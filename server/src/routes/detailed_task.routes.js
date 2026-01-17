@@ -75,34 +75,3 @@ router.delete('/action-items/:id', [
 ], deleteActionItem);
 
 module.exports = router;
-```
-
----
-
-## **How to Update on GitHub:**
-
-1. Go to: https://github.com/amakki-a11y/bbc-agents/blob/main/server/src/routes/detailed_task.routes.js
-
-2. Click the **pencil icon ✏️** (Edit this file)
-
-3. Select all: `Ctrl + A`
-
-4. Paste the new code: `Ctrl + V`
-
-5. Scroll down and click **"Commit changes"**
-   - Add message: "Fix: Allow large timestamp-based task IDs"
-   - Click **"Commit changes"**
-
----
-
-## **After Committing:**
-
-Ask Antigravity to pull the changes and restart the server:
-```
-Please pull the latest changes from GitHub and restart the backend server:
-
-1. cd server
-2. git pull origin main
-3. npm run dev
-
-Then test by clicking on a task - does Task Details page open now?
