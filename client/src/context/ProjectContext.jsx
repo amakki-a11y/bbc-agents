@@ -35,7 +35,7 @@ export const ProjectProvider = ({ children }) => {
     const fetchTasks = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_URL}/data/tasks`, {
+            const res = await axios.get(`${API_URL}/tasks`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const mappedTasks = res.data.map(task => ({
@@ -46,10 +46,7 @@ export const ProjectProvider = ({ children }) => {
             setTasks(mappedTasks);
         } catch (error) {
             console.error("Failed to fetch tasks:", error);
-            setTasks([
-                { id: 101, projectId: 1, title: "Sample Task 1", status: "TO DO", priority: "medium" },
-                { id: 102, projectId: 1, title: "Sample Task 2", status: "IN PROGRESS", priority: "high" },
-            ]);
+            setTasks([]);
         }
     };
 
@@ -58,8 +55,8 @@ export const ProjectProvider = ({ children }) => {
         const initialActivity = {
             id: Date.now(),
             type: 'create',
-            message: 'MT created this task',
-            user: 'MT',
+            message: 'Created this task',
+            user: 'You',
             createdAt: new Date().toISOString()
         };
         
@@ -87,7 +84,7 @@ export const ProjectProvider = ({ children }) => {
                     due_date: task.due_date || null
                 };
                 
-                const res = await axios.post(`${API_URL}/data/tasks`, backendTask, {
+                const res = await axios.post(`${API_URL}/tasks`, backendTask, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 
@@ -112,7 +109,7 @@ export const ProjectProvider = ({ children }) => {
         setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
                 const updatedTask = { ...t, ...updates };
-                axios.put(`${API_URL}/data/tasks/${taskId}`, { ...updates }, {
+                axios.put(`${API_URL}/tasks/${taskId}`, { ...updates }, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 }).catch(e => console.log('Backend sync failed'));
                 return updatedTask;
@@ -124,7 +121,7 @@ export const ProjectProvider = ({ children }) => {
     const deleteTask = useCallback(async (taskId) => {
         setTasks(prev => prev.filter(t => t.id !== taskId));
         try {
-            await axios.delete(`${API_URL}/data/tasks/${taskId}`, {
+            await axios.delete(`${API_URL}/tasks/${taskId}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
         } catch (e) { console.log("Backend offline, local delete"); }
@@ -134,7 +131,7 @@ export const ProjectProvider = ({ children }) => {
         if (!taskIds.length) return;
         setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, ...updates } : t));
         try {
-            await axios.put(`${API_URL}/data/tasks/bulk`, { taskIds, updates }, {
+            await axios.put(`${API_URL}/tasks/bulk`, { taskIds, updates }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
         } catch (e) { console.error("Bulk update failed", e); }
@@ -144,7 +141,7 @@ export const ProjectProvider = ({ children }) => {
         if (!taskIds.length) return;
         setTasks(prev => prev.filter(t => !taskIds.includes(t.id)));
         try {
-            await axios.delete(`${API_URL}/data/tasks/bulk`, {
+            await axios.delete(`${API_URL}/tasks/bulk`, {
                 data: { taskIds },
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
