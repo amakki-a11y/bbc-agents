@@ -36,25 +36,28 @@ export const ProjectProvider = ({ children }) => {
         localStorage.setItem('project_view_settings', JSON.stringify(viewSettings));
     }, [viewSettings]);
 
-    const fetchTasks = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_URL}/tasks`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setTasks(res.data);
-        } catch (error) {
-            console.error("Failed to fetch tasks, using fallback data", error);
-            // Fallback data if backend is not ready
-            setTasks([
-                { id: 101, projectId: 1, title: "Centralized WhatsApp for all branches", status: "IN PROGRESS", priority: "urgent", due_date: "2026-03-24", assignee: 'MT' },
-                { id: 102, projectId: 1, title: "Automation for clients: choose nearest branch", status: "IN PROGRESS", priority: "high", due_date: "2026-03-25", assignee: 'MT' },
-                { id: 103, projectId: 1, title: "Label clients by nearest branch after first contact", status: "IN PROGRESS", priority: "normal", due_date: "2026-03-26", assignee: 'MT' },
-                { id: 201, projectId: 1, title: "Control Panel with reports on every contact", status: "TO DO", priority: "normal", assignee: 'MT' },
-                { id: 202, projectId: 1, title: "Broadcast msgs 1000-1500 to saved contacts", status: "TO DO", priority: "high", assignee: 'MT' },
-            ]);
-        }
-    };
+   const fetchTasks = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_URL}/data/tasks`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        // Map backend format to frontend format
+        const mappedTasks = res.data.map(task => ({
+            ...task,
+            projectId: task.project_id,
+            status: task.status?.toUpperCase().replace('_', ' ') || 'TO DO'
+        }));
+        setTasks(mappedTasks);
+    } catch (error) {
+        console.error("Failed to fetch tasks:", error);
+        // Fallback data if backend is not ready
+        setTasks([
+            { id: 101, projectId: 1, title: "Sample Task 1", status: "TO DO", priority: "medium" },
+            { id: 102, projectId: 1, title: "Sample Task 2", status: "IN PROGRESS", priority: "high" },
+        ]);
+    }
+};
 
     const logActivity = useCallback((task, type, message, meta = {}) => {
         const entry = {
@@ -69,18 +72,65 @@ export const ProjectProvider = ({ children }) => {
     }, []);
 
     const addTask = useCallback(async (task) => {
-        // Optimistic update
-        const tempId = Date.now();
-        const initialActivity = {
-            id: Date.now(),
-            type: 'create',
-            message: 'MT created this task',
-            user: 'MT',
-            createdAt: new Date().toISOString()
-        };
-        const newTask = { status: 'TO DO', tags: [], activity: [initialActivity], ...task, id: tempId, projectId: activeProjectId };
+    // Optimistic update with temp ID
+    const tempId = Date.now();
+    const initialActivity = {
+        id: Date.now(),
+        type: 'create',
+        message: 'MT created this task',
+        user: 'MT',
+        createdAt: new Date().toISOString()
+    };
+    
+    // Local task for UI (with frontend format)
+    const localTask = { 
+        status: 'TO DO', 
+        tags: [], 
+        activity: [initialActivity], 
+        ...task, 
+        id: tempId, 
+        projectId: activeProjectId 
+    };
 
-        setTasks(prev => [...prev, newTask]);
+    setTasks(prev => [...prev, localTask]);
+
+    // Background sync to backend
+    (async () => {
+        try {
+            const token = localStorage.getItem('token');
+            
+            // Convert to backend format
+            const backendTask = {
+                title: task.title || 'New Task',
+                description: task.description || '',
+                status: 'todo', // Backend expects lowercase
+                priority: task.priority || 'medium',
+                tags: task.tags || [],
+                project_id: activeProjectId, // Backend expects snake_case
+                due_date: task.due_date || null
+            };
+            
+            const res = await axios.post(`${API_URL}/data/tasks`, backendTask, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Replace temp task with real task from backend
+            const savedTask = {
+                ...res.data,
+                projectId: res.data.project_id, // Map back to frontend format
+                activity: [initialActivity]
+            };
+            
+            setTasks(prev => prev.map(t => t.id === tempId ? savedTask : t));
+            console.log('Task saved to database:', savedTask);
+        } catch (e) {
+            console.error("Backend sync failed:", e.response?.data || e.message);
+            // Keep the local task even if backend fails
+        }
+    })();
+
+    return localTask;
+}, [activeProjectId, API_URL]);
 
         // Background sync
         (async () => {
