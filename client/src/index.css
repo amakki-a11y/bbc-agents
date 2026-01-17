@@ -1,0 +1,86 @@
+:root {
+  --bg-dark: #ffffff; /* White background */
+  --bg-card: #f8f9fc; /* Light Gray for cards/sidebar */
+  --primary: #7b68ee; /* Medium Slate Blue (Purple) */
+  --primary-hover: #6a5acd;
+  --text-main: #2d333a; /* Dark Gray text */
+  --text-muted: #7f8c8d;
+  --border: #e0e0e0;
+  --glass: rgba(255, 255, 255, 0.95); /* Light glass */
+  --success: #00d084;
+  --danger: #ff4d4d;
+  --sidebar-bg: #fafafa;
+  --header-bg: #7b68ee;
+  --status-purple: #7b68ee;
+  --status-gray: #b0b0b0;
+}
+
+/* ClickUp Style Helps */
+.status-pill {
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.status-pill.purple { background-color: var(--status-purple); }
+.status-pill.gray { background-color: var(--status-gray); }
+
+.task-row {
+    border-bottom: 1px solid #f0f0f0;
+}
+.task-row:hover {
+    background-color: #f7faff;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.input-field {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-field:focus {
+  outline: 2px solid var(--primary);
+  border-color: transparent;
+}

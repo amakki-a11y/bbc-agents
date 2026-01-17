@@ -1,0 +1,174 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+  avatar_url    String?
+  tasks         Task[]
+  events        Event[]
+  activities    Activity[]
+  assignedActionItems ActionItem[]
+  projects      Project[]
+  taskTemplates TaskTemplate[]
+  notifications Notification[]
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  created_at  DateTime @default(now())
+  user_id     Int
+  user        User     @relation(fields: [user_id], references: [id])
+  tasks       Task[]
+  notifications Notification[]
+}
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("todo") 
+  priority    String?  
+  tags        String?  
+  due_date    DateTime?
+  start_date  DateTime?
+  time_estimate Int? // in minutes
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user_id     Int
+  user        User     @relation(fields: [user_id], references: [id])
+  project_id  Int?
+  project     Project? @relation(fields: [project_id], references: [id])
+  
+  // Recurrence
+  recurrenceType     String? // daily, weekly, monthly, yearly
+  recurrenceInterval Int?    // e.g., every 2 days
+  recurrenceEndDate  DateTime?
+  
+  // Dependencies
+  blockedBy   Task[]   @relation("TaskDependencies")
+  blocking    Task[]   @relation("TaskDependencies")
+
+  subtasks    Subtask[]
+  actionItems ActionItem[]
+  customFields CustomField[]
+  attachments Attachment[]
+  activities  Activity[]
+  timeEntries TimeEntry[]
+  notifications Notification[]
+
+  @@index([project_id])
+}
+
+model TaskTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  priority    String?
+  tags        String?
+  time_estimate Int?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user_id     Int
+  user        User     @relation(fields: [user_id], references: [id])
+}
+
+model Subtask {
+  id          Int      @id @default(autoincrement())
+  title       String
+  is_complete Boolean  @default(false)
+  task_id     Int
+  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model ActionItem {
+  id          Int      @id @default(autoincrement())
+  title       String
+  is_complete Boolean  @default(false)
+  due_date    DateTime?
+  task_id     Int
+  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  assignee_id Int?
+  assignee    User?    @relation(fields: [assignee_id], references: [id])
+}
+
+model CustomField {
+  id          Int      @id @default(autoincrement())
+  name        String
+  type        String   // text, number, dropdown, date, checkbox
+  value       String?
+  task_id     Int
+  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model Attachment {
+  id          Int      @id @default(autoincrement())
+  filename    String
+  file_url    String
+  size        Int
+  uploaded_by_id Int? // simplified for now
+  created_at  DateTime @default(now())
+  task_id     Int
+  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id          Int      @id @default(autoincrement())
+  type        String   // status_change, comment, field_update, upload
+  content     String
+  timestamp   DateTime @default(now())
+  user_id     Int?
+  user        User?    @relation(fields: [user_id], references: [id])
+  task_id     Int
+  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model TimeEntry {
+  id          Int      @id @default(autoincrement())
+  start_time  DateTime
+  end_time    DateTime?
+  duration    Int?     // in seconds
+  is_manual   Boolean  @default(false)
+  user_id     Int
+  task_id     Int
+  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  title       String
+  start_time  DateTime
+  end_time    DateTime
+  description String?
+  created_at  DateTime @default(now())
+  user_id     Int
+  user        User     @relation(fields: [user_id], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String
+  message   String
+  is_read   Boolean  @default(false)
+  created_at DateTime @default(now())
+  user_id   Int
+  user      User     @relation(fields: [user_id], references: [id])
+  task_id   Int?
+  task      Task?    @relation(fields: [task_id], references: [id])
+  project_id Int?
+  project   Project? @relation(fields: [project_id], references: [id])
+
+  @@index([user_id])
+  @@index([is_read])
+}
