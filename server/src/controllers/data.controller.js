@@ -4,6 +4,23 @@ const prisma = new PrismaClient();
 // Tasks
 const cache = require('../utils/cache');
 
+// Helper function to parse tags from DB (string) to array
+const parseTags = (tagsString) => {
+    if (!tagsString) return [];
+    try {
+        return JSON.parse(tagsString);
+    } catch {
+        return [];
+    }
+};
+
+// Helper function to stringify tags for DB storage
+const stringifyTags = (tags) => {
+    if (!tags || (Array.isArray(tags) && tags.length === 0)) return null;
+    if (typeof tags === 'string') return tags; // Already a string
+    return JSON.stringify(tags);
+};
+
 // Tasks
 const getTasks = async (req, res) => {
     try {
@@ -17,12 +34,6 @@ const getTasks = async (req, res) => {
         const cachedData = cache.get(cacheKey);
 
         if (cachedData) {
-            // Restore headers if saved, or just send data
-            // Since we might have pagination headers, we should cache those too effectively
-            // But for now, let's cache the simple response body. 
-            // Cursor pagination headers: 'X-Next-Cursor'
-            // If we cache the result, we need to know the cursor state. 
-            // Let's store object { data: tasks, nextCursor: ... } in cache
             if (cachedData.nextCursor) {
                 res.set('X-Next-Cursor', cachedData.nextCursor);
             }
@@ -43,9 +54,9 @@ const getTasks = async (req, res) => {
 
         const tasks = await prisma.task.findMany({
             where,
-            take: limit + 1, // Fetch one extra to check for next page
+            take: limit + 1,
             cursor: cursor ? { id: cursor } : undefined,
-            orderBy: { id: 'desc' }, // or created_at, but id is unique and good for cursor
+            orderBy: { id: 'desc' },
             include: {
                 blockedBy: { select: { id: true, title: true, status: true } },
                 blocking: { select: { id: true, title: true, status: true } }
@@ -62,10 +73,16 @@ const getTasks = async (req, res) => {
             res.set('X-Next-Cursor', nextCursor.toString());
         }
 
-        // Cache for 30 seconds
-        cache.set(cacheKey, { data: tasks, nextCursor }, 30);
+        // Parse tags from JSON string to array for each task
+        const tasksWithParsedTags = tasks.map(task => ({
+            ...task,
+            tags: parseTags(task.tags)
+        }));
 
-        res.json(tasks);
+        // Cache for 30 seconds
+        cache.set(cacheKey, { data: tasksWithParsedTags, nextCursor }, 30);
+
+        res.json(tasksWithParsedTags);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch tasks' });
@@ -82,19 +99,19 @@ const createTask = async (req, res) => {
 
         const taskData = {
             title,
-            description,
-            priority,
-            tags,
+            description: description || null,
+            priority: priority || 'medium',
+            tags: stringifyTags(tags), // Convert array to JSON string
             due_date: due_date ? new Date(due_date) : null,
             user_id: req.user.userId,
             project_id: project_id ? parseInt(project_id) : null,
-            recurrenceType,
-            recurrenceInterval,
+            recurrenceType: recurrenceType || null,
+            recurrenceInterval: recurrenceInterval || null,
             recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null
         };
 
         // Handle dependencies
-        if (blockedBy && Array.isArray(blockedBy)) {
+        if (blockedBy && Array.isArray(blockedBy) && blockedBy.length > 0) {
             taskData.blockedBy = {
                 connect: blockedBy.map(id => ({ id: parseInt(id) }))
             };
@@ -109,7 +126,11 @@ const createTask = async (req, res) => {
 
         cache.delByPrefix(`tasks:${req.user.userId}`);
 
-        res.status(201).json(task);
+        // Return task with tags parsed back to array
+        res.status(201).json({
+            ...task,
+            tags: parseTags(task.tags)
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to create task' });
@@ -127,21 +148,21 @@ const updateTask = async (req, res) => {
             removeBlockedBy // IDs to REMOVE
         } = req.body;
 
-        const updateData = {
-            title,
-            status,
-            description,
-            priority,
-            tags,
-            due_date: due_date ? new Date(due_date) : undefined,
-            project_id: project_id ? parseInt(project_id) : undefined,
-            recurrenceType,
-            recurrenceInterval,
-            recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : undefined,
-        };
+        const updateData = {};
+        
+        // Only include fields that are actually provided
+        if (title !== undefined) updateData.title = title;
+        if (status !== undefined) updateData.status = status;
+        if (description !== undefined) updateData.description = description;
+        if (priority !== undefined) updateData.priority = priority;
+        if (tags !== undefined) updateData.tags = stringifyTags(tags); // Convert array to JSON string
+        if (due_date !== undefined) updateData.due_date = due_date ? new Date(due_date) : null;
+        if (project_id !== undefined) updateData.project_id = project_id ? parseInt(project_id) : null;
+        if (recurrenceType !== undefined) updateData.recurrenceType = recurrenceType;
+        if (recurrenceInterval !== undefined) updateData.recurrenceInterval = recurrenceInterval;
+        if (recurrenceEndDate !== undefined) updateData.recurrenceEndDate = recurrenceEndDate ? new Date(recurrenceEndDate) : null;
 
         // Handle Dependencies
-        // Strategy: We can use 'set', 'connect', 'disconnect'
         if (blockedBy) {
             updateData.blockedBy = {
                 set: blockedBy.map(tid => ({ id: parseInt(tid) }))
@@ -156,26 +177,24 @@ const updateTask = async (req, res) => {
             }
         }
 
-        // Circular dependency check could be done here if strictly required
-        // simplistic check: ensure we don't start blocking something that blocks us (recursive check needed for full graph)
-        // For now, relying on basic logic, but a robust system needs graph cycle detection.
-
         const task = await prisma.task.update({
             where: { id: parseInt(id), user_id: req.user.userId },
             data: updateData,
             include: { blockedBy: true, blocking: true }
         });
 
-        // Recurrence Logic: If task completed and is recurring, create next instance
-        // This is a simplified version. A robust one would check previous state.
+        // Recurrence Logic placeholder
         if (status === 'done' && task.recurrenceType) {
-            // Logic to spawn next task could go here or in a separate service
-            // For simplicity, we might implement a 'checkRecurring' utility later
+            // Logic to spawn next task could go here
         }
 
         cache.delByPrefix(`tasks:${req.user.userId}`);
 
-        res.json(task);
+        // Return task with tags parsed back to array
+        res.json({
+            ...task,
+            tags: parseTags(task.tags)
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to update task' });
@@ -198,7 +217,7 @@ const deleteTask = async (req, res) => {
 // Bulk Operations
 const bulkUpdateTasks = async (req, res) => {
     try {
-        const { taskIds, updates } = req.body; // taskIds: [], updates: { status: 'done', ... }
+        const { taskIds, updates } = req.body;
 
         if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
             return res.status(400).json({ error: 'No task IDs provided' });
@@ -211,6 +230,7 @@ const bulkUpdateTasks = async (req, res) => {
             if (allowedUpdates.includes(key)) {
                 if (key === 'project_id') cleanUpdates[key] = updates[key] ? parseInt(updates[key]) : null;
                 else if (key === 'due_date') cleanUpdates[key] = updates[key] ? new Date(updates[key]) : null;
+                else if (key === 'tags') cleanUpdates[key] = stringifyTags(updates[key]); // Convert tags
                 else cleanUpdates[key] = updates[key];
             }
         });
@@ -268,7 +288,7 @@ const getEvents = async (req, res) => {
 
         const events = await prisma.event.findMany({ where: { user_id: req.user.userId } });
 
-        cache.set(cacheKey, events, 60); // Cache for 1 minute
+        cache.set(cacheKey, events, 60);
         res.json(events);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch events' });
