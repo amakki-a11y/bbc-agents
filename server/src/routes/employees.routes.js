@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth.middleware');
+const { checkPermission } = require('../middleware/checkPermission');
 const { check } = require('express-validator');
 const validate = require('../middleware/validate');
 const {
@@ -15,23 +16,24 @@ const {
 
 router.use(authenticateToken);
 
-// Get my profile
+// Get my profile (no permission required - own profile)
 router.get('/me', getMyProfile);
 
-// Get org hierarchy
+// Get org hierarchy (no permission required - all authenticated users)
 router.get('/hierarchy', getHierarchy);
 
-// Get all employees
+// Get all employees (no permission required - all authenticated users)
 router.get('/', getEmployees);
 
-// Get single employee
+// Get single employee (no permission required - all authenticated users)
 router.get('/:id', [
     check('id').notEmpty().withMessage('Employee ID is required'),
     validate
 ], getEmployee);
 
-// Create employee
+// Create employee - requires manage_employees permission
 router.post('/', [
+    checkPermission('manage_employees'),
     check('user_id').isInt().withMessage('Valid user_id is required'),
     check('name').trim().notEmpty().withMessage('Name is required').escape(),
     check('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
@@ -44,8 +46,9 @@ router.post('/', [
     validate
 ], createEmployee);
 
-// Update employee
+// Update employee - requires manage_employees permission
 router.put('/:id', [
+    checkPermission('manage_employees'),
     check('id').notEmpty().withMessage('Employee ID is required'),
     check('name').optional().trim().notEmpty().withMessage('Name cannot be empty').escape(),
     check('email').optional().isEmail().withMessage('Valid email is required').normalizeEmail(),
@@ -58,8 +61,9 @@ router.put('/:id', [
     validate
 ], updateEmployee);
 
-// Delete employee
+// Delete employee - requires manage_employees permission
 router.delete('/:id', [
+    checkPermission('manage_employees'),
     check('id').notEmpty().withMessage('Employee ID is required'),
     validate
 ], deleteEmployee);

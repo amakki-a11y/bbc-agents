@@ -16,47 +16,36 @@ const departments = [
 const roles = [
   {
     name: 'Admin',
-    permissions: JSON.stringify({
-      departments: ['create', 'read', 'update', 'delete'],
-      employees: ['create', 'read', 'update', 'delete'],
-      attendance: ['create', 'read', 'update', 'delete', 'approve'],
-      roles: ['create', 'read', 'update', 'delete'],
-      reports: ['view', 'export'],
-      settings: ['manage'],
-    }),
+    permissions: JSON.stringify([
+      'manage_departments',
+      'manage_employees',
+      'manage_roles',
+      'view_all_tasks',
+      'view_department_tasks',
+      'manage_attendance',
+      'view_reports',
+      'send_announcements'
+    ]),
   },
   {
     name: 'Head of Department',
-    permissions: JSON.stringify({
-      departments: ['read'],
-      employees: ['read', 'update'],
-      attendance: ['read', 'update', 'approve'],
-      roles: ['read'],
-      reports: ['view', 'export'],
-      settings: [],
-    }),
+    permissions: JSON.stringify([
+      'manage_employees',
+      'view_department_tasks',
+      'manage_attendance',
+      'view_reports'
+    ]),
   },
   {
     name: 'Assistant',
-    permissions: JSON.stringify({
-      departments: ['read'],
-      employees: ['read'],
-      attendance: ['read', 'create'],
-      roles: ['read'],
-      reports: ['view'],
-      settings: [],
-    }),
+    permissions: JSON.stringify([
+      'view_department_tasks',
+      'view_reports'
+    ]),
   },
   {
     name: 'Employee',
-    permissions: JSON.stringify({
-      departments: ['read'],
-      employees: ['read'],
-      attendance: ['read', 'create'],
-      roles: [],
-      reports: [],
-      settings: [],
-    }),
+    permissions: JSON.stringify([]),
   },
 ];
 
