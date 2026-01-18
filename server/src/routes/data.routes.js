@@ -24,12 +24,23 @@ router.get('/tasks', getTasks);
 
 router.post('/tasks', [
     check('title').trim().notEmpty().withMessage('Title is required').escape(),
-    check('description').optional().trim().escape(),
-    check('status').optional().isIn(['todo', 'in-progress', 'done', 'blocked']).withMessage('Invalid status'),
+    check('description').optional({ nullable: true }).trim(),
+    check('status').optional().isIn(['todo', 'in_progress', 'in-progress', 'done', 'blocked']).withMessage('Invalid status'),
     check('priority').optional().isIn(['low', 'medium', 'high', 'urgent']).withMessage('Invalid priority'),
-    check('due_date').optional().isISO8601().withMessage('Invalid due date').toDate(),
-    check('projectId').optional().isInt().withMessage('Invalid project ID').toInt(),
-    check('assigneeId').optional().isInt().withMessage('Invalid assignee ID').toInt(),
+    check('due_date').optional({ nullable: true }).custom((value) => {
+        if (value === null || value === '') return true;
+        if (isNaN(Date.parse(value))) throw new Error('Invalid due date');
+        return true;
+    }),
+    check('project_id').optional({ nullable: true }).custom((value) => {
+        if (value === null) return true;
+        if (!Number.isInteger(Number(value))) throw new Error('Invalid project ID');
+        return true;
+    }),
+    check('tags').optional().custom((value) => {
+        if (Array.isArray(value) || typeof value === 'string' || value === null) return true;
+        throw new Error('Tags must be an array or string');
+    }),
     validate
 ], createTask);
 
@@ -47,10 +58,23 @@ router.delete('/tasks/bulk', [
 router.put('/tasks/:id', [
     check('id').isInt().withMessage('Invalid task ID').toInt(),
     check('title').optional().trim().notEmpty().escape(),
-    check('description').optional().trim().escape(),
-    check('status').optional().isIn(['todo', 'in-progress', 'done', 'blocked']).withMessage('Invalid status'),
+    check('description').optional({ nullable: true }).trim(),
+    check('status').optional().isIn(['todo', 'in_progress', 'in-progress', 'done', 'blocked']).withMessage('Invalid status'),
     check('priority').optional().isIn(['low', 'medium', 'high', 'urgent']).withMessage('Invalid priority'),
-    check('due_date').optional().isISO8601().withMessage('Invalid due date').toDate(),
+    check('due_date').optional({ nullable: true }).custom((value) => {
+        if (value === null || value === '') return true;
+        if (isNaN(Date.parse(value))) throw new Error('Invalid due date');
+        return true;
+    }),
+    check('project_id').optional({ nullable: true }).custom((value) => {
+        if (value === null) return true;
+        if (!Number.isInteger(Number(value))) throw new Error('Invalid project ID');
+        return true;
+    }),
+    check('tags').optional().custom((value) => {
+        if (Array.isArray(value) || typeof value === 'string' || value === null) return true;
+        throw new Error('Tags must be an array or string');
+    }),
     validate
 ], updateTask);
 
