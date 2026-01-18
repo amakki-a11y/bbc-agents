@@ -2,6 +2,561 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { generateAIResponse } = require('../services/aiService');
 
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Parse relative date strings into Date objects
+ */
+const parseRelativeDate = (dateStr) => {
+    if (!dateStr) return null;
+
+    const lower = dateStr.toLowerCase().trim();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check for ISO date format
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        return new Date(dateStr);
+    }
+
+    // Relative dates
+    if (lower === 'today') {
+        return today;
+    }
+    if (lower === 'tomorrow') {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+    }
+    if (lower === 'next week') {
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        return nextWeek;
+    }
+
+    // Day names
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayMatch = days.findIndex(d => lower.includes(d));
+    if (dayMatch !== -1) {
+        const target = new Date(today);
+        const currentDay = target.getDay();
+        let daysUntil = dayMatch - currentDay;
+        if (daysUntil <= 0) daysUntil += 7; // Next occurrence
+        target.setDate(target.getDate() + daysUntil);
+        return target;
+    }
+
+    // "in X days"
+    const inDaysMatch = lower.match(/in (\d+) days?/);
+    if (inDaysMatch) {
+        const target = new Date(today);
+        target.setDate(target.getDate() + parseInt(inDaysMatch[1]));
+        return target;
+    }
+
+    // Try to parse as date
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) {
+        return parsed;
+    }
+
+    return null;
+};
+
+/**
+ * Determine if check-in is late (after 9 AM)
+ */
+const isLateCheckIn = (checkInTime) => {
+    const hours = checkInTime.getHours();
+    const minutes = checkInTime.getMinutes();
+    return hours > 9 || (hours === 9 && minutes > 0);
+};
+
+/**
+ * Calculate hours worked between check-in and check-out
+ */
+const calculateHoursWorked = (checkIn, checkOut) => {
+    const diff = checkOut - checkIn;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return { hours, minutes, totalMinutes: hours * 60 + minutes };
+};
+
+// ============================================
+// ACTION HANDLERS
+// ============================================
+
+/**
+ * Handle creating a task for the employee
+ */
+const handleCreateTask = async (employeeId, { title, description, priority, due_date }) => {
+    try {
+        // Get the employee's user_id
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            select: { user_id: true, name: true }
+        });
+
+        if (!employee) {
+            return { success: false, error: 'Employee not found' };
+        }
+
+        // Parse the due date
+        const parsedDueDate = parseRelativeDate(due_date);
+
+        // Create the task
+        const task = await prisma.task.create({
+            data: {
+                title: title,
+                description: description || null,
+                priority: priority || 'medium',
+                due_date: parsedDueDate,
+                status: 'todo',
+                user_id: employee.user_id
+            }
+        });
+
+        return {
+            success: true,
+            message: `Task "${title}" created successfully`,
+            task: {
+                id: task.id,
+                title: task.title,
+                priority: task.priority,
+                due_date: task.due_date ? task.due_date.toLocaleDateString() : null,
+                status: task.status
+            }
+        };
+    } catch (error) {
+        console.error('handleCreateTask error:', error);
+        return { success: false, error: 'Failed to create task' };
+    }
+};
+
+/**
+ * Handle employee check-in
+ */
+const handleCheckIn = async (employeeId) => {
+    try {
+        const now = new Date();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Check if already checked in today
+        const existingAttendance = await prisma.attendance.findFirst({
+            where: {
+                employee_id: employeeId,
+                date: {
+                    gte: today,
+                    lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+                }
+            }
+        });
+
+        if (existingAttendance && existingAttendance.check_in) {
+            return {
+                success: false,
+                error: 'Already checked in today',
+                checkInTime: existingAttendance.check_in.toLocaleTimeString()
+            };
+        }
+
+        const isLate = isLateCheckIn(now);
+        const status = isLate ? 'late' : 'present';
+
+        // Create or update attendance record
+        let attendance;
+        if (existingAttendance) {
+            attendance = await prisma.attendance.update({
+                where: { id: existingAttendance.id },
+                data: {
+                    check_in: now,
+                    status: status
+                }
+            });
+        } else {
+            attendance = await prisma.attendance.create({
+                data: {
+                    employee_id: employeeId,
+                    date: today,
+                    check_in: now,
+                    status: status
+                }
+            });
+        }
+
+        return {
+            success: true,
+            message: isLate ? 'Checked in (late)' : 'Checked in on time',
+            checkInTime: now.toLocaleTimeString(),
+            status: status,
+            isLate: isLate
+        };
+    } catch (error) {
+        console.error('handleCheckIn error:', error);
+        return { success: false, error: 'Failed to record check-in' };
+    }
+};
+
+/**
+ * Handle employee check-out
+ */
+const handleCheckOut = async (employeeId) => {
+    try {
+        const now = new Date();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Find today's attendance record
+        const attendance = await prisma.attendance.findFirst({
+            where: {
+                employee_id: employeeId,
+                date: {
+                    gte: today,
+                    lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+                }
+            }
+        });
+
+        if (!attendance) {
+            return {
+                success: false,
+                error: 'No check-in found for today. Please check in first.'
+            };
+        }
+
+        if (attendance.check_out) {
+            return {
+                success: false,
+                error: 'Already checked out today',
+                checkOutTime: attendance.check_out.toLocaleTimeString()
+            };
+        }
+
+        if (!attendance.check_in) {
+            return {
+                success: false,
+                error: 'No check-in recorded. Please check in first.'
+            };
+        }
+
+        // Calculate hours worked
+        const hoursWorked = calculateHoursWorked(attendance.check_in, now);
+
+        // Update attendance with check-out
+        await prisma.attendance.update({
+            where: { id: attendance.id },
+            data: { check_out: now }
+        });
+
+        return {
+            success: true,
+            message: `Checked out. Worked ${hoursWorked.hours}h ${hoursWorked.minutes}m today.`,
+            checkOutTime: now.toLocaleTimeString(),
+            hoursWorked: `${hoursWorked.hours}h ${hoursWorked.minutes}m`,
+            totalMinutes: hoursWorked.totalMinutes
+        };
+    } catch (error) {
+        console.error('handleCheckOut error:', error);
+        return { success: false, error: 'Failed to record check-out' };
+    }
+};
+
+/**
+ * Handle leave request
+ */
+const handleLeaveRequest = async (employeeId, { date, reason }) => {
+    try {
+        const leaveDate = parseRelativeDate(date);
+        if (!leaveDate) {
+            return { success: false, error: 'Could not parse leave date' };
+        }
+
+        // Get employee and manager info
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            include: {
+                manager: { select: { id: true, name: true, email: true } }
+            }
+        });
+
+        if (!employee) {
+            return { success: false, error: 'Employee not found' };
+        }
+
+        // Create attendance record for leave day
+        const attendance = await prisma.attendance.create({
+            data: {
+                employee_id: employeeId,
+                date: leaveDate,
+                status: 'on_leave',
+                notes: `Leave requested: ${reason}`
+            }
+        });
+
+        // If has manager, notify them
+        if (employee.manager) {
+            await prisma.message.create({
+                data: {
+                    employee_id: employee.manager.id,
+                    content: `**Leave Request from ${employee.name}**\n\nDate: ${leaveDate.toLocaleDateString()}\nReason: ${reason}\n\nPlease review and approve.`,
+                    sender: 'bot',
+                    message_type: 'request',
+                    status: 'pending',
+                    metadata: JSON.stringify({
+                        action: 'leave_request',
+                        fromEmployee: employeeId,
+                        leaveDate: leaveDate.toISOString(),
+                        reason: reason
+                    })
+                }
+            });
+        }
+
+        return {
+            success: true,
+            message: `Leave request submitted for ${leaveDate.toLocaleDateString()}`,
+            leaveDate: leaveDate.toLocaleDateString(),
+            reason: reason,
+            managerNotified: employee.manager ? employee.manager.name : null
+        };
+    } catch (error) {
+        console.error('handleLeaveRequest error:', error);
+        return { success: false, error: 'Failed to submit leave request' };
+    }
+};
+
+/**
+ * Handle sending message to manager
+ */
+const handleMessageManager = async (employeeId, content) => {
+    try {
+        // Get employee and manager
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            include: {
+                manager: { select: { id: true, name: true, email: true } },
+                department: { select: { name: true } }
+            }
+        });
+
+        if (!employee) {
+            return { success: false, error: 'Employee not found' };
+        }
+
+        if (!employee.manager) {
+            return { success: false, error: 'No manager assigned. Contact HR for assistance.' };
+        }
+
+        // Create message for manager
+        await prisma.message.create({
+            data: {
+                employee_id: employee.manager.id,
+                content: `**Message from ${employee.name} (${employee.department.name}):**\n\n${content}`,
+                sender: 'bot',
+                message_type: 'request',
+                status: 'pending',
+                metadata: JSON.stringify({
+                    action: 'message_from_employee',
+                    fromEmployee: employeeId,
+                    fromName: employee.name
+                })
+            }
+        });
+
+        // Create confirmation for sender
+        await prisma.message.create({
+            data: {
+                employee_id: employeeId,
+                content: `Message sent to ${employee.manager.name}: "${content}"`,
+                sender: 'bot',
+                message_type: 'request',
+                routed_to: employee.manager.id,
+                status: 'delivered',
+                metadata: JSON.stringify({
+                    action: 'message_routed',
+                    routedTo: employee.manager.name
+                })
+            }
+        });
+
+        return {
+            success: true,
+            message: `Message sent to your manager ${employee.manager.name}`,
+            sentTo: employee.manager.name
+        };
+    } catch (error) {
+        console.error('handleMessageManager error:', error);
+        return { success: false, error: 'Failed to send message to manager' };
+    }
+};
+
+/**
+ * Handle sending message to HR
+ */
+const handleMessageHR = async (employeeId, content) => {
+    try {
+        // Get employee info
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            include: {
+                department: { select: { name: true } }
+            }
+        });
+
+        if (!employee) {
+            return { success: false, error: 'Employee not found' };
+        }
+
+        // Find HR employees (in HR department)
+        const hrEmployees = await prisma.employee.findMany({
+            where: {
+                department: { name: { contains: 'HR' } }
+            },
+            select: { id: true, name: true }
+        });
+
+        if (hrEmployees.length === 0) {
+            // If no HR department found, create a general HR message
+            await prisma.message.create({
+                data: {
+                    employee_id: employeeId,
+                    content: `**HR Message Logged**\n\nYour message has been recorded for HR review:\n\n"${content}"`,
+                    sender: 'bot',
+                    message_type: 'request',
+                    status: 'pending',
+                    metadata: JSON.stringify({
+                        action: 'hr_message_logged',
+                        content: content
+                    })
+                }
+            });
+
+            return {
+                success: true,
+                message: 'Your message has been logged for HR review',
+                note: 'HR department will be notified'
+            };
+        }
+
+        // Send message to all HR employees
+        for (const hr of hrEmployees) {
+            await prisma.message.create({
+                data: {
+                    employee_id: hr.id,
+                    content: `**HR Request from ${employee.name} (${employee.department.name}):**\n\n${content}`,
+                    sender: 'bot',
+                    message_type: 'request',
+                    status: 'pending',
+                    metadata: JSON.stringify({
+                        action: 'hr_request',
+                        fromEmployee: employeeId,
+                        fromName: employee.name
+                    })
+                }
+            });
+        }
+
+        return {
+            success: true,
+            message: `Message sent to HR department`,
+            notifiedCount: hrEmployees.length
+        };
+    } catch (error) {
+        console.error('handleMessageHR error:', error);
+        return { success: false, error: 'Failed to send message to HR' };
+    }
+};
+
+/**
+ * Handle getting employee's tasks
+ */
+const handleGetMyTasks = async (employeeId, context) => {
+    // Tasks are already in context
+    if (context.tasks.length === 0) {
+        return {
+            success: true,
+            message: 'You have no pending tasks',
+            tasks: []
+        };
+    }
+
+    return {
+        success: true,
+        message: `You have ${context.tasks.length} pending task(s)`,
+        tasks: context.tasks.map(t => ({
+            title: t.title,
+            status: t.status,
+            priority: t.priority || 'medium',
+            due_date: t.due_date ? new Date(t.due_date).toLocaleDateString() : null
+        }))
+    };
+};
+
+/**
+ * Handle getting employee's attendance
+ */
+const handleGetMyAttendance = async (employeeId, context) => {
+    if (context.attendance.length === 0) {
+        return {
+            success: true,
+            message: 'No attendance records this week',
+            attendance: []
+        };
+    }
+
+    const records = context.attendance.map(a => ({
+        date: new Date(a.date).toLocaleDateString(),
+        status: a.status,
+        checkIn: a.check_in ? new Date(a.check_in).toLocaleTimeString() : null,
+        checkOut: a.check_out ? new Date(a.check_out).toLocaleTimeString() : null
+    }));
+
+    const summary = {
+        present: context.attendance.filter(a => a.status === 'present').length,
+        late: context.attendance.filter(a => a.status === 'late').length,
+        absent: context.attendance.filter(a => a.status === 'absent').length,
+        onLeave: context.attendance.filter(a => a.status === 'on_leave').length
+    };
+
+    return {
+        success: true,
+        message: `This week: ${summary.present} present, ${summary.late} late, ${summary.absent} absent, ${summary.onLeave} on leave`,
+        attendance: records,
+        summary: summary
+    };
+};
+
+/**
+ * Master action handler - routes to appropriate handler
+ */
+const createActionHandler = (employeeId, context) => {
+    return async (toolName, toolInput) => {
+        switch (toolName) {
+            case 'createTask':
+                return await handleCreateTask(employeeId, toolInput);
+            case 'checkIn':
+                return await handleCheckIn(employeeId);
+            case 'checkOut':
+                return await handleCheckOut(employeeId);
+            case 'requestLeave':
+                return await handleLeaveRequest(employeeId, toolInput);
+            case 'messageManager':
+                return await handleMessageManager(employeeId, toolInput.content);
+            case 'messageHR':
+                return await handleMessageHR(employeeId, toolInput.content);
+            case 'getMyTasks':
+                return await handleGetMyTasks(employeeId, context);
+            case 'getMyAttendance':
+                return await handleGetMyAttendance(employeeId, context);
+            default:
+                return { success: false, error: `Unknown action: ${toolName}` };
+        }
+    };
+};
+
 /**
  * Get complete context about an employee for AI bot
  */
@@ -91,8 +646,159 @@ const getEmployeeContext = async (employeeId) => {
 /**
  * Generate mock bot response based on message content (fallback when AI unavailable)
  */
-const generateMockResponse = async (message, context) => {
+const generateMockResponse = async (message, context, employeeId) => {
     const lowerMessage = message.toLowerCase();
+
+    // Check-in handling
+    if (lowerMessage.includes('check me in') || lowerMessage.includes("i'm here") ||
+        lowerMessage.includes('i arrived') || lowerMessage.includes('im here')) {
+        if (employeeId) {
+            const result = await handleCheckIn(employeeId);
+            if (result.success) {
+                return {
+                    content: `${result.isLate ? '⚠️' : '✅'} ${result.message} at ${result.checkInTime}. Have a productive day, ${context.employee.name}!`,
+                    messageType: 'report',
+                    metadata: { action: 'check_in', ...result }
+                };
+            } else {
+                return {
+                    content: result.error,
+                    messageType: 'report',
+                    metadata: { action: 'check_in_failed', error: result.error }
+                };
+            }
+        }
+    }
+
+    // Check-out handling
+    if (lowerMessage.includes('check me out') || lowerMessage.includes("i'm leaving") ||
+        lowerMessage.includes('logging off') || lowerMessage.includes('going home') ||
+        lowerMessage.includes('im leaving')) {
+        if (employeeId) {
+            const result = await handleCheckOut(employeeId);
+            if (result.success) {
+                return {
+                    content: `✅ ${result.message} See you tomorrow, ${context.employee.name}!`,
+                    messageType: 'report',
+                    metadata: { action: 'check_out', ...result }
+                };
+            } else {
+                return {
+                    content: result.error,
+                    messageType: 'report',
+                    metadata: { action: 'check_out_failed', error: result.error }
+                };
+            }
+        }
+    }
+
+    // Create task handling
+    if (lowerMessage.includes('create') && lowerMessage.includes('task') ||
+        lowerMessage.includes('add') && lowerMessage.includes('task') ||
+        lowerMessage.includes('remind me to')) {
+        // Extract task details from message
+        const titleMatch = message.match(/(?:create|add)\s+(?:a\s+)?task\s+(?:called\s+|titled\s+|named\s+)?["']?([^"']+?)["']?\s*(?:due|by|for|$)/i) ||
+                          message.match(/remind me to\s+(.+?)(?:\s+(?:by|on|tomorrow|next|due)|$)/i);
+        const title = titleMatch ? titleMatch[1].trim() : 'New Task';
+
+        // Check for due date keywords
+        let dueDate = null;
+        if (lowerMessage.includes('tomorrow')) dueDate = 'tomorrow';
+        else if (lowerMessage.includes('today')) dueDate = 'today';
+        else if (lowerMessage.includes('next week')) dueDate = 'next week';
+        else if (lowerMessage.includes('friday')) dueDate = 'friday';
+        else if (lowerMessage.includes('monday')) dueDate = 'monday';
+
+        if (employeeId) {
+            const result = await handleCreateTask(employeeId, {
+                title: title,
+                due_date: dueDate,
+                priority: lowerMessage.includes('urgent') || lowerMessage.includes('high priority') ? 'high' : 'medium'
+            });
+
+            if (result.success) {
+                return {
+                    content: `✅ Task created: **${result.task.title}**\n- Priority: ${result.task.priority}\n- Due: ${result.task.due_date || 'Not set'}\n- Status: ${result.task.status}`,
+                    messageType: 'report',
+                    metadata: { action: 'task_created', ...result }
+                };
+            } else {
+                return {
+                    content: `Failed to create task: ${result.error}`,
+                    messageType: 'report',
+                    metadata: { action: 'task_failed', error: result.error }
+                };
+            }
+        }
+    }
+
+    // Leave request handling
+    if ((lowerMessage.includes('need') || lowerMessage.includes('want') || lowerMessage.includes('request')) &&
+        (lowerMessage.includes('off') || lowerMessage.includes('leave') || lowerMessage.includes('vacation'))) {
+        // Extract date
+        let leaveDate = null;
+        if (lowerMessage.includes('tomorrow')) leaveDate = 'tomorrow';
+        else if (lowerMessage.includes('friday')) leaveDate = 'friday';
+        else if (lowerMessage.includes('monday')) leaveDate = 'monday';
+
+        // Extract reason
+        const reasonMatch = message.match(/(?:for|because|due to)\s+(.+?)(?:\.|$)/i);
+        const reason = reasonMatch ? reasonMatch[1].trim() : 'Personal reason';
+
+        if (leaveDate && employeeId) {
+            const result = await handleLeaveRequest(employeeId, { date: leaveDate, reason });
+            if (result.success) {
+                return {
+                    content: `✅ Leave request submitted for ${result.leaveDate}\n- Reason: ${result.reason}\n${result.managerNotified ? `- Manager (${result.managerNotified}) has been notified` : ''}`,
+                    messageType: 'request',
+                    metadata: { action: 'leave_requested', ...result }
+                };
+            }
+        }
+    }
+
+    // Message manager
+    if (lowerMessage.includes('tell') && lowerMessage.includes('manager') ||
+        lowerMessage.includes('message') && lowerMessage.includes('manager') ||
+        lowerMessage.includes('notify') && lowerMessage.includes('manager')) {
+        const contentMatch = message.match(/(?:manager|boss|supervisor)\s+(?:that\s+)?(.+)/i);
+        const msgContent = contentMatch ? contentMatch[1].trim() : message;
+
+        if (employeeId && context.manager) {
+            const result = await handleMessageManager(employeeId, msgContent);
+            if (result.success) {
+                return {
+                    content: `✅ ${result.message}`,
+                    messageType: 'request',
+                    metadata: { action: 'message_sent_to_manager', ...result }
+                };
+            }
+        } else if (!context.manager) {
+            return {
+                content: `You don't have a manager assigned. Would you like to message HR instead?`,
+                messageType: 'request',
+                metadata: { action: 'no_manager' }
+            };
+        }
+    }
+
+    // Message HR
+    if (lowerMessage.includes('report to hr') || lowerMessage.includes('message hr') ||
+        lowerMessage.includes('tell hr') || lowerMessage.includes('contact hr')) {
+        const contentMatch = message.match(/(?:hr|human resources)\s+(?:about\s+|that\s+)?(.+)/i);
+        const msgContent = contentMatch ? contentMatch[1].trim() : message;
+
+        if (employeeId) {
+            const result = await handleMessageHR(employeeId, msgContent);
+            if (result.success) {
+                return {
+                    content: `✅ ${result.message}`,
+                    messageType: 'request',
+                    metadata: { action: 'message_sent_to_hr', ...result }
+                };
+            }
+        }
+    }
 
     // Task-related queries
     if (lowerMessage.includes('task') || lowerMessage.includes('todo') || lowerMessage.includes('work')) {
@@ -171,15 +877,20 @@ const generateMockResponse = async (message, context) => {
     if (lowerMessage.includes('help') || lowerMessage.includes('what can you do')) {
         return {
             content: `Hello ${context.employee.name}! I'm your BBC Assistant. Here's what I can help you with:\n\n` +
-                `**Tasks & Work**\n` +
-                `- "Show my tasks" - View your pending tasks\n` +
-                `- "What's my workload?" - Get task summary\n\n` +
                 `**Attendance**\n` +
-                `- "Am I late this week?" - Check attendance status\n` +
-                `- "Report absence" - Notify your manager\n\n` +
+                `- "Check me in" or "I'm here" - Record your arrival\n` +
+                `- "Check me out" or "I'm leaving" - Record your departure\n` +
+                `- "Show my attendance" - View this week's records\n\n` +
+                `**Tasks**\n` +
+                `- "Create a task called X due tomorrow" - Create new task\n` +
+                `- "Show my tasks" - View your pending tasks\n` +
+                `- "Remind me to X" - Quick task creation\n\n` +
+                `**Leave Requests**\n` +
+                `- "I need Friday off for a doctor appointment" - Request leave\n` +
+                `- "Request vacation for tomorrow" - Submit leave\n\n` +
                 `**Communication**\n` +
-                `- "Message my manager" - Send message to your manager\n` +
-                `- "Route to HR" - Forward to HR department\n\n` +
+                `- "Tell my manager I'll be late" - Message your manager\n` +
+                `- "Report to HR about the broken AC" - Message HR department\n\n` +
                 `**Information**\n` +
                 `- "Who is my manager?" - View manager info\n` +
                 `- "My profile" - View your details\n\n` +
@@ -279,13 +990,16 @@ const handleBotMessage = async (req, res) => {
         // Get employee context
         const context = await getEmployeeContext(employeeId);
 
+        // Create action handler for tool calls
+        const actionHandler = createActionHandler(employeeId, context);
+
         // Try AI response first, fall back to mock if unavailable
-        let botResponse = await generateAIResponse(content, context);
+        let botResponse = await generateAIResponse(content, context, actionHandler);
 
         // If AI failed or returned null, use mock response
         if (!botResponse) {
             console.log('Using mock response (AI unavailable or failed)');
-            botResponse = await generateMockResponse(content, context);
+            botResponse = await generateMockResponse(content, context, employeeId);
         }
 
         // Save bot response
