@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { generateAIResponse } = require('../services/aiService');
 
 /**
  * Get complete context about an employee for AI bot
@@ -88,9 +89,9 @@ const getEmployeeContext = async (employeeId) => {
 };
 
 /**
- * Generate bot response based on message content (mock AI for now)
+ * Generate mock bot response based on message content (fallback when AI unavailable)
  */
-const generateBotResponse = async (message, context) => {
+const generateMockResponse = async (message, context) => {
     const lowerMessage = message.toLowerCase();
 
     // Task-related queries
@@ -278,8 +279,14 @@ const handleBotMessage = async (req, res) => {
         // Get employee context
         const context = await getEmployeeContext(employeeId);
 
-        // Generate bot response
-        const botResponse = await generateBotResponse(content, context);
+        // Try AI response first, fall back to mock if unavailable
+        let botResponse = await generateAIResponse(content, context);
+
+        // If AI failed or returned null, use mock response
+        if (!botResponse) {
+            console.log('Using mock response (AI unavailable or failed)');
+            botResponse = await generateMockResponse(content, context);
+        }
 
         // Save bot response
         const botMessage = await prisma.message.create({
