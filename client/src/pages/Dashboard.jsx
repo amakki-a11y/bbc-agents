@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
     Search, UserPlus, Copy,
-    ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot
+    ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
+    Users, Building2, Clock, GitBranch
 } from 'lucide-react';
 import axios from 'axios';
 import NotificationBell from '../components/NotificationBell';
@@ -165,6 +166,31 @@ const Dashboard = ({ children }) => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }} onClick={() => window.location.href = '/bot'}>
                             <Bot size={18} /> AI Assistant
+                        </div>
+
+                        {/* Company Section Divider */}
+                        <div style={{
+                            margin: '1rem 0 0.5rem',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            color: '#999',
+                            letterSpacing: '0.5px'
+                        }}>
+                            Company
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }} onClick={() => window.location.href = '/employees'} className="sidebar-item">
+                            <Users size={18} /> Employees
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }} onClick={() => window.location.href = '/departments'} className="sidebar-item">
+                            <Building2 size={18} /> Departments
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }} onClick={() => window.location.href = '/attendance'} className="sidebar-item">
+                            <Clock size={18} /> Attendance
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }} onClick={() => window.location.href = '/org-chart'} className="sidebar-item">
+                            <GitBranch size={18} /> Org Chart
                         </div>
                     </div>
 
