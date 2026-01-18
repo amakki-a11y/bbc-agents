@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
     Search, UserPlus, Copy,
-    ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp
+    ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot
 } from 'lucide-react';
 import axios from 'axios';
 import NotificationBell from '../components/NotificationBell';
+import BotButton from '../components/bot/BotButton';
 
 const Dashboard = ({ children }) => {
     const { logout, user } = useAuth();
@@ -162,6 +163,9 @@ const Dashboard = ({ children }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }}>
                             <Calendar size={18} /> Calendar
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px', color: '#555' }} onClick={() => window.location.href = '/bot'}>
+                            <Bot size={18} /> AI Assistant
+                        </div>
                     </div>
 
                     {/* Bottom Sidebar */}
@@ -186,7 +190,8 @@ const Dashboard = ({ children }) => {
                 </main>
             </div>
 
-
+            {/* Floating Bot Button */}
+            <BotButton />
         </div>
     );
 };

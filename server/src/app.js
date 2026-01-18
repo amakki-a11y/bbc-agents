@@ -46,6 +46,7 @@ app.use('/api/departments', require('./routes/departments.routes'));
 app.use('/api/employees', require('./routes/employees.routes'));
 app.use('/api/attendance', require('./routes/attendance.routes'));
 app.use('/api/roles', require('./routes/roles.routes'));
+app.use('/api/bot', require('./routes/ai_bot.routes'));
 app.use('/ai', aiRoutes);
 app.use('/health', healthRoutes);
 

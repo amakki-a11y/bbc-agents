@@ -14,6 +14,7 @@ const AnalyticsDashboard = React.lazy(() => import('./pages/AnalyticsDashboard')
 const ProjectListView = React.lazy(() => import('./pages/ProjectListView'));
 const TaskTemplates = React.lazy(() => import('./pages/TaskTemplates'));
 const TaskDetailsPage = React.lazy(() => import('./pages/TaskDetailsPage'));
+const BotPage = React.lazy(() => import('./pages/BotPage'));
 
 function App() {
     return (
@@ -29,6 +30,7 @@ function App() {
                                 <Route path="/projects/:id" element={<ProtectedRoute><Dashboard><ProjectListView /></Dashboard></ProtectedRoute>} />
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
+                                <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </Suspense>

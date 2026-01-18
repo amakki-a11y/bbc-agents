@@ -61,6 +61,26 @@ model Employee {
   updated_at    DateTime @updatedAt
   attendances   Attendance[] @relation("EmployeeAttendance")
   approvedAttendances Attendance[] @relation("AttendanceApprover")
+  messages      Message[] @relation("EmployeeMessages")
+  routedMessages Message[] @relation("RoutedMessages")
+}
+
+// AI Bot Message System
+model Message {
+  id           String   @id @default(cuid())
+  employee_id  String
+  employee     Employee @relation("EmployeeMessages", fields: [employee_id], references: [id])
+  content      String
+  sender       String   @default("employee") // employee, bot
+  message_type String   @default("question") // question, report, request, announcement
+  routed_to    String?
+  routedEmployee Employee? @relation("RoutedMessages", fields: [routed_to], references: [id])
+  status       String   @default("delivered") // pending, delivered, read, actioned
+  metadata     String?  // JSON string for storing actions taken
+  created_at   DateTime @default(now())
+
+  @@index([employee_id])
+  @@index([created_at])
 }
 
 model Attendance {
