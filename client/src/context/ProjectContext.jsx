@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
 
 const ProjectContext = createContext();
@@ -17,6 +17,9 @@ export const ProjectProvider = ({ children }) => {
     const [viewSettings, setViewSettings] = useState({});
     const [searchQuery, setSearchQuery] = useState("");
     const [filters, setFilters] = useState({});
+    
+    // Track temp ID to real ID mappings
+    const tempIdMapRef = useRef(new Map());
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -41,13 +44,45 @@ export const ProjectProvider = ({ children }) => {
             const mappedTasks = res.data.map(task => ({
                 ...task,
                 projectId: task.project_id,
-                status: task.status?.toUpperCase().replace('_', ' ') || 'TO DO'
+                // Normalize status: backend uses lowercase, frontend uses uppercase with space
+                status: normalizeStatusForUI(task.status)
             }));
             setTasks(mappedTasks);
+            console.log('Tasks fetched from database:', mappedTasks.length);
         } catch (error) {
             console.error("Failed to fetch tasks:", error);
             setTasks([]);
         }
+    };
+
+    // Helper to normalize status for UI display
+    const normalizeStatusForUI = (status) => {
+        if (!status) return 'TO DO';
+        const statusMap = {
+            'todo': 'TO DO',
+            'to do': 'TO DO',
+            'in_progress': 'IN PROGRESS',
+            'in progress': 'IN PROGRESS',
+            'inprogress': 'IN PROGRESS',
+            'done': 'DONE',
+            'complete': 'DONE',
+            'completed': 'DONE'
+        };
+        return statusMap[status.toLowerCase()] || status.toUpperCase();
+    };
+
+    // Helper to normalize status for backend
+    const normalizeStatusForBackend = (status) => {
+        if (!status) return 'todo';
+        const statusMap = {
+            'TO DO': 'todo',
+            'TODO': 'todo',
+            'IN PROGRESS': 'in_progress',
+            'INPROGRESS': 'in_progress',
+            'DONE': 'done',
+            'COMPLETE': 'done'
+        };
+        return statusMap[status.toUpperCase()] || status.toLowerCase();
     };
 
     const addTask = useCallback(async (task) => {
@@ -66,87 +101,166 @@ export const ProjectProvider = ({ children }) => {
             activity: [initialActivity], 
             ...task, 
             id: tempId, 
-            projectId: activeProjectId 
+            projectId: activeProjectId,
+            _isSaving: true // Flag to indicate task is being saved
         };
 
+        // Add task with temp ID immediately for optimistic UI
         setTasks(prev => [...prev, localTask]);
+        console.log('Task added with temp ID:', tempId);
 
-        (async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const backendTask = {
-                    title: task.title || 'New Task',
-                    description: task.description || '',
-                    status: 'todo',
-                    priority: task.priority || 'medium',
-                    tags: task.tags || [],
-                    project_id: activeProjectId,
-                    due_date: task.due_date || null
-                };
-                
-                const res = await axios.post(`${API_URL}/tasks`, backendTask, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                const savedTask = {
-                    ...res.data,
-                    projectId: res.data.project_id,
-                    status: res.data.status?.toUpperCase().replace('_', ' ') || 'TO DO',
-                    activity: [initialActivity]
-                };
-                
-                setTasks(prev => prev.map(t => t.id === tempId ? savedTask : t));
-                console.log('Task saved to database:', savedTask);
-            } catch (e) {
-                console.error("Backend sync failed:", e.response?.data || e.message);
-            }
-        })();
-
-        return localTask;
+        // Save to backend
+        try {
+            const token = localStorage.getItem('token');
+            const backendTask = {
+                title: task.title || 'New Task',
+                description: task.description || '',
+                status: normalizeStatusForBackend(task.status || 'TO DO'),
+                priority: task.priority || 'medium',
+                tags: task.tags || [],
+                project_id: activeProjectId,
+                due_date: task.due_date || null
+            };
+            
+            console.log('Saving task to backend:', backendTask);
+            
+            const res = await axios.post(`${API_URL}/tasks`, backendTask, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            const savedTask = {
+                ...res.data,
+                projectId: res.data.project_id,
+                status: normalizeStatusForUI(res.data.status),
+                activity: [initialActivity],
+                _isSaving: false
+            };
+            
+            console.log('Task saved to database with real ID:', savedTask.id);
+            
+            // Store the mapping from temp ID to real ID
+            tempIdMapRef.current.set(tempId, savedTask.id);
+            
+            // Replace temp task with saved task
+            setTasks(prev => {
+                const updated = prev.map(t => t.id === tempId ? savedTask : t);
+                console.log('Tasks updated, replaced temp ID', tempId, 'with real ID', savedTask.id);
+                return updated;
+            });
+            
+            return savedTask;
+        } catch (e) {
+            console.error("Backend sync failed:", e.response?.data || e.message);
+            // Mark task as failed to save
+            setTasks(prev => prev.map(t => 
+                t.id === tempId ? { ...t, _isSaving: false, _saveFailed: true } : t
+            ));
+            return localTask;
+        }
     }, [activeProjectId, API_URL]);
 
+    // Helper to get real ID from temp ID if available
+    const getRealTaskId = useCallback((taskId) => {
+        const numericId = Number(taskId);
+        if (numericId > 1000000000000) {
+            // This is a temp ID, check if we have a mapping
+            const realId = tempIdMapRef.current.get(numericId);
+            if (realId) {
+                console.log('Mapped temp ID', numericId, 'to real ID', realId);
+                return realId;
+            }
+        }
+        return taskId;
+    }, []);
+
     const updateTask = useCallback(async (taskId, updates) => {
+        const realTaskId = getRealTaskId(taskId);
+        
+        // Normalize status if it's being updated
+        const normalizedUpdates = { ...updates };
+        if (updates.status) {
+            normalizedUpdates.status = normalizeStatusForUI(updates.status);
+        }
+        
         setTasks(prev => prev.map(t => {
-            if (t.id === taskId) {
-                const updatedTask = { ...t, ...updates };
-                axios.put(`${API_URL}/tasks/${taskId}`, { ...updates }, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                }).catch(e => console.log('Backend sync failed'));
-                return updatedTask;
+            if (t.id === taskId || t.id === realTaskId) {
+                return { ...t, ...normalizedUpdates };
             }
             return t;
         }));
-    }, [API_URL]);
+
+        // Only sync to backend if we have a real ID
+        if (realTaskId < 1000000000000) {
+            try {
+                const backendUpdates = { ...updates };
+                if (updates.status) {
+                    backendUpdates.status = normalizeStatusForBackend(updates.status);
+                }
+                await axios.put(`${API_URL}/tasks/${realTaskId}`, backendUpdates, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+                console.log('Task updated in database:', realTaskId);
+            } catch (e) {
+                console.error('Backend sync failed:', e.response?.data || e.message);
+            }
+        } else {
+            console.log('Skipping backend update for temp ID:', taskId);
+        }
+    }, [API_URL, getRealTaskId]);
 
     const deleteTask = useCallback(async (taskId) => {
-        setTasks(prev => prev.filter(t => t.id !== taskId));
-        try {
-            await axios.delete(`${API_URL}/tasks/${taskId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        } catch (e) { console.log("Backend offline, local delete"); }
-    }, [API_URL]);
+        const realTaskId = getRealTaskId(taskId);
+        
+        setTasks(prev => prev.filter(t => t.id !== taskId && t.id !== realTaskId));
+        
+        // Only delete from backend if we have a real ID
+        if (realTaskId < 1000000000000) {
+            try {
+                await axios.delete(`${API_URL}/tasks/${realTaskId}`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+            } catch (e) { 
+                console.log("Backend delete failed:", e.message); 
+            }
+        }
+    }, [API_URL, getRealTaskId]);
 
     const bulkUpdateTasks = useCallback(async (taskIds, updates) => {
         if (!taskIds.length) return;
+        
+        const realTaskIds = taskIds.map(id => getRealTaskId(id)).filter(id => id < 1000000000000);
+        
         setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, ...updates } : t));
-        try {
-            await axios.put(`${API_URL}/tasks/bulk`, { taskIds, updates }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        } catch (e) { console.error("Bulk update failed", e); }
-    }, [API_URL]);
+        
+        if (realTaskIds.length > 0) {
+            try {
+                await axios.put(`${API_URL}/tasks/bulk`, { taskIds: realTaskIds, updates }, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+            } catch (e) { 
+                console.error("Bulk update failed", e); 
+            }
+        }
+    }, [API_URL, getRealTaskId]);
 
     const bulkDeleteTasks = useCallback(async (taskIds) => {
         if (!taskIds.length) return;
+        
+        const realTaskIds = taskIds.map(id => getRealTaskId(id)).filter(id => id < 1000000000000);
+        
         setTasks(prev => prev.filter(t => !taskIds.includes(t.id)));
-        try {
-            await axios.delete(`${API_URL}/tasks/bulk`, {
-                data: { taskIds },
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        } catch (e) { console.error("Bulk delete failed", e); }
-    }, [API_URL]);
+        
+        if (realTaskIds.length > 0) {
+            try {
+                await axios.delete(`${API_URL}/tasks/bulk`, {
+                    data: { taskIds: realTaskIds },
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                });
+            } catch (e) { 
+                console.error("Bulk delete failed", e); 
+            }
+        }
+    }, [API_URL, getRealTaskId]);
 
     const updateViewSetting = useCallback((projectId, key, value) => {
         setViewSettings(prev => ({
@@ -155,13 +269,32 @@ export const ProjectProvider = ({ children }) => {
         }));
     }, []);
 
+    // Get task by ID (handles temp ID to real ID mapping)
+    const getTaskById = useCallback((taskId) => {
+        const numericId = Number(taskId);
+        
+        // First try direct match
+        let task = tasks.find(t => t.id === numericId || t.id === taskId || String(t.id) === String(taskId));
+        
+        // If not found and it's a temp ID, check if we have a mapping
+        if (!task && numericId > 1000000000000) {
+            const realId = tempIdMapRef.current.get(numericId);
+            if (realId) {
+                task = tasks.find(t => t.id === realId);
+            }
+        }
+        
+        return task;
+    }, [tasks]);
+
     const value = useMemo(() => ({
         projects, activeProjectId, setActiveProjectId, tasks, addTask, updateTask,
         deleteTask, bulkUpdateTasks, bulkDeleteTasks, viewSettings, updateViewSetting,
-        searchQuery, setSearchQuery, filters, setFilters, fetchTasks
+        searchQuery, setSearchQuery, filters, setFilters, fetchTasks, getTaskById,
+        getRealTaskId
     }), [projects, activeProjectId, tasks, addTask, updateTask, deleteTask,
         bulkUpdateTasks, bulkDeleteTasks, viewSettings, updateViewSetting,
-        searchQuery, filters]);
+        searchQuery, filters, getTaskById, getRealTaskId]);
 
     return (
         <ProjectContext.Provider value={value}>
