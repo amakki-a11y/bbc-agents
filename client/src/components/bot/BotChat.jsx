@@ -11,8 +11,6 @@ const BotChat = ({ isFullPage = false }) => {
     const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
-    
-    // Get fetchTasks from ProjectContext for auto-refresh
     const { fetchTasks } = useProject();
 
     // Load conversation history on mount
@@ -100,7 +98,7 @@ const BotChat = ({ isFullPage = false }) => {
                 botContent.includes('created a new task') ||
                 botContent.includes('task has been added')
             ) {
-                console.log('🔄 Task created by bot, refreshing task list...');
+                console.log('Task created by bot, refreshing...');
                 fetchTasks();
             }
 
