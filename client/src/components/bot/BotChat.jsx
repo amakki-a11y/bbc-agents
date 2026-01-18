@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { http } from '../../api/http';
 import { Send, Bot, User, Loader2, AlertCircle } from 'lucide-react';
+import { useProject } from '../../context/ProjectContext';
 
 const BotChat = ({ isFullPage = false }) => {
     const [messages, setMessages] = useState([]);
@@ -10,6 +11,9 @@ const BotChat = ({ isFullPage = false }) => {
     const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+    
+    // Get fetchTasks from ProjectContext for auto-refresh
+    const { fetchTasks } = useProject();
 
     // Load conversation history on mount
     useEffect(() => {
@@ -87,6 +91,19 @@ const BotChat = ({ isFullPage = false }) => {
                     }
                 ];
             });
+
+            // Auto-refresh tasks if bot created a task
+            const metadata = response.data.botMessage.metadata;
+            const botContent = response.data.botMessage.content?.toLowerCase() || '';
+            if (
+                (metadata && (metadata.action === 'task_created' || metadata.task)) ||
+                botContent.includes('created a new task') ||
+                botContent.includes('task has been added')
+            ) {
+                console.log('🔄 Task created by bot, refreshing task list...');
+                fetchTasks();
+            }
+
         } catch (err) {
             console.error('Failed to send message:', err);
             setError(err.response?.data?.message || 'Failed to send message. Please try again.');
