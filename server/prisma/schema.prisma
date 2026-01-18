@@ -20,6 +20,64 @@ model User {
   projects      Project[]
   taskTemplates TaskTemplate[]
   notifications Notification[]
+  employee      Employee?
+}
+
+// Company System Models
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+  employees   Employee[]
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String   // JSON string for permissions
+  created_at  DateTime @default(now())
+  employees   Employee[]
+}
+
+model Employee {
+  id            String   @id @default(cuid())
+  user_id       Int      @unique
+  user          User     @relation(fields: [user_id], references: [id])
+  name          String
+  email         String   @unique
+  phone         String?
+  department_id String
+  department    Department @relation(fields: [department_id], references: [id])
+  role_id       String
+  role          Role     @relation(fields: [role_id], references: [id])
+  manager_id    String?
+  manager       Employee? @relation("EmployeeManager", fields: [manager_id], references: [id])
+  subordinates  Employee[] @relation("EmployeeManager")
+  hire_date     DateTime
+  status        String   @default("active") // active, on_leave, terminated
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  attendances   Attendance[] @relation("EmployeeAttendance")
+  approvedAttendances Attendance[] @relation("AttendanceApprover")
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  employee_id  String
+  employee     Employee @relation("EmployeeAttendance", fields: [employee_id], references: [id])
+  date         DateTime
+  check_in     DateTime?
+  check_out    DateTime?
+  status       String   @default("present") // present, late, absent, on_leave, half_day
+  notes        String?
+  approved_by  String?
+  approver     Employee? @relation("AttendanceApprover", fields: [approved_by], references: [id])
+  created_at   DateTime @default(now())
+
+  @@index([employee_id])
+  @@index([date])
 }
 
 model Project {

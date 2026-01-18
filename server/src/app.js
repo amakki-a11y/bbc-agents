@@ -42,6 +42,10 @@ app.use('/api', dataRoutes);
 app.use('/api/tasks/details', detailedTaskRoutes); // Specialized routes
 app.use('/api/projects', require('./routes/projects.routes'));
 app.use('/api/templates', require('./routes/templates.routes'));
+app.use('/api/departments', require('./routes/departments.routes'));
+app.use('/api/employees', require('./routes/employees.routes'));
+app.use('/api/attendance', require('./routes/attendance.routes'));
+app.use('/api/roles', require('./routes/roles.routes'));
 app.use('/ai', aiRoutes);
 app.use('/health', healthRoutes);
 
