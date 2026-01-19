@@ -13,12 +13,10 @@ const BotChat = ({ isFullPage = false }) => {
     const inputRef = useRef(null);
     const { fetchTasks } = useProject();
 
-    // Load conversation history on mount
     useEffect(() => {
         loadHistory();
     }, []);
 
-    // Scroll to bottom when messages change
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -31,11 +29,9 @@ const BotChat = ({ isFullPage = false }) => {
         try {
             const response = await http.get('/api/bot/history?limit=50');
             setMessages(response.data);
-            // Mark messages as read
             await http.post('/api/bot/read');
         } catch (err) {
             console.error('Failed to load history:', err);
-            // Show welcome message if no history
             if (err.response?.status === 400) {
                 setMessages([{
                     id: 'welcome',
@@ -68,7 +64,6 @@ const BotChat = ({ isFullPage = false }) => {
                 content: userMessage.content
             });
 
-            // Replace temp message with actual and add bot response
             setMessages(prev => {
                 const filtered = prev.filter(m => m.id !== userMessage.id);
                 return [
@@ -90,7 +85,6 @@ const BotChat = ({ isFullPage = false }) => {
                 ];
             });
 
-            // Auto-refresh tasks if bot created a task
             const metadata = response.data.botMessage.metadata;
             const botContent = response.data.botMessage.content?.toLowerCase() || '';
             if (
@@ -105,7 +99,6 @@ const BotChat = ({ isFullPage = false }) => {
         } catch (err) {
             console.error('Failed to send message:', err);
             setError(err.response?.data?.message || 'Failed to send message. Please try again.');
-            // Remove the temp message on error
             setMessages(prev => prev.filter(m => m.id !== userMessage.id));
         } finally {
             setIsLoading(false);
@@ -126,7 +119,6 @@ const BotChat = ({ isFullPage = false }) => {
     };
 
     const formatContent = (content) => {
-        // Convert markdown-like formatting to HTML
         return content
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\n/g, '<br />');
@@ -219,7 +211,6 @@ const BotChat = ({ isFullPage = false }) => {
 
     return (
         <div style={containerStyle}>
-            {/* Header */}
             <div style={headerStyle}>
                 <div style={{
                     width: '40px',
@@ -240,7 +231,6 @@ const BotChat = ({ isFullPage = false }) => {
                 </div>
             </div>
 
-            {/* Messages */}
             <div style={messagesContainerStyle}>
                 {messages.length === 0 && !isLoading && (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px' }}>
@@ -346,7 +336,6 @@ const BotChat = ({ isFullPage = false }) => {
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <div style={inputContainerStyle}>
                 <input
                     ref={inputRef}
