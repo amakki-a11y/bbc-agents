@@ -1,77 +1,96 @@
-import React from 'react';
+import { FileText, ListChecks, Zap } from 'lucide-react';
 
 const TaskTabs = ({ activeTab, setActiveTab, counts = {} }) => {
     const tabs = [
         {
             id: 'details',
             label: 'Details',
-            icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-            )
+            icon: FileText
         },
         {
             id: 'subtasks',
             label: 'Subtasks',
             count: counts.subtasks || 0,
-            icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-            )
+            icon: ListChecks
         },
         {
             id: 'actionItems',
             label: 'Action Items',
             count: counts.actionItems || 0,
-            icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-            )
+            icon: Zap
         }
     ];
 
     return (
-        <div className="border-b border-gray-200 bg-white">
-            <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                {tabs.map((tab) => {
-                    const isActive = activeTab === tab.id;
+        <div style={{
+            display: 'flex',
+            gap: '4px',
+            borderBottom: '1px solid #e5e7eb',
+            marginBottom: '1rem'
+        }}>
+            {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
 
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`
-                group inline-flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm
-                transition-colors duration-150
-                ${isActive
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }
-              `}
-                            aria-current={isActive ? 'page' : undefined}
-                        >
-                            <span className={`${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}`}>
-                                {tab.icon}
+                return (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '12px 16px',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: isActive ? '2px solid #4f46e5' : '2px solid transparent',
+                            marginBottom: '-1px',
+                            fontSize: '0.9rem',
+                            fontWeight: isActive ? 600 : 500,
+                            color: isActive ? '#4f46e5' : '#6b7280',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!isActive) {
+                                e.currentTarget.style.color = '#374151';
+                                e.currentTarget.style.borderBottomColor = '#d1d5db';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isActive) {
+                                e.currentTarget.style.color = '#6b7280';
+                                e.currentTarget.style.borderBottomColor = 'transparent';
+                            }
+                        }}
+                    >
+                        <Icon
+                            size={16}
+                            style={{
+                                color: isActive ? '#4f46e5' : '#9ca3af'
+                            }}
+                        />
+                        <span>{tab.label}</span>
+                        {tab.count > 0 && (
+                            <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '20px',
+                                height: '20px',
+                                padding: '0 6px',
+                                borderRadius: '10px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                background: isActive ? '#eef2ff' : '#f3f4f6',
+                                color: isActive ? '#4f46e5' : '#6b7280'
+                            }}>
+                                {tab.count}
                             </span>
-                            <span>{tab.label}</span>
-                            {tab.count > 0 && (
-                                <span className={`
-                  ml-1 py-0.5 px-2 rounded-full text-xs font-medium
-                  ${isActive
-                                        ? 'bg-blue-100 text-blue-600'
-                                        : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
-                                    }
-                `}>
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
-            </nav>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
 };

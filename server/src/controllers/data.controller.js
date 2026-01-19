@@ -4,6 +4,9 @@ const prisma = new PrismaClient();
 // Tasks
 const cache = require('../utils/cache');
 
+// Import activity logger from detailed_task.controller
+const { logActivity } = require('./detailed_task.controller');
+
 // Helper function to parse tags from DB (string) to array
 const parseTags = (tagsString) => {
     if (!tagsString) return [];
@@ -124,6 +127,9 @@ const createTask = async (req, res) => {
             }
         });
 
+        // Log task creation activity
+        await logActivity(task.id, req.user.userId, 'created', 'created this task');
+
         cache.delByPrefix(`tasks:${req.user.userId}`);
 
         // Return task with tags parsed back to array
@@ -148,8 +154,11 @@ const updateTask = async (req, res) => {
             removeBlockedBy // IDs to REMOVE
         } = req.body;
 
+        // Get old task for activity logging comparison
+        const oldTask = await prisma.task.findUnique({ where: { id: parseInt(id) } });
+
         const updateData = {};
-        
+
         // Only include fields that are actually provided
         if (title !== undefined) updateData.title = title;
         if (status !== undefined) updateData.status = status;
@@ -182,6 +191,83 @@ const updateTask = async (req, res) => {
             data: updateData,
             include: { blockedBy: true, blocking: true }
         });
+
+        // Activity logging helpers
+        const formatStatus = (s) => {
+            const map = { 'todo': 'To Do', 'in_progress': 'In Progress', 'in_review': 'In Review', 'done': 'Done', 'blocked': 'Blocked' };
+            return map[s] || s;
+        };
+        const formatPriority = (p) => {
+            const map = { 'urgent': 'Urgent', 'high': 'High', 'normal': 'Normal', 'low': 'Low', 'medium': 'Normal' };
+            return map[p] || p || 'None';
+        };
+        const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'none';
+
+        // Log activity for changes (if oldTask exists)
+        if (oldTask) {
+            const userId = req.user.userId;
+
+            // Status change
+            if (status !== undefined && status !== oldTask.status) {
+                await logActivity(id, userId, 'status_change', `changed status from ${formatStatus(oldTask.status)} to ${formatStatus(status)}`);
+            }
+
+            // Priority change
+            if (priority !== undefined && priority !== oldTask.priority) {
+                await logActivity(id, userId, 'priority_change', `changed priority from ${formatPriority(oldTask.priority)} to ${formatPriority(priority)}`);
+            }
+
+            // Title change
+            if (title !== undefined && title !== oldTask.title) {
+                await logActivity(id, userId, 'field_update', `changed title from "${oldTask.title}" to "${title}"`);
+            }
+
+            // Description change - log with old/new values for diff view
+            if (description !== undefined && description !== oldTask.description) {
+                const oldDesc = oldTask.description || '';
+                const newDesc = description || '';
+                const metadata = {
+                    old_value: oldDesc.substring(0, 500), // Truncate for storage
+                    new_value: newDesc.substring(0, 500)
+                };
+
+                if (!oldTask.description && description) {
+                    await logActivity(id, userId, 'description_change', 'added description', metadata);
+                } else if (oldTask.description && !description) {
+                    await logActivity(id, userId, 'description_change', 'removed description', metadata);
+                } else {
+                    await logActivity(id, userId, 'description_change', 'updated description', metadata);
+                }
+            }
+
+            // Due date change
+            const oldDueDate = oldTask.due_date ? new Date(oldTask.due_date).toISOString().split('T')[0] : null;
+            const newDueDate = due_date ? new Date(due_date).toISOString().split('T')[0] : null;
+            if (due_date !== undefined && oldDueDate !== newDueDate) {
+                if (!oldDueDate && newDueDate) {
+                    await logActivity(id, userId, 'date_change', `set due date to ${formatDate(due_date)}`);
+                } else if (oldDueDate && !newDueDate) {
+                    await logActivity(id, userId, 'date_change', 'removed due date');
+                } else {
+                    await logActivity(id, userId, 'date_change', `changed due date from ${formatDate(oldTask.due_date)} to ${formatDate(due_date)}`);
+                }
+            }
+
+            // Tags change
+            if (tags !== undefined) {
+                const oldTags = parseTags(oldTask.tags);
+                const newTags = Array.isArray(tags) ? tags : [];
+                const addedTags = newTags.filter(t => !oldTags.includes(t));
+                const removedTags = oldTags.filter(t => !newTags.includes(t));
+
+                for (const tag of addedTags) {
+                    await logActivity(id, userId, 'tag_change', `added tag: ${tag}`);
+                }
+                for (const tag of removedTags) {
+                    await logActivity(id, userId, 'tag_change', `removed tag: ${tag}`);
+                }
+            }
+        }
 
         // Recurrence Logic placeholder
         if (status === 'done' && task.recurrenceType) {

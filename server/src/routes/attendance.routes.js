@@ -13,6 +13,8 @@ const {
     updateAttendance,
     deleteAttendance,
     getMyAttendance,
+    getMyTodayStatus,
+    getTeamAttendance,
     getAttendanceSummary,
     getTodayStatus
 } = require('../controllers/attendance.controller');
@@ -27,6 +29,12 @@ router.post('/check-out', checkOut);
 
 // Get my attendance (no permission required - own attendance)
 router.get('/me', getMyAttendance);
+
+// Get my today status (no permission required - own attendance)
+router.get('/me/today', getMyTodayStatus);
+
+// Get team attendance (requires manage_attendance permission)
+router.get('/team', checkPermission('manage_attendance'), getTeamAttendance);
 
 // Get today's status (dashboard) - requires manage_attendance permission
 router.get('/today', checkPermission('manage_attendance'), getTodayStatus);

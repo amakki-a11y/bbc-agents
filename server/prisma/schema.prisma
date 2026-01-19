@@ -1,6 +1,7 @@
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -43,8 +44,8 @@ model Role {
 
 model Employee {
   id            String   @id @default(cuid())
-  user_id       Int      @unique
-  user          User     @relation(fields: [user_id], references: [id])
+  user_id       Int?     @unique
+  user          User?    @relation(fields: [user_id], references: [id])
   name          String
   email         String   @unique
   phone         String?
@@ -63,6 +64,9 @@ model Employee {
   approvedAttendances Attendance[] @relation("AttendanceApprover")
   messages      Message[] @relation("EmployeeMessages")
   routedMessages Message[] @relation("RoutedMessages")
+  leaves        Leave[] @relation("EmployeeLeaves")
+  approvedLeaves Leave[] @relation("LeaveApprover")
+  leaveBalances LeaveBalance[]
 }
 
 // AI Bot Message System
@@ -203,8 +207,9 @@ model Attachment {
 
 model Activity {
   id          Int      @id @default(autoincrement())
-  type        String   // status_change, comment, field_update, upload
+  type        String   // status_change, comment, field_update, description_change, attachment_upload, attachment_delete
   content     String
+  metadata    String?  // JSON string for additional data like old/new values
   timestamp   DateTime @default(now())
   user_id     Int?
   user        User?    @relation(fields: [user_id], references: [id])
@@ -249,4 +254,55 @@ model Notification {
 
   @@index([user_id])
   @@index([is_read])
+}
+
+// Leave Management Models
+
+model LeaveType {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  days_allowed Int      @default(0)  // Annual allowance (0 = unlimited)
+  color        String   @default("#3b82f6")
+  created_at   DateTime @default(now())
+  leaves       Leave[]
+  balances     LeaveBalance[]
+}
+
+model Leave {
+  id               String    @id @default(cuid())
+  employee_id      String
+  leave_type_id    String
+  start_date       DateTime
+  end_date         DateTime
+  days             Float     // Number of days (supports half days)
+  reason           String?
+  status           String    @default("pending")  // pending, approved, rejected, cancelled
+  approved_by      String?
+  approved_at      DateTime?
+  rejection_reason String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  employee         Employee  @relation("EmployeeLeaves", fields: [employee_id], references: [id])
+  leave_type       LeaveType @relation(fields: [leave_type_id], references: [id])
+  approver         Employee? @relation("LeaveApprover", fields: [approved_by], references: [id])
+
+  @@index([employee_id])
+  @@index([status])
+  @@index([start_date])
+}
+
+model LeaveBalance {
+  id            String    @id @default(cuid())
+  employee_id   String
+  leave_type_id String
+  year          Int
+  total_days    Float     // Total allowance for the year
+  used_days     Float     @default(0)
+  pending_days  Float     @default(0)
+
+  employee      Employee  @relation(fields: [employee_id], references: [id])
+  leave_type    LeaveType @relation(fields: [leave_type_id], references: [id])
+
+  @@unique([employee_id, leave_type_id, year])
 }

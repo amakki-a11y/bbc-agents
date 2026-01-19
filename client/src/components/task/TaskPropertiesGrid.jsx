@@ -7,9 +7,18 @@ import PriorityField from './PriorityField';
 import TrackTimeField from './TrackTimeField';
 import RelationshipsField from './RelationshipsField';
 
-const TaskPropertiesGrid = ({ task, onUpdate }) => {
+const TaskPropertiesGrid = ({ task, onUpdate, onTaskRefresh }) => {
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '2rem', marginBottom: '1.5rem' }}>
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1.5rem',
+            marginBottom: '2rem',
+            padding: '1.25rem',
+            background: '#f9fafb',
+            borderRadius: '12px',
+            border: '1px solid #f3f4f6'
+        }}>
             {/* Left Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <StatusField status={task.status} onUpdate={(val) => onUpdate('status', val)} />
@@ -22,8 +31,17 @@ const TaskPropertiesGrid = ({ task, onUpdate }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <AssigneesField assignee={task.assignee} onUpdate={(val) => onUpdate('assignee', val)} />
                 <PriorityField priority={task.priority} onUpdate={(val) => onUpdate('priority', val)} />
-                <TrackTimeField />
-                <RelationshipsField />
+                <TrackTimeField
+                    taskId={task.id}
+                    timeEntries={task.timeEntries || []}
+                    onTaskRefresh={onTaskRefresh}
+                />
+                <RelationshipsField
+                    taskId={task.id}
+                    blockedBy={task.blockedBy || []}
+                    blocking={task.blocking || []}
+                    onTaskRefresh={onTaskRefresh}
+                />
             </div>
         </div>
     );

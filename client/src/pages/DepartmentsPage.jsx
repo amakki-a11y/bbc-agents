@@ -16,10 +16,12 @@ const DepartmentsPage = () => {
             setLoading(true);
             const [deptRes, empRes] = await Promise.all([
                 http.get('/api/departments'),
-                http.get('/api/employees')
+                http.get('/api/employees?limit=1000')
             ]);
-            setDepartments(deptRes.data);
-            setEmployees(empRes.data);
+            setDepartments(deptRes.data || []);
+            // Handle paginated response: { data: [], pagination: {...} } or plain array
+            const employeesData = empRes.data?.data || empRes.data || [];
+            setEmployees(Array.isArray(employeesData) ? employeesData : []);
         } catch (error) {
             console.error('Failed to fetch departments:', error);
         } finally {
@@ -37,7 +39,7 @@ const DepartmentsPage = () => {
     );
 
     const getDepartmentEmployees = (deptId) => {
-        return employees.filter(emp => emp.department_id === deptId);
+        return (employees || []).filter(emp => emp.department_id === deptId);
     };
 
     const getDepartmentColor = (index) => {
@@ -56,23 +58,54 @@ const DepartmentsPage = () => {
 
     return (
         <Dashboard>
-            <div style={{ padding: '24px', height: '100%', overflow: 'auto' }}>
+            <div style={{ padding: '24px', height: '100%', overflow: 'auto', background: '#f9fafb' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <div>
-                            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1f2937', margin: 0 }}>
-                                <Building2 size={28} style={{ display: 'inline', marginRight: '12px', verticalAlign: 'middle' }} />
+                            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1f2937', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '10px',
+                                    background: 'linear-gradient(135deg, #7b68ee, #6366f1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <Building2 size={22} style={{ color: 'white' }} />
+                                </div>
                                 Departments
                             </h1>
-                            <p style={{ color: '#6b7280', marginTop: '4px' }}>
+                            <p style={{ color: '#6b7280', marginTop: '8px', marginLeft: '52px', fontSize: '14px' }}>
                                 Organize your company structure
                             </p>
                         </div>
                         <button
                             onClick={() => setShowAddForm(true)}
-                            className="btn btn-primary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 20px',
+                                background: '#7b68ee',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 2px 8px rgba(123, 104, 238, 0.3)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#6366f1';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#7b68ee';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
                         >
                             <Plus size={18} /> Add Department
                         </button>
@@ -92,7 +125,17 @@ const DepartmentsPage = () => {
                                 border: '1px solid #e5e7eb',
                                 borderRadius: '8px',
                                 fontSize: '14px',
-                                outline: 'none'
+                                outline: 'none',
+                                background: 'white',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onFocus={(e) => {
+                                e.currentTarget.style.borderColor = '#7b68ee';
+                                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(123, 104, 238, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                                e.currentTarget.style.boxShadow = 'none';
                             }}
                         />
                     </div>
@@ -100,18 +143,18 @@ const DepartmentsPage = () => {
 
                 {/* Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ background: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd' }}>
-                        <div style={{ color: '#0369a1', fontSize: '14px', fontWeight: 500 }}>Total Departments</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#0c4a6e' }}>{departments.length}</div>
+                    <div style={{ background: '#f0edff', padding: '20px', borderRadius: '12px', border: '1px solid #d4ccff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div style={{ color: '#7b68ee', fontSize: '14px', fontWeight: 500 }}>Total Departments</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#5b4dc7' }}>{(departments || []).length}</div>
                     </div>
-                    <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#15803d', fontSize: '14px', fontWeight: 500 }}>Total Employees</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#14532d' }}>{employees.length}</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#14532d' }}>{(employees || []).length}</div>
                     </div>
-                    <div style={{ background: '#fdf4ff', padding: '20px', borderRadius: '12px', border: '1px solid #f0abfc' }}>
+                    <div style={{ background: '#fdf4ff', padding: '20px', borderRadius: '12px', border: '1px solid #f0abfc', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#a21caf', fontSize: '14px', fontWeight: 500 }}>Avg. per Dept</div>
                         <div style={{ fontSize: '32px', fontWeight: 700, color: '#701a75' }}>
-                            {departments.length ? Math.round(employees.length / departments.length) : 0}
+                            {(departments || []).length ? Math.round((employees || []).length / (departments || []).length) : 0}
                         </div>
                     </div>
                 </div>
@@ -235,7 +278,7 @@ const DepartmentDetailModal = ({ department, employees, onClose, onUpdate }) => 
     const handleSave = async () => {
         try {
             setSaving(true);
-            await http.patch(`/api/departments/${department.id}`, formData);
+            await http.put(`/api/departments/${department.id}`, formData);
             onUpdate();
             setIsEditing(false);
         } catch (error) {

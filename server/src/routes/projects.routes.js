@@ -1,31 +1,57 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/auth.middleware');
-const { createProject, getProjects, getProjectDetails } = require('../controllers/projects.controller');
-const { check } = require('express-validator');
+const {
+    createProject,
+    getProjects,
+    getProjectDetails,
+    updateProject,
+    archiveProject,
+    deleteProject
+} = require('../controllers/projects.controller');
+const { check, param } = require('express-validator');
 const validate = require('../middleware/validate');
 
 router.use(authenticateToken);
 
+// Get all projects
+router.get('/', getProjects);
+
+// Create new project
 router.post('/', [
     check('name').trim().notEmpty().withMessage('Project name is required').escape(),
-    check('description').optional().trim().escape(),
-    check('status').optional().isIn(['planning', 'active', 'completed', 'on-hold']).withMessage('Invalid status'),
-    check('startDate').optional().isISO8601().withMessage('Invalid start date').toDate(),
-    check('endDate').optional().isISO8601().withMessage('Invalid end date').toDate(),
+    check('description').optional().trim(),
+    check('color').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Invalid color format'),
     validate
 ], createProject);
 
-router.get('/', getProjects);
-
+// Get project details
 router.get('/:id', [
-    // Assuming IDs are integers based on previous context, but strictly speaking generated IDs might be UUIDs or Ints.
-    // The previous code had check('id').isInt().
-    // If Prisma uses Int IDs, this is correct. If UUID, should be isUUID().
-    // Looking at schema would be best, but I'll assume Int for now as per typical Prisma defaults unless specified otherwise.
-    // The previous plan mentioned "Validate id is integer/int-like".
-    check('id').isInt().withMessage('Invalid project ID').toInt(),
+    param('id').isInt().withMessage('Invalid project ID').toInt(),
     validate
 ], getProjectDetails);
+
+// Update project
+router.put('/:id', [
+    param('id').isInt().withMessage('Invalid project ID').toInt(),
+    check('name').optional().trim().notEmpty().escape(),
+    check('description').optional().trim(),
+    check('color').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Invalid color format'),
+    validate
+], updateProject);
+
+// Archive/unarchive project
+router.patch('/:id/archive', [
+    param('id').isInt().withMessage('Invalid project ID').toInt(),
+    check('archived').optional().isBoolean().withMessage('Archived must be a boolean'),
+    validate
+], archiveProject);
+
+// Delete project
+router.delete('/:id', [
+    param('id').isInt().withMessage('Invalid project ID').toInt(),
+    check('moveTasks').optional().isInt().withMessage('moveTasks must be a valid project ID'),
+    validate
+], deleteProject);
 
 module.exports = router;

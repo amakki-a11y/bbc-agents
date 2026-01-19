@@ -1,37 +1,58 @@
 :root {
-  --bg-dark: #ffffff; /* White background */
-  --bg-card: #f8f9fc; /* Light Gray for cards/sidebar */
-  --primary: #7b68ee; /* Medium Slate Blue (Purple) */
+  --bg-dark: #ffffff;
+  /* White background */
+  --bg-card: #f8f9fc;
+  /* Light Gray for cards/sidebar */
+  --primary: #7b68ee;
+  /* Medium Slate Blue (Purple) */
   --primary-hover: #6a5acd;
-  --text-main: #2d333a; /* Dark Gray text */
+  --text-main: #2d333a;
+  /* Dark Gray text */
   --text-muted: #7f8c8d;
   --border: #e0e0e0;
-  --glass: rgba(255, 255, 255, 0.95); /* Light glass */
+  --glass: rgba(255, 255, 255, 0.95);
+  /* Light glass */
   --success: #00d084;
   --danger: #ff4d4d;
   --sidebar-bg: #fafafa;
   --header-bg: #7b68ee;
   --status-purple: #7b68ee;
   --status-gray: #b0b0b0;
+
+  /* Bot Assistant Theme */
+  --bot-primary: #7c3aed;
+  --bot-primary-dark: #6366f1;
+  --bot-bg-light: #f9fafb;
+  --bot-user-bubble: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  --bot-bot-bubble: #ffffff;
+  --bot-online: #10b981;
+  --bot-typing: #fbbf24;
 }
 
 /* ClickUp Style Helps */
 .status-pill {
-    padding: 2px 8px;
-    border-radius: 4px;
-    color: white;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
-.status-pill.purple { background-color: var(--status-purple); }
-.status-pill.gray { background-color: var(--status-gray); }
+
+.status-pill.purple {
+  background-color: var(--status-purple);
+}
+
+.status-pill.gray {
+  background-color: var(--status-gray);
+}
 
 .task-row {
-    border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
 }
+
 .task-row:hover {
-    background-color: #f7faff;
+  background-color: #f7faff;
 }
 
 body {
@@ -89,6 +110,7 @@ body {
 .sidebar-item {
   transition: all 0.15s ease;
 }
+
 .sidebar-item:hover {
   background-color: #f0f0f5;
   color: var(--primary) !important;
@@ -96,9 +118,137 @@ body {
 
 /* Spin animation for loading */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
+
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Bot Assistant Animations */
+@keyframes botBounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+@keyframes botMessageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes botPanelSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes botBadgePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes botRipple {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes botFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes botSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes botTooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Bot Assistant Utility Classes */
+.bot-animate-bounce {
+  animation: botBounce 1.4s infinite ease-in-out both;
+}
+
+.bot-animate-message {
+  animation: botMessageSlideIn 0.3s ease;
+}
+
+.bot-animate-panel {
+  animation: botPanelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bot-animate-badge {
+  animation: botBadgePulse 2s infinite;
+}
+
+.bot-animate-ripple {
+  animation: botRipple 2s infinite;
+}
+
+.bot-animate-fade {
+  animation: botFadeIn 0.2s ease;
+}
+
+/* Bot Custom Scrollbar */
+.bot-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bot-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bot-chat-messages::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.bot-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

@@ -298,7 +298,7 @@ const deleteAttendance = async (req, res) => {
 const getMyAttendance = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { start_date, end_date } = req.query;
+        const { start_date, end_date, year, month } = req.query;
 
         const employee = await prisma.employee.findUnique({
             where: { user_id: userId }
@@ -308,26 +308,209 @@ const getMyAttendance = async (req, res) => {
             return res.status(404).json({ error: 'Employee profile not found' });
         }
 
-        const where = {
-            employee_id: employee.id,
-            ...(start_date && end_date && {
+        let dateFilter = {};
+
+        // Support month/year query for calendar view
+        if (year && month) {
+            const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+            const endOfMonth = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+            dateFilter = {
+                date: {
+                    gte: startOfMonth,
+                    lte: endOfMonth
+                }
+            };
+        } else if (start_date && end_date) {
+            dateFilter = {
                 date: {
                     gte: new Date(start_date),
                     lte: new Date(end_date)
                 }
-            })
-        };
+            };
+        }
 
         const records = await prisma.attendance.findMany({
-            where,
-            orderBy: { date: 'desc' },
-            take: 30
+            where: {
+                employee_id: employee.id,
+                ...dateFilter
+            },
+            orderBy: { date: 'desc' }
         });
 
-        res.json(records);
+        // Calculate summary stats
+        const summary = {
+            present: records.filter(r => r.status === 'present').length,
+            late: records.filter(r => r.status === 'late').length,
+            absent: records.filter(r => r.status === 'absent').length,
+            onLeave: records.filter(r => r.status === 'on_leave').length,
+            halfDay: records.filter(r => r.status === 'half_day').length,
+            total: records.length
+        };
+
+        // Calculate attendance rate (present + late / total working days)
+        const workingDays = summary.present + summary.late + summary.absent + summary.halfDay;
+        summary.attendanceRate = workingDays > 0
+            ? Math.round(((summary.present + summary.late) / workingDays) * 100)
+            : 100;
+
+        res.json({
+            records,
+            summary,
+            employee: { id: employee.id, name: employee.name }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch attendance' });
+    }
+};
+
+// Get today's attendance for current user
+const getMyTodayStatus = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        const employee = await prisma.employee.findUnique({
+            where: { user_id: userId }
+        });
+
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee profile not found' });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const attendance = await prisma.attendance.findFirst({
+            where: {
+                employee_id: employee.id,
+                date: {
+                    gte: today,
+                    lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+                }
+            }
+        });
+
+        res.json({
+            hasCheckedIn: !!attendance?.check_in,
+            hasCheckedOut: !!attendance?.check_out,
+            checkInTime: attendance?.check_in,
+            checkOutTime: attendance?.check_out,
+            status: attendance?.status,
+            attendance
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch today status' });
+    }
+};
+
+// Get team attendance (for managers)
+const getTeamAttendance = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { department_id, start_date, end_date, year, month } = req.query;
+
+        // Get current user's employee profile to check if manager
+        const currentEmployee = await prisma.employee.findUnique({
+            where: { user_id: userId },
+            include: { role: true }
+        });
+
+        // Get employees to fetch attendance for
+        let employeeFilter = {};
+        if (department_id) {
+            employeeFilter = { department_id };
+        } else if (currentEmployee?.department_id) {
+            // Default to own department
+            employeeFilter = { department_id: currentEmployee.department_id };
+        }
+
+        const employees = await prisma.employee.findMany({
+            where: {
+                ...employeeFilter,
+                status: 'active'
+            },
+            include: {
+                department: { select: { id: true, name: true } },
+                role: { select: { name: true } }
+            }
+        });
+
+        // Build date filter
+        let dateFilter = {};
+        if (year && month) {
+            const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+            const endOfMonth = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+            dateFilter = {
+                date: { gte: startOfMonth, lte: endOfMonth }
+            };
+        } else if (start_date && end_date) {
+            dateFilter = {
+                date: { gte: new Date(start_date), lte: new Date(end_date) }
+            };
+        } else {
+            // Default to current month
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+            dateFilter = {
+                date: { gte: startOfMonth, lte: endOfMonth }
+            };
+        }
+
+        // Get attendance records for employees
+        const employeeIds = employees.map(e => e.id);
+        const records = await prisma.attendance.findMany({
+            where: {
+                employee_id: { in: employeeIds },
+                ...dateFilter
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        // Build team summary with attendance by employee
+        const teamData = employees.map(emp => {
+            const empRecords = records.filter(r => r.employee_id === emp.id);
+            return {
+                employee: {
+                    id: emp.id,
+                    name: emp.name,
+                    department: emp.department?.name,
+                    role: emp.role?.name
+                },
+                summary: {
+                    present: empRecords.filter(r => r.status === 'present').length,
+                    late: empRecords.filter(r => r.status === 'late').length,
+                    absent: empRecords.filter(r => r.status === 'absent').length,
+                    onLeave: empRecords.filter(r => r.status === 'on_leave').length,
+                    halfDay: empRecords.filter(r => r.status === 'half_day').length
+                },
+                records: empRecords
+            };
+        });
+
+        // Today's status
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayRecords = records.filter(r => {
+            const recordDate = new Date(r.date);
+            recordDate.setHours(0, 0, 0, 0);
+            return recordDate.getTime() === today.getTime();
+        });
+
+        res.json({
+            team: teamData,
+            todaySummary: {
+                present: todayRecords.filter(r => r.status === 'present').length,
+                late: todayRecords.filter(r => r.status === 'late').length,
+                absent: employees.length - todayRecords.filter(r => r.check_in).length,
+                onLeave: todayRecords.filter(r => r.status === 'on_leave').length,
+                totalEmployees: employees.length
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch team attendance' });
     }
 };
 
@@ -462,6 +645,8 @@ module.exports = {
     updateAttendance,
     deleteAttendance,
     getMyAttendance,
+    getMyTodayStatus,
+    getTeamAttendance,
     getAttendanceSummary,
     getTodayStatus
 };

@@ -34,7 +34,7 @@ router.get('/:id', [
 // Create employee - requires manage_employees permission
 router.post('/', [
     checkPermission('manage_employees'),
-    check('user_id').isInt().withMessage('Valid user_id is required'),
+    check('user_id').optional().isInt().withMessage('Valid user_id is required'),
     check('name').trim().notEmpty().withMessage('Name is required').escape(),
     check('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
     check('phone').optional().trim().escape(),

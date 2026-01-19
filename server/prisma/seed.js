@@ -23,6 +23,7 @@ const roles = [
       'view_all_tasks',
       'view_department_tasks',
       'manage_attendance',
+      'manage_leave',
       'view_reports',
       'send_announcements'
     ]),
@@ -33,6 +34,7 @@ const roles = [
       'manage_employees',
       'view_department_tasks',
       'manage_attendance',
+      'manage_leave',
       'view_reports'
     ]),
   },
@@ -47,6 +49,15 @@ const roles = [
     name: 'Employee',
     permissions: JSON.stringify([]),
   },
+];
+
+const leaveTypes = [
+  { name: 'Annual Leave', days_allowed: 20, color: '#3b82f6' },
+  { name: 'Sick Leave', days_allowed: 10, color: '#ef4444' },
+  { name: 'Personal Leave', days_allowed: 5, color: '#8b5cf6' },
+  { name: 'Maternity Leave', days_allowed: 90, color: '#ec4899' },
+  { name: 'Paternity Leave', days_allowed: 10, color: '#06b6d4' },
+  { name: 'Unpaid Leave', days_allowed: 0, color: '#6b7280' },
 ];
 
 async function main() {
@@ -73,6 +84,17 @@ async function main() {
     });
   }
   console.log(`Created ${roles.length} roles`);
+
+  // Seed Leave Types
+  console.log('Creating leave types...');
+  for (const type of leaveTypes) {
+    await prisma.leaveType.upsert({
+      where: { name: type.name },
+      update: { days_allowed: type.days_allowed, color: type.color },
+      create: type,
+    });
+  }
+  console.log(`Created ${leaveTypes.length} leave types`);
 
   console.log('Seeding completed successfully!');
 }

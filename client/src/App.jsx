@@ -17,8 +17,11 @@ const TaskDetailsPage = React.lazy(() => import('./pages/TaskDetailsPage'));
 const BotPage = React.lazy(() => import('./pages/BotPage'));
 const EmployeesPage = React.lazy(() => import('./pages/EmployeesPage'));
 const DepartmentsPage = React.lazy(() => import('./pages/DepartmentsPage'));
+const RolesPage = React.lazy(() => import('./pages/RolesPage'));
 const AttendancePage = React.lazy(() => import('./pages/AttendancePage'));
+const LeavePage = React.lazy(() => import('./pages/LeavePage'));
 const OrgChartPage = React.lazy(() => import('./pages/OrgChartPage'));
+const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 
 function App() {
     return (
@@ -37,8 +40,11 @@ function App() {
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
                                 <Route path="/employees" element={<ProtectedRoute><EmployeesPage /></ProtectedRoute>} />
                                 <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
+                                <Route path="/roles" element={<ProtectedRoute><RolesPage /></ProtectedRoute>} />
                                 <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
+                                <Route path="/leave" element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
                                 <Route path="/org-chart" element={<ProtectedRoute><OrgChartPage /></ProtectedRoute>} />
+                                <Route path="/inbox" element={<ProtectedRoute><Dashboard><InboxPage /></Dashboard></ProtectedRoute>} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </Suspense>

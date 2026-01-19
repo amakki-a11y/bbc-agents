@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { http } from '../../api/http';
 import { X, Save, Loader2 } from 'lucide-react';
 
-const EmployeeForm = ({ employee, onClose, onSave, departments, roles, employees }) => {
+const EmployeeForm = ({ employee, onClose, onSave, departments = [], roles = [], employees = [] }) => {
+    // Debug: Log props to verify data is being passed
+    console.log('EmployeeForm received:', { departments, roles, employees });
+
     const isEditing = !!employee;
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
@@ -13,12 +16,15 @@ const EmployeeForm = ({ employee, onClose, onSave, departments, roles, employees
         department_id: employee?.department_id || '',
         role_id: employee?.role_id || '',
         manager_id: employee?.manager_id || '',
-        hire_date: employee?.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : '',
+        hire_date: employee?.hire_date
+            ? new Date(employee.hire_date).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
         status: employee?.status || 'active'
     });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        console.log('Field changed:', name, '=', value);
         setFormData(prev => ({ ...prev, [name]: value }));
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
@@ -45,12 +51,20 @@ const EmployeeForm = ({ employee, onClose, onSave, departments, roles, employees
         try {
             setLoading(true);
             const payload = {
-                ...formData,
-                manager_id: formData.manager_id || null
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone || null,
+                department_id: formData.department_id,
+                role_id: formData.role_id,
+                manager_id: formData.manager_id || null,
+                hire_date: formData.hire_date || null,
+                status: formData.status
             };
+            console.log('Sending payload:', payload);
+            console.log('formData state:', formData);
 
             if (isEditing) {
-                await http.patch(`/api/employees/${employee.id}`, payload);
+                await http.put(`/api/employees/${employee.id}`, payload);
             } else {
                 await http.post('/api/employees', payload);
             }

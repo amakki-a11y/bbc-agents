@@ -8,7 +8,9 @@ const {
     getConversationHistory,
     getContext,
     routeMessage,
-    markAsRead
+    markAsRead,
+    clearHistory,
+    writeTaskDescription
 } = require('../controllers/ai_bot.controller');
 
 // All routes require authentication
@@ -37,5 +39,15 @@ router.post('/route', [
 
 // Mark messages as read
 router.post('/read', markAsRead);
+
+// Clear conversation history
+router.delete('/history', clearHistory);
+
+// Write/improve task description with AI
+router.post('/write-description', [
+    check('taskTitle').trim().notEmpty().withMessage('Task title is required'),
+    check('action').optional().isIn(['generate', 'improve', 'shorten', 'expand', 'criteria', 'bullets', 'professional']),
+    validate
+], writeTaskDescription);
 
 module.exports = router;

@@ -114,7 +114,8 @@ const handleCreateTask = async (employeeId, { title, description, priority, due_
                 priority: priority || 'medium',
                 due_date: parsedDueDate,
                 status: 'todo',
-                user_id: employee.user_id
+                user_id: employee.user_id,
+                project_id: 1
             }
         });
 
@@ -1222,10 +1223,168 @@ const markAsRead = async (req, res) => {
     }
 };
 
+const clearHistory = async (req, res) => {
+    try {
+        const employeeId = req.employee?.id;
+
+        if (!employeeId) {
+            return res.status(400).json({ error: 'Employee profile required' });
+        }
+
+        await prisma.message.deleteMany({
+            where: { employee_id: employeeId }
+        });
+
+        res.json({ success: true, message: 'Chat history cleared' });
+    } catch (error) {
+        console.error('Clear history error:', error);
+        res.status(500).json({ error: 'Failed to clear history' });
+    }
+};
+
+/**
+ * Generate or improve task description using AI
+ */
+const writeTaskDescription = async (req, res) => {
+    try {
+        const { taskTitle, currentDescription, action } = req.body;
+
+        if (!taskTitle) {
+            return res.status(400).json({ error: 'Task title is required' });
+        }
+
+        // Check if API key is configured
+        if (!process.env.ANTHROPIC_API_KEY) {
+            return res.status(503).json({
+                error: 'AI service unavailable',
+                message: 'ANTHROPIC_API_KEY not configured'
+            });
+        }
+
+        const Anthropic = require('@anthropic-ai/sdk');
+        const anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY
+        });
+
+        // Build the prompt based on action
+        let systemPrompt = `You are a helpful assistant that writes clear, concise task descriptions for a project management system.
+Your descriptions should be:
+- Clear and actionable
+- 2-4 sentences typically
+- Professional but not overly formal
+- Focused on what needs to be done and why
+
+Respond ONLY with the description text, no quotes, no prefixes like "Description:", just the content.`;
+
+        let userPrompt = '';
+
+        switch (action) {
+            case 'generate':
+                userPrompt = `Write a clear description for a task titled: "${taskTitle}"
+
+The description should explain what needs to be done and provide any relevant context.`;
+                break;
+
+            case 'improve':
+                userPrompt = `Improve this task description to be clearer and more actionable.
+
+Task title: "${taskTitle}"
+Current description: "${currentDescription}"
+
+Rewrite the description to be more professional and clear while keeping the original intent.`;
+                break;
+
+            case 'shorten':
+                userPrompt = `Shorten this task description while keeping the essential information.
+
+Task title: "${taskTitle}"
+Current description: "${currentDescription}"
+
+Make it more concise (1-2 sentences max) while retaining the key points.`;
+                break;
+
+            case 'expand':
+                userPrompt = `Expand this task description with more detail and context.
+
+Task title: "${taskTitle}"
+Current description: "${currentDescription}"
+
+Add more detail about what needs to be done, acceptance criteria, or relevant context.`;
+                break;
+
+            case 'criteria':
+                userPrompt = `Add acceptance criteria to this task description.
+
+Task title: "${taskTitle}"
+Current description: "${currentDescription || 'No description yet'}"
+
+Write a description that includes clear acceptance criteria as bullet points. Format as:
+[Brief description paragraph]
+
+**Acceptance Criteria:**
+- Criterion 1
+- Criterion 2
+- Criterion 3`;
+                break;
+
+            case 'bullets':
+                userPrompt = `Convert this task description into clear bullet points.
+
+Task title: "${taskTitle}"
+Current description: "${currentDescription}"
+
+Transform the content into a well-organized bullet-point list that highlights key actions, requirements, or details.`;
+                break;
+
+            case 'professional':
+                userPrompt = `Rewrite this task description in a more professional, business-appropriate tone.
+
+Task title: "${taskTitle}"
+Current description: "${currentDescription}"
+
+Make it sound more formal and polished while keeping the same meaning. Use clear, professional language.`;
+                break;
+
+            default:
+                userPrompt = `Write a clear description for a task titled: "${taskTitle}"`;
+        }
+
+        const response = await anthropic.messages.create({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 500,
+            system: systemPrompt,
+            messages: [
+                { role: 'user', content: userPrompt }
+            ]
+        });
+
+        const textContent = response.content.find(block => block.type === 'text');
+
+        if (!textContent) {
+            return res.status(500).json({ error: 'Failed to generate description' });
+        }
+
+        res.json({
+            success: true,
+            description: textContent.text.trim(),
+            action: action,
+            usage: {
+                inputTokens: response.usage?.input_tokens,
+                outputTokens: response.usage?.output_tokens
+            }
+        });
+    } catch (error) {
+        console.error('Write description error:', error);
+        res.status(500).json({ error: 'Failed to generate description' });
+    }
+};
+
 module.exports = {
     handleBotMessage,
     getConversationHistory,
     getContext,
     routeMessage,
-    markAsRead
+    markAsRead,
+    clearHistory,
+    writeTaskDescription
 };

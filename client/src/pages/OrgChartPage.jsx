@@ -15,14 +15,16 @@ const OrgChartPage = () => {
         try {
             setLoading(true);
             const [empRes, deptRes] = await Promise.all([
-                http.get('/api/employees'),
+                http.get('/api/employees?limit=1000'),
                 http.get('/api/departments')
             ]);
-            setEmployees(empRes.data);
-            setDepartments(deptRes.data);
+            // Handle paginated response: { data: [], pagination: {...} } or plain array
+            const employeesData = empRes.data?.data || empRes.data || [];
+            setEmployees(Array.isArray(employeesData) ? employeesData : []);
+            setDepartments(deptRes.data || []);
 
             // Expand all top-level nodes by default
-            const topLevel = empRes.data.filter(e => !e.manager_id);
+            const topLevel = (Array.isArray(employeesData) ? employeesData : []).filter(e => !e.manager_id);
             setExpandedNodes(new Set(topLevel.map(e => e.id)));
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -37,12 +39,12 @@ const OrgChartPage = () => {
 
     // Build hierarchy tree
     const buildTree = () => {
-        const topLevel = employees.filter(e => !e.manager_id);
+        const topLevel = (employees || []).filter(e => !e.manager_id);
         return topLevel;
     };
 
     const getSubordinates = (managerId) => {
-        return employees.filter(e => e.manager_id === managerId);
+        return (employees || []).filter(e => e.manager_id === managerId);
     };
 
     const toggleNode = (id) => {
@@ -56,7 +58,7 @@ const OrgChartPage = () => {
     };
 
     const getDepartmentEmployees = (deptId) => {
-        return employees.filter(e => e.department_id === deptId);
+        return (employees || []).filter(e => e.department_id === deptId);
     };
 
     const getStatusColor = (status) => {
@@ -283,18 +285,31 @@ const OrgChartPage = () => {
 
     return (
         <Dashboard>
-            <div style={{ padding: '24px', height: '100%', overflow: 'auto' }}>
+            <div style={{ padding: '24px', height: '100%', overflow: 'auto', background: '#f9fafb' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div>
-                            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1f2937', margin: 0 }}>
-                                <GitBranch size={28} style={{ display: 'inline', marginRight: '12px', verticalAlign: 'middle' }} />
-                                Organization Chart
-                            </h1>
-                            <p style={{ color: '#6b7280', marginTop: '4px' }}>
-                                View your company's reporting structure
-                            </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <div style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '12px',
+                                background: 'linear-gradient(135deg, #7b68ee, #6366f1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 4px 12px rgba(123, 104, 238, 0.3)'
+                            }}>
+                                <GitBranch size={24} color="white" />
+                            </div>
+                            <div>
+                                <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1f2937', margin: 0 }}>
+                                    Organization Chart
+                                </h1>
+                                <p style={{ color: '#6b7280', marginTop: '4px', margin: 0 }}>
+                                    View your company's reporting structure
+                                </p>
+                            </div>
                         </div>
 
                         {/* View Mode Toggle */}
@@ -345,18 +360,18 @@ const OrgChartPage = () => {
 
                 {/* Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ background: '#f0f9ff', padding: '20px', borderRadius: '12px', border: '1px solid #bae6fd' }}>
-                        <div style={{ color: '#0369a1', fontSize: '14px', fontWeight: 500 }}>Total Employees</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#0c4a6e' }}>{employees.length}</div>
+                    <div style={{ background: '#f0edff', padding: '20px', borderRadius: '12px', border: '1px solid #c4b5fd', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div style={{ color: '#7b68ee', fontSize: '14px', fontWeight: 500 }}>Total Employees</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#4c1d95' }}>{(employees || []).length}</div>
                     </div>
-                    <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#15803d', fontSize: '14px', fontWeight: 500 }}>Departments</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#14532d' }}>{departments.length}</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#14532d' }}>{(departments || []).length}</div>
                     </div>
-                    <div style={{ background: '#ede9fe', padding: '20px', borderRadius: '12px', border: '1px solid #c4b5fd' }}>
-                        <div style={{ color: '#6d28d9', fontSize: '14px', fontWeight: 500 }}>Managers</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#4c1d95' }}>
-                            {new Set(employees.filter(e => e.manager_id).map(e => e.manager_id)).size}
+                    <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '12px', border: '1px solid #fde68a', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div style={{ color: '#b45309', fontSize: '14px', fontWeight: 500 }}>Managers</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#78350f' }}>
+                            {new Set((employees || []).filter(e => e.manager_id).map(e => e.manager_id)).size}
                         </div>
                     </div>
                 </div>
@@ -557,8 +572,27 @@ const OrgChartPage = () => {
                                     setSelectedEmployee(null);
                                     window.location.href = '/employees';
                                 }}
-                                className="btn btn-primary"
-                                style={{ width: '100%' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = '#6366f1';
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = '#7b68ee';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 24px',
+                                    background: '#7b68ee',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 2px 8px rgba(123, 104, 238, 0.3)',
+                                    transition: 'all 0.2s ease'
+                                }}
                             >
                                 View Full Profile
                             </button>

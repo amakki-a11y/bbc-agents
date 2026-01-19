@@ -3,7 +3,7 @@ import { http } from '../../api/http';
 import EmployeeForm from './EmployeeForm';
 import { X, Mail, Phone, Building2, Shield, Calendar, Users, Clock, Edit2, UserX, CheckCircle } from 'lucide-react';
 
-const EmployeeDetailsModal = ({ employee, onClose, onUpdate, departments, roles, employees }) => {
+const EmployeeDetailsModal = ({ employee, onClose, onUpdate, departments = [], roles = [], employees = [] }) => {
     const [attendance, setAttendance] = useState([]);
     const [loadingAttendance, setLoadingAttendance] = useState(true);
     const [showEditForm, setShowEditForm] = useState(false);

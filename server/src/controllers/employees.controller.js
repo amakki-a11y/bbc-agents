@@ -5,17 +5,16 @@ const cache = require('../utils/cache');
 // Get all employees with pagination and filters
 const getEmployees = async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 50;
-        const cursor = req.query.cursor || undefined;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
         const { department_id, role_id, status, search } = req.query;
 
         const cacheKey = `employees:${JSON.stringify(req.query)}`;
         const cachedData = cache.get(cacheKey);
         if (cachedData) {
-            if (cachedData.nextCursor) {
-                res.set('X-Next-Cursor', cachedData.nextCursor);
-            }
-            return res.json(cachedData.data);
+            res.set('X-Cache', 'HIT');
+            return res.json(cachedData);
         }
 
         const where = {
@@ -30,10 +29,13 @@ const getEmployees = async (req, res) => {
             })
         };
 
+        // Get total count for pagination
+        const total = await prisma.employee.count({ where });
+
         const employees = await prisma.employee.findMany({
             where,
-            take: limit + 1,
-            cursor: cursor ? { id: cursor } : undefined,
+            skip,
+            take: limit,
             orderBy: { name: 'asc' },
             include: {
                 department: { select: { id: true, name: true } },
@@ -43,18 +45,18 @@ const getEmployees = async (req, res) => {
             }
         });
 
-        let nextCursor = undefined;
-        if (employees.length > limit) {
-            const nextItem = employees.pop();
-            nextCursor = nextItem.id;
-        }
+        const response = {
+            data: employees,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
 
-        if (nextCursor) {
-            res.set('X-Next-Cursor', nextCursor);
-        }
-
-        cache.set(cacheKey, { data: employees, nextCursor }, 30);
-        res.json(employees);
+        cache.set(cacheKey, response, 30);
+        res.json(response);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to fetch employees' });
@@ -96,15 +98,15 @@ const createEmployee = async (req, res) => {
             hire_date, status
         } = req.body;
 
-        if (!user_id || !name || !email || !department_id || !role_id) {
+        if (!name || !email || !department_id || !role_id) {
             return res.status(400).json({
-                error: 'user_id, name, email, department_id, and role_id are required'
+                error: 'name, email, department_id, and role_id are required'
             });
         }
 
         const employee = await prisma.employee.create({
             data: {
-                user_id: parseInt(user_id),
+                ...(user_id && { user_id: parseInt(user_id) }),
                 name,
                 email,
                 phone,
