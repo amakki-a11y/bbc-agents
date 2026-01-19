@@ -44,3 +44,5 @@ nul
 
 # Uploaded files (if any)
 uploads/
+.vercel
+.env*.local
