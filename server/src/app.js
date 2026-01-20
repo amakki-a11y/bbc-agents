@@ -6,6 +6,10 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy - required for Render/Heroku/etc behind load balancer
+// This fixes X-Forwarded-For header warnings
+app.set('trust proxy', 1);
+
 const authRoutes = require('./routes/auth.routes');
 const dataRoutes = require('./routes/data.routes');
 const aiRoutes = require('./routes/ai.routes');
