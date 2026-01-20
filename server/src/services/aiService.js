@@ -454,6 +454,115 @@ const toolDefinitions = [
         name: 'getDailyBriefing',
         description: 'Daily briefing with company pulse, issues needing attention, personal day overview, and AI insights. Use for "briefing", "good morning", "morning", "what did I miss", "catch me up", "daily update"',
         input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === GOALS & OKR TRACKING ===
+    {
+        name: 'createGoal',
+        description: 'Create a new goal for self, team member, department, or company. Use for "set goal [X]", "create goal [X]", "new goal [X] for [person/dept]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Goal title (e.g., "Complete 20 tasks", "100% attendance")' },
+                targetValue: { type: 'number', description: 'Target value to achieve (e.g., 20 for 20 tasks, 100 for 100%)' },
+                unit: { type: 'string', enum: ['tasks', 'hours', 'percent', 'dollars', 'customers', 'projects'], description: 'Unit of measurement' },
+                owner_name: { type: 'string', description: 'Name of employee/department to assign goal to (omit for self)' },
+                owner_type: { type: 'string', enum: ['employee', 'department', 'company'], description: 'Type of owner (default: employee)' },
+                due_date: { type: 'string', description: 'Due date (e.g., "end of month", "Jan 31", "in 2 weeks")' },
+                auto_track: { type: 'string', enum: ['tasks_completed', 'hours_worked', 'attendance_rate'], description: 'Auto-track field (optional)' },
+                description: { type: 'string', description: 'Goal description' }
+            },
+            required: ['title', 'targetValue', 'unit']
+        }
+    },
+    {
+        name: 'getGoals',
+        description: 'Get goals list. Use for "show goals", "my goals", "company goals", "[name]\'s goals", "team goals", "department goals"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                owner_name: { type: 'string', description: 'Name of employee/department (omit for own goals)' },
+                owner_type: { type: 'string', enum: ['employee', 'department', 'company'], description: 'Filter by owner type' },
+                status: { type: 'string', enum: ['active', 'completed', 'at_risk', 'all'], description: 'Filter by status (default: active)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getGoalProgress',
+        description: 'Get detailed progress on a specific goal. Use for "how is [goal] progressing?", "[goal] status", "progress on [goal]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                goal_title: { type: 'string', description: 'Title of the goal to check' },
+                goal_id: { type: 'integer', description: 'ID of the goal (if known)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'updateGoalProgress',
+        description: 'Manually update goal progress. Use for "update goal [X] to [Y]", "set [goal] progress to [value]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                goal_title: { type: 'string', description: 'Title of the goal to update' },
+                goal_id: { type: 'integer', description: 'ID of the goal (if known)' },
+                new_value: { type: 'number', description: 'New current value' }
+            },
+            required: ['new_value']
+        }
+    },
+    {
+        name: 'getGoalsAtRisk',
+        description: 'Get goals that are behind schedule or at risk. Use for "goals at risk", "what goals need attention?", "struggling goals"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'completeGoal',
+        description: 'Mark a goal as completed. Use for "complete goal [X]", "mark goal [X] done", "goal [X] achieved"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                goal_title: { type: 'string', description: 'Title of the goal to complete' },
+                goal_id: { type: 'integer', description: 'ID of the goal (if known)' }
+            },
+            required: []
+        }
+    },
+
+    // === GAMIFICATION ===
+    {
+        name: 'getLeaderboard',
+        description: 'Get points leaderboard. Use for "leaderboard", "top scorers", "who\'s winning?", "rankings"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                period: { type: 'string', enum: ['week', 'month', 'all'], description: 'Time period (default: week)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getMyStats',
+        description: 'Get personal gamification stats: points, level, streak, achievements. Use for "my stats", "my points", "my level", "how am I doing?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getAchievements',
+        description: 'Get achievements list. Use for "my achievements", "my badges", "what have I earned?", "[name]\'s achievements"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of employee (omit for own achievements)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getStreaks',
+        description: 'Get streak information for employees. Use for "streaks", "who has the longest streak?", "my streak"',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -564,6 +673,12 @@ Task Mgmt: assignTask ("assign X to Y"), getEmployeeProgress ("show X's progress
 Reports: getDailyStandupReport, getRedFlags ("red flags", "what needs attention?"), getProjectStatus
 Quick: getWhoNeedsHelp ("who needs help?"), getPulseCheck ("pulse check"), getEndOfDayWrapup ("wrap up"), getDailyBriefing ("briefing", "good morning", "what did I miss")
 
+GOALS & OKR:
+createGoal ("set goal X", "create goal X for Y"), getGoals ("show goals", "my goals", "company goals"), getGoalProgress ("how is X progressing?"), updateGoalProgress ("update goal X to Y"), getGoalsAtRisk ("goals at risk"), completeGoal ("complete goal X")
+
+GAMIFICATION:
+getLeaderboard ("leaderboard", "who's winning?"), getMyStats ("my stats", "my points", "my level"), getAchievements ("my achievements", "my badges"), getStreaks ("streaks", "my streak")
+
 VOICE COMMAND EXAMPLES:
 - "Who's in?" → "8 in office: John, Sarah, Mike +5 more"
 - "Who's out?" → "3 absent: Ahmed (no show), Lisa (sick), Tom (vacation)"
@@ -578,6 +693,12 @@ VOICE COMMAND EXAMPLES:
 - "Red flags" → "🚨 3 overdue, 2 pending approvals, 1 absent without notice"
 - "Wrap up" → "Today: 8 done, 2 pending. Tomorrow: 3 meetings, 5 tasks due"
 - "Good morning" / "Briefing" → Full daily briefing with pulse, issues, your day, AI insight
+- "Set goal: complete 20 tasks by Jan 31" → "✓ Goal created: Complete 20 tasks [░░░░░░░░░░] 0/20, due Jan 31"
+- "My goals" → "3 active goals: • Complete 20 tasks [████████░░] 80% • 100% attendance [██████████] ✓"
+- "Goals at risk" → "⚠️ 1 at risk: Launch project (40%, due in 5 days)"
+- "Leaderboard" → "🏆 This Week: 🥇 Sarah (150 pts) 🥈 Ahmed (120 pts) 🥉 John (95 pts)"
+- "My stats" → "📊 Level 5 | 450 pts | 🔥 7-day streak | 12 achievements"
+- "My achievements" → "🏆 5 badges: Task Master, Early Bird, Streak Keeper, Goal Crusher, Team Player"
 
 RULES:
 1. ALWAYS use tools - never fake responses

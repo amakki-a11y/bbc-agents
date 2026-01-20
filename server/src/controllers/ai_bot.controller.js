@@ -2724,6 +2724,603 @@ const handleGetDailyBriefing = async (employeeId, context) => {
     }
 };
 
+// ============================================
+// GOALS & OKR HANDLERS
+// ============================================
+
+/**
+ * Generate ASCII progress bar
+ */
+const getProgressBar = (current, target) => {
+    const percent = Math.min(100, Math.round((current / target) * 100));
+    const filled = Math.round(percent / 10);
+    const empty = 10 - filled;
+    return '[' + '█'.repeat(filled) + '░'.repeat(empty) + '] ' + percent + '%';
+};
+
+/**
+ * Calculate goal status based on progress and time remaining
+ */
+const calculateGoalStatus = (currentValue, targetValue, dueDate) => {
+    const percent = (currentValue / targetValue) * 100;
+    const today = new Date();
+    const due = new Date(dueDate);
+    const totalDays = Math.ceil((due - new Date()) / (1000 * 60 * 60 * 24));
+
+    if (percent >= 100) return 'completed';
+    if (totalDays < 0) return 'failed';
+    if (percent < 50 && totalDays < 7) return 'at_risk';
+    return 'active';
+};
+
+/**
+ * Auto-track goal progress based on autoTrackField
+ */
+const autoTrackGoalProgress = async (goal) => {
+    if (!goal.autoTrackField || !goal.ownerId) return goal.currentValue;
+
+    const startDate = new Date(goal.startDate);
+    const endDate = new Date(goal.dueDate);
+
+    try {
+        switch (goal.autoTrackField) {
+            case 'tasks_completed': {
+                const employee = await prisma.employee.findUnique({
+                    where: { id: goal.ownerId },
+                    select: { user_id: true }
+                });
+                if (!employee?.user_id) return goal.currentValue;
+
+                const count = await prisma.task.count({
+                    where: {
+                        user_id: employee.user_id,
+                        status: 'done',
+                        updated_at: { gte: startDate, lte: endDate }
+                    }
+                });
+                return count;
+            }
+            case 'hours_worked': {
+                const attendances = await prisma.attendance.findMany({
+                    where: {
+                        employee_id: goal.ownerId,
+                        date: { gte: startDate, lte: endDate },
+                        check_in: { not: null },
+                        check_out: { not: null }
+                    }
+                });
+                let totalHours = 0;
+                for (const a of attendances) {
+                    if (a.check_in && a.check_out) {
+                        totalHours += (new Date(a.check_out) - new Date(a.check_in)) / (1000 * 60 * 60);
+                    }
+                }
+                return Math.round(totalHours * 10) / 10;
+            }
+            case 'attendance_rate': {
+                const startOfPeriod = new Date(startDate);
+                const endOfPeriod = new Date(Math.min(endDate, new Date()));
+                let workDays = 0;
+                const current = new Date(startOfPeriod);
+                while (current <= endOfPeriod) {
+                    const day = current.getDay();
+                    if (day !== 0 && day !== 6) workDays++;
+                    current.setDate(current.getDate() + 1);
+                }
+
+                const presentDays = await prisma.attendance.count({
+                    where: {
+                        employee_id: goal.ownerId,
+                        date: { gte: startOfPeriod, lte: endOfPeriod },
+                        status: { in: ['present', 'late'] }
+                    }
+                });
+                return workDays > 0 ? Math.round((presentDays / workDays) * 100) : 0;
+            }
+            default:
+                return goal.currentValue;
+        }
+    } catch (error) {
+        console.error('autoTrackGoalProgress error:', error);
+        return goal.currentValue;
+    }
+};
+
+/**
+ * Handle creating a new goal
+ */
+const handleCreateGoal = async (employeeId, { title, targetValue, unit, owner_name, owner_type, due_date, auto_track, description }) => {
+    try {
+        let ownerId = null;
+        let ownerType = owner_type || 'employee';
+
+        // Determine owner
+        if (owner_name) {
+            if (ownerType === 'department') {
+                const dept = await prisma.department.findFirst({
+                    where: { name: { contains: owner_name, mode: 'insensitive' } }
+                });
+                if (!dept) return { success: false, error: `Department "${owner_name}" not found` };
+                ownerId = dept.id;
+            } else {
+                const emp = await prisma.employee.findFirst({
+                    where: { name: { contains: owner_name, mode: 'insensitive' } }
+                });
+                if (!emp) return { success: false, error: `Employee "${owner_name}" not found` };
+                ownerId = emp.id;
+                ownerType = 'employee';
+            }
+        } else {
+            // Self goal
+            ownerId = employeeId;
+            ownerType = 'employee';
+        }
+
+        // Parse due date
+        const parsedDueDate = parseRelativeDate(due_date) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default 30 days
+
+        const goal = await prisma.goal.create({
+            data: {
+                title,
+                description: description || null,
+                goalType: ownerType === 'company' ? 'company' : ownerType === 'department' ? 'department' : 'individual',
+                targetValue,
+                currentValue: 0,
+                unit,
+                ownerType,
+                ownerId,
+                startDate: new Date(),
+                dueDate: parsedDueDate,
+                status: 'active',
+                autoTrackField: auto_track || null,
+                createdBy: employeeId
+            }
+        });
+
+        const dueStr = parsedDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const ownerStr = owner_name ? ` for ${owner_name}` : '';
+
+        return {
+            success: true,
+            message: `✓ Goal created: ${title}${ownerStr} ${getProgressBar(0, targetValue)} 0/${targetValue} ${unit}, due ${dueStr}`,
+            goal: { id: goal.id, title: goal.title }
+        };
+    } catch (error) {
+        console.error('handleCreateGoal error:', error);
+        return { success: false, error: 'Failed to create goal' };
+    }
+};
+
+/**
+ * Handle getting goals list
+ */
+const handleGetGoals = async (employeeId, { owner_name, owner_type, status }) => {
+    try {
+        const where = {};
+
+        // Filter by status
+        if (status && status !== 'all') {
+            where.status = status;
+        } else if (!status) {
+            where.status = 'active';
+        }
+
+        // Filter by owner
+        if (owner_name) {
+            if (owner_type === 'department') {
+                const dept = await prisma.department.findFirst({
+                    where: { name: { contains: owner_name, mode: 'insensitive' } }
+                });
+                if (dept) {
+                    where.ownerType = 'department';
+                    where.ownerId = dept.id;
+                }
+            } else {
+                const emp = await prisma.employee.findFirst({
+                    where: { name: { contains: owner_name, mode: 'insensitive' } }
+                });
+                if (emp) {
+                    where.ownerType = 'employee';
+                    where.ownerId = emp.id;
+                }
+            }
+        } else if (owner_type === 'company') {
+            where.ownerType = 'company';
+        } else if (!owner_type) {
+            // Default to own goals
+            where.ownerType = 'employee';
+            where.ownerId = employeeId;
+        }
+
+        const goals = await prisma.goal.findMany({
+            where,
+            orderBy: { dueDate: 'asc' },
+            take: 10
+        });
+
+        if (goals.length === 0) {
+            return { success: true, message: 'No goals found.' };
+        }
+
+        // Auto-track and update progress
+        const goalsWithProgress = [];
+        for (const goal of goals) {
+            const currentValue = await autoTrackGoalProgress(goal);
+            if (currentValue !== goal.currentValue) {
+                await prisma.goal.update({
+                    where: { id: goal.id },
+                    data: { currentValue, status: calculateGoalStatus(currentValue, goal.targetValue, goal.dueDate) }
+                });
+                goal.currentValue = currentValue;
+                goal.status = calculateGoalStatus(currentValue, goal.targetValue, goal.dueDate);
+            }
+            goalsWithProgress.push(goal);
+        }
+
+        const lines = goalsWithProgress.map(g => {
+            const bar = getProgressBar(g.currentValue, g.targetValue);
+            const statusIcon = g.status === 'completed' ? ' ✓' : g.status === 'at_risk' ? ' ⚠️' : '';
+            return `• ${g.title} ${bar}${statusIcon}`;
+        });
+
+        return {
+            success: true,
+            message: `${goals.length} goal${goals.length !== 1 ? 's' : ''}:\n${lines.join('\n')}`
+        };
+    } catch (error) {
+        console.error('handleGetGoals error:', error);
+        return { success: false, error: 'Failed to retrieve goals' };
+    }
+};
+
+/**
+ * Handle getting detailed goal progress
+ */
+const handleGetGoalProgress = async (employeeId, { goal_title, goal_id }) => {
+    try {
+        let goal;
+        if (goal_id) {
+            goal = await prisma.goal.findUnique({ where: { id: goal_id } });
+        } else if (goal_title) {
+            goal = await prisma.goal.findFirst({
+                where: { title: { contains: goal_title, mode: 'insensitive' } }
+            });
+        }
+
+        if (!goal) {
+            return { success: false, error: `Goal "${goal_title || goal_id}" not found` };
+        }
+
+        // Auto-track progress
+        const currentValue = await autoTrackGoalProgress(goal);
+        if (currentValue !== goal.currentValue) {
+            await prisma.goal.update({
+                where: { id: goal.id },
+                data: { currentValue, status: calculateGoalStatus(currentValue, goal.targetValue, goal.dueDate) }
+            });
+            goal.currentValue = currentValue;
+        }
+
+        const percent = Math.round((goal.currentValue / goal.targetValue) * 100);
+        const daysLeft = Math.ceil((new Date(goal.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+        const trackStatus = percent >= 80 ? 'on track' : percent >= 50 ? 'needs attention' : 'behind';
+
+        return {
+            success: true,
+            message: `${goal.title}: ${goal.currentValue}/${goal.targetValue} ${goal.unit} (${percent}%) - ${trackStatus}, ${daysLeft} days left`
+        };
+    } catch (error) {
+        console.error('handleGetGoalProgress error:', error);
+        return { success: false, error: 'Failed to get goal progress' };
+    }
+};
+
+/**
+ * Handle updating goal progress manually
+ */
+const handleUpdateGoalProgress = async (employeeId, { goal_title, goal_id, new_value }) => {
+    try {
+        let goal;
+        if (goal_id) {
+            goal = await prisma.goal.findUnique({ where: { id: goal_id } });
+        } else if (goal_title) {
+            goal = await prisma.goal.findFirst({
+                where: { title: { contains: goal_title, mode: 'insensitive' } }
+            });
+        }
+
+        if (!goal) {
+            return { success: false, error: `Goal "${goal_title || goal_id}" not found` };
+        }
+
+        const newStatus = calculateGoalStatus(new_value, goal.targetValue, goal.dueDate);
+
+        await prisma.goal.update({
+            where: { id: goal.id },
+            data: { currentValue: new_value, status: newStatus }
+        });
+
+        return {
+            success: true,
+            message: `✓ Updated: ${goal.title} now at ${new_value}/${goal.targetValue} ${goal.unit}`
+        };
+    } catch (error) {
+        console.error('handleUpdateGoalProgress error:', error);
+        return { success: false, error: 'Failed to update goal progress' };
+    }
+};
+
+/**
+ * Handle getting goals at risk
+ */
+const handleGetGoalsAtRisk = async () => {
+    try {
+        const today = new Date();
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+
+        // Get active goals due within next week that are behind
+        const goals = await prisma.goal.findMany({
+            where: {
+                status: { in: ['active', 'at_risk'] },
+                dueDate: { lte: nextWeek }
+            },
+            include: {
+                creator: { select: { name: true } }
+            },
+            orderBy: { dueDate: 'asc' }
+        });
+
+        // Filter to those that are actually at risk (< 70% complete)
+        const atRisk = [];
+        for (const goal of goals) {
+            const currentValue = await autoTrackGoalProgress(goal);
+            const percent = Math.round((currentValue / goal.targetValue) * 100);
+            const daysLeft = Math.ceil((new Date(goal.dueDate) - today) / (1000 * 60 * 60 * 24));
+
+            if (percent < 70 || daysLeft < 0) {
+                atRisk.push({ ...goal, currentValue, percent, daysLeft });
+
+                // Update status if needed
+                if (goal.status !== 'at_risk' && goal.status !== 'failed') {
+                    await prisma.goal.update({
+                        where: { id: goal.id },
+                        data: { currentValue, status: daysLeft < 0 ? 'failed' : 'at_risk' }
+                    });
+                }
+            }
+        }
+
+        if (atRisk.length === 0) {
+            return { success: true, message: 'No goals at risk. All on track!' };
+        }
+
+        const lines = atRisk.slice(0, 5).map(g => {
+            const status = g.daysLeft < 0 ? `${Math.abs(g.daysLeft)}d overdue` : `due in ${g.daysLeft}d`;
+            return `• ${g.title} (${g.percent}%, ${status})`;
+        });
+
+        const extra = atRisk.length > 5 ? `\n+${atRisk.length - 5} more` : '';
+
+        return {
+            success: true,
+            message: `⚠️ ${atRisk.length} at risk:\n${lines.join('\n')}${extra}`
+        };
+    } catch (error) {
+        console.error('handleGetGoalsAtRisk error:', error);
+        return { success: false, error: 'Failed to get goals at risk' };
+    }
+};
+
+/**
+ * Handle completing a goal
+ */
+const handleCompleteGoal = async (employeeId, { goal_title, goal_id }) => {
+    try {
+        let goal;
+        if (goal_id) {
+            goal = await prisma.goal.findUnique({ where: { id: goal_id } });
+        } else if (goal_title) {
+            goal = await prisma.goal.findFirst({
+                where: { title: { contains: goal_title, mode: 'insensitive' } }
+            });
+        }
+
+        if (!goal) {
+            return { success: false, error: `Goal "${goal_title || goal_id}" not found` };
+        }
+
+        await prisma.goal.update({
+            where: { id: goal.id },
+            data: { status: 'completed', currentValue: goal.targetValue }
+        });
+
+        return {
+            success: true,
+            message: `🎉 Goal completed: ${goal.title}!`
+        };
+    } catch (error) {
+        console.error('handleCompleteGoal error:', error);
+        return { success: false, error: 'Failed to complete goal' };
+    }
+};
+
+// ============================================
+// GAMIFICATION HANDLERS
+// ============================================
+
+/**
+ * Calculate level from total points
+ */
+const calculateLevel = (totalPoints) => {
+    if (totalPoints >= 1000) return 10;
+    if (totalPoints >= 750) return 9;
+    if (totalPoints >= 550) return 8;
+    if (totalPoints >= 400) return 7;
+    if (totalPoints >= 280) return 6;
+    if (totalPoints >= 180) return 5;
+    if (totalPoints >= 100) return 4;
+    if (totalPoints >= 50) return 3;
+    if (totalPoints >= 20) return 2;
+    return 1;
+};
+
+/**
+ * Get or create employee points record
+ */
+const getOrCreatePoints = async (employeeId) => {
+    let points = await prisma.employeePoints.findUnique({
+        where: { employeeId }
+    });
+
+    if (!points) {
+        points = await prisma.employeePoints.create({
+            data: { employeeId, totalPoints: 0, weeklyPoints: 0, monthlyPoints: 0, currentStreak: 0, longestStreak: 0, level: 1 }
+        });
+    }
+
+    return points;
+};
+
+/**
+ * Handle getting leaderboard
+ */
+const handleGetLeaderboard = async ({ period }) => {
+    try {
+        const periodField = period === 'month' ? 'monthlyPoints' : period === 'all' ? 'totalPoints' : 'weeklyPoints';
+
+        const leaderboard = await prisma.employeePoints.findMany({
+            where: { [periodField]: { gt: 0 } },
+            include: { employee: { select: { name: true } } },
+            orderBy: { [periodField]: 'desc' },
+            take: 10
+        });
+
+        if (leaderboard.length === 0) {
+            return { success: true, message: 'No points earned yet. Start completing tasks to earn points!' };
+        }
+
+        const medals = ['🥇', '🥈', '🥉'];
+        const lines = leaderboard.slice(0, 5).map((p, i) => {
+            const medal = medals[i] || `${i + 1}.`;
+            const pts = p[periodField];
+            return `${medal} ${p.employee.name} (${pts} pts)`;
+        });
+
+        const periodLabel = period === 'month' ? 'This Month' : period === 'all' ? 'All Time' : 'This Week';
+        const extra = leaderboard.length > 5 ? `\n+${leaderboard.length - 5} more` : '';
+
+        return {
+            success: true,
+            message: `🏆 ${periodLabel}:\n${lines.join('\n')}${extra}`
+        };
+    } catch (error) {
+        console.error('handleGetLeaderboard error:', error);
+        return { success: false, error: 'Failed to get leaderboard' };
+    }
+};
+
+/**
+ * Handle getting personal stats
+ */
+const handleGetMyStats = async (employeeId) => {
+    try {
+        const points = await getOrCreatePoints(employeeId);
+        const achievementCount = await prisma.achievement.count({
+            where: { employeeId }
+        });
+
+        const streakIcon = points.currentStreak >= 7 ? '🔥' : points.currentStreak >= 3 ? '⚡' : '📅';
+
+        return {
+            success: true,
+            message: `📊 Level ${points.level} | ${points.totalPoints} pts | ${streakIcon} ${points.currentStreak}-day streak | ${achievementCount} achievements`
+        };
+    } catch (error) {
+        console.error('handleGetMyStats error:', error);
+        return { success: false, error: 'Failed to get stats' };
+    }
+};
+
+/**
+ * Handle getting achievements
+ */
+const handleGetAchievements = async (employeeId, { employee_name }) => {
+    try {
+        let targetEmployeeId = employeeId;
+
+        if (employee_name) {
+            const emp = await prisma.employee.findFirst({
+                where: { name: { contains: employee_name, mode: 'insensitive' } }
+            });
+            if (emp) targetEmployeeId = emp.id;
+        }
+
+        const achievements = await prisma.achievement.findMany({
+            where: { employeeId: targetEmployeeId },
+            orderBy: { earnedAt: 'desc' },
+            take: 10
+        });
+
+        if (achievements.length === 0) {
+            return { success: true, message: 'No achievements yet. Keep working to earn badges!' };
+        }
+
+        const badges = achievements.slice(0, 5).map(a => `${a.icon} ${a.title}`);
+        const extra = achievements.length > 5 ? ` +${achievements.length - 5} more` : '';
+
+        return {
+            success: true,
+            message: `🏆 ${achievements.length} badges: ${badges.join(', ')}${extra}`
+        };
+    } catch (error) {
+        console.error('handleGetAchievements error:', error);
+        return { success: false, error: 'Failed to get achievements' };
+    }
+};
+
+/**
+ * Handle getting streaks
+ */
+const handleGetStreaks = async (employeeId) => {
+    try {
+        // Get top streaks
+        const topStreaks = await prisma.employeePoints.findMany({
+            where: { currentStreak: { gt: 0 } },
+            include: { employee: { select: { name: true } } },
+            orderBy: { currentStreak: 'desc' },
+            take: 5
+        });
+
+        // Get own streak
+        const myPoints = await getOrCreatePoints(employeeId);
+        const myEmployee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            select: { name: true }
+        });
+
+        if (topStreaks.length === 0) {
+            return {
+                success: true,
+                message: `🔥 Your streak: ${myPoints.currentStreak} days (best: ${myPoints.longestStreak})`
+            };
+        }
+
+        const lines = topStreaks.map((p, i) => {
+            const icon = i === 0 ? '🔥' : '⚡';
+            return `${icon} ${p.employee.name}: ${p.currentStreak}d`;
+        });
+
+        return {
+            success: true,
+            message: `Streaks:\n${lines.join('\n')}\n\nYours: ${myPoints.currentStreak}d (best: ${myPoints.longestStreak})`
+        };
+    } catch (error) {
+        console.error('handleGetStreaks error:', error);
+        return { success: false, error: 'Failed to get streaks' };
+    }
+};
+
 /**
  * Master action handler - routes to appropriate handler
  */
@@ -2843,6 +3440,30 @@ const createActionHandler = (employeeId, context) => {
                 return await handleGetEndOfDayWrapup(employeeId);
             case 'getDailyBriefing':
                 return await handleGetDailyBriefing(employeeId, context);
+
+            // Goals & OKR
+            case 'createGoal':
+                return await handleCreateGoal(employeeId, toolInput);
+            case 'getGoals':
+                return await handleGetGoals(employeeId, toolInput);
+            case 'getGoalProgress':
+                return await handleGetGoalProgress(employeeId, toolInput);
+            case 'updateGoalProgress':
+                return await handleUpdateGoalProgress(employeeId, toolInput);
+            case 'getGoalsAtRisk':
+                return await handleGetGoalsAtRisk();
+            case 'completeGoal':
+                return await handleCompleteGoal(employeeId, toolInput);
+
+            // Gamification
+            case 'getLeaderboard':
+                return await handleGetLeaderboard(toolInput);
+            case 'getMyStats':
+                return await handleGetMyStats(employeeId);
+            case 'getAchievements':
+                return await handleGetAchievements(employeeId, toolInput);
+            case 'getStreaks':
+                return await handleGetStreaks(employeeId);
 
             default:
                 return { success: false, error: `Unknown action: ${toolName}` };

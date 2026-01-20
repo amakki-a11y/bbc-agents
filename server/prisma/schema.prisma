@@ -78,6 +78,11 @@ model Employee {
   approvalsToReview  ApprovalRequest[] @relation("ApprovalApprover")
   // Reminders
   reminders     Reminder[]
+  // Goals
+  createdGoals  Goal[]
+  // Gamification
+  achievements  Achievement[]
+  points        EmployeePoints?
 }
 
 // AI Bot Message System
@@ -394,4 +399,85 @@ model LeaveBalance {
   leave_type    LeaveType @relation(fields: [leave_type_id], references: [id])
 
   @@unique([employee_id, leave_type_id, year])
+}
+
+// Goals & OKR Tracking System
+
+model Goal {
+  id              Int       @id @default(autoincrement())
+  title           String
+  description     String?
+  goalType        String    // company, department, team, individual
+  targetValue     Float
+  currentValue    Float     @default(0)
+  unit            String    // tasks, hours, customers, dollars, percent
+  ownerType       String    // employee, department, company
+  ownerId         String?   // employee_id or department_id (null for company)
+  startDate       DateTime
+  dueDate         DateTime
+  status          String    @default("active") // active, completed, at_risk, failed
+  parentGoalId    Int?
+  parentGoal      Goal?     @relation("GoalHierarchy", fields: [parentGoalId], references: [id])
+  childGoals      Goal[]    @relation("GoalHierarchy")
+  autoTrackField  String?   // tasks_completed, hours_worked, attendance_rate
+  createdBy       String
+  creator         Employee  @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  milestones      GoalMilestone[]
+
+  @@index([ownerType, ownerId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model GoalMilestone {
+  id          Int       @id @default(autoincrement())
+  goalId      Int
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String
+  targetValue Float
+  dueDate     DateTime
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([goalId])
+}
+
+// Gamification System
+
+model Achievement {
+  id          Int       @id @default(autoincrement())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  type        String    // task_master, early_bird, streak_keeper, goal_crusher, team_player, perfect_week
+  title       String
+  description String?
+  icon        String    @default("🏆")
+  points      Int       @default(10)
+  earnedAt    DateTime  @default(now())
+  metadata    String?   // JSON for extra data
+
+  @@index([employeeId])
+  @@index([type])
+  @@index([earnedAt])
+}
+
+model EmployeePoints {
+  id            Int       @id @default(autoincrement())
+  employeeId    String    @unique
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  totalPoints   Int       @default(0)
+  weeklyPoints  Int       @default(0)
+  monthlyPoints Int       @default(0)
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  level         Int       @default(1)
+  lastActiveAt  DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([totalPoints])
+  @@index([weeklyPoints])
+  @@index([level])
 }
