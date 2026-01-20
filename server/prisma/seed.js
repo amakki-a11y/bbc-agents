@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
 
@@ -95,6 +96,44 @@ async function main() {
     });
   }
   console.log(`Created ${leaveTypes.length} leave types`);
+
+  // Seed Default Admin User
+  console.log('Creating default admin user...');
+  const adminEmail = 'admin@bbc.com';
+  const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
+
+  if (!existingUser) {
+    // Password: Admin@123 (meets complexity requirements)
+    const hashedPassword = await bcrypt.hash('Admin@123', 10);
+    const adminUser = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        password_hash: hashedPassword,
+      },
+    });
+    console.log(`Created admin user: ${adminEmail} (password: Admin@123)`);
+
+    // Create corresponding employee record linked to admin user
+    const managementDept = await prisma.department.findUnique({ where: { name: 'Management' } });
+    const adminRole = await prisma.role.findUnique({ where: { name: 'Admin' } });
+
+    if (managementDept && adminRole) {
+      await prisma.employee.create({
+        data: {
+          user_id: adminUser.id,
+          name: 'System Administrator',
+          email: adminEmail,
+          department_id: managementDept.id,
+          role_id: adminRole.id,
+          hire_date: new Date(),
+          status: 'active',
+        },
+      });
+      console.log('Created admin employee record');
+    }
+  } else {
+    console.log('Admin user already exists');
+  }
 
   console.log('Seeding completed successfully!');
 }
