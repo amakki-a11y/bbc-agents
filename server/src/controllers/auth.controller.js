@@ -27,11 +27,11 @@ const generateTokens = (user) => {
     const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' } // Short-lived access token
+        { expiresIn: '24h' } // Extended for better production UX
     );
     const refreshToken = jwt.sign(
         { userId: user.id, email: user.email },
-        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, // Use separate secret if available
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
         { expiresIn: '7d' } // Long-lived refresh token
     );
     return { accessToken, refreshToken };

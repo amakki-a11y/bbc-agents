@@ -1,6 +1,6 @@
 const express = require('express');
 const { check } = require('express-validator');
-const { register, login } = require('../controllers/auth.controller');
+const { register, login, refreshToken } = require('../controllers/auth.controller');
 const validate = require('../middleware/validate');
 
 const router = express.Router();
@@ -18,5 +18,10 @@ router.post('/login', [
     check('password').exists().withMessage('Password is required'),
     validate
 ], login);
+
+router.post('/refresh', [
+    check('refreshToken').exists().withMessage('Refresh token is required'),
+    validate
+], refreshToken);
 
 module.exports = router;
