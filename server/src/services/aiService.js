@@ -9,114 +9,275 @@ const anthropic = new Anthropic({
  * Tool definitions for Claude to use
  */
 const toolDefinitions = [
+    // === TASK MANAGEMENT ===
     {
         name: 'createTask',
         description: 'Create a new task for the employee. Use this when the employee wants to create, add, or set up a new task.',
         input_schema: {
             type: 'object',
             properties: {
-                title: {
-                    type: 'string',
-                    description: 'The title of the task'
-                },
-                description: {
-                    type: 'string',
-                    description: 'Optional description of the task'
-                },
-                priority: {
-                    type: 'string',
-                    enum: ['low', 'medium', 'high'],
-                    description: 'Priority level of the task (defaults to medium)'
-                },
-                due_date: {
-                    type: 'string',
-                    description: 'Due date in ISO format (e.g., 2024-01-15) or relative (e.g., tomorrow, next monday)'
-                }
+                title: { type: 'string', description: 'The title of the task' },
+                description: { type: 'string', description: 'Optional description of the task' },
+                priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Priority level (defaults to medium)' },
+                due_date: { type: 'string', description: 'Due date in ISO format or relative (e.g., tomorrow, next monday)' }
             },
             required: ['title']
         }
     },
     {
-        name: 'checkIn',
-        description: 'Record employee check-in/arrival at work. Use when employee says things like "I\'m here", "check me in", "I arrived", "good morning" with intent to log arrival.',
+        name: 'delegateTask',
+        description: 'Delegate a task to a team member. Only managers can use this. Use when manager wants to assign work to their subordinate.',
         input_schema: {
             type: 'object',
-            properties: {},
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee to delegate to' },
+                title: { type: 'string', description: 'Task title' },
+                description: { type: 'string', description: 'Task description' },
+                priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Priority level' },
+                due_date: { type: 'string', description: 'Due date' }
+            },
+            required: ['employee_name', 'title']
+        }
+    },
+    {
+        name: 'getMyTasks',
+        description: 'Retrieve the employee\'s current task list. Use when employee asks about their tasks, todos, or work items.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'updateTask',
+        description: 'Update/edit an existing task. Use when employee wants to modify, edit, change, or update a task\'s title, description, priority, due date, or status.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                task_title: { type: 'string', description: 'Current title of the task to update (used to find the task)' },
+                task_id: { type: 'integer', description: 'ID of the task to update (if known)' },
+                new_title: { type: 'string', description: 'New title for the task' },
+                description: { type: 'string', description: 'New description for the task' },
+                priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'New priority level' },
+                due_date: { type: 'string', description: 'New due date (ISO format or relative like "tomorrow")' },
+                status: { type: 'string', enum: ['todo', 'in_progress', 'done'], description: 'New status' }
+            },
             required: []
         }
+    },
+    {
+        name: 'deleteTask',
+        description: 'Delete/remove a task. Use when employee wants to delete, remove, or cancel a task.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                task_title: { type: 'string', description: 'Title of the task to delete (used to find the task)' },
+                task_id: { type: 'integer', description: 'ID of the task to delete (if known)' }
+            },
+            required: []
+        }
+    },
+
+    // === ATTENDANCE ===
+    {
+        name: 'checkIn',
+        description: 'Record employee check-in/arrival at work. Use when employee says "I\'m here", "check me in", "I arrived".',
+        input_schema: { type: 'object', properties: {}, required: [] }
     },
     {
         name: 'checkOut',
-        description: 'Record employee check-out/departure from work. Use when employee says things like "I\'m leaving", "check me out", "bye", "logging off", "going home".',
-        input_schema: {
-            type: 'object',
-            properties: {},
-            required: []
-        }
+        description: 'Record employee check-out/departure from work. Use when employee says "I\'m leaving", "check me out", "bye".',
+        input_schema: { type: 'object', properties: {}, required: [] }
     },
+    {
+        name: 'getMyAttendance',
+        description: 'Get the employee\'s attendance records. Use when employee asks about attendance, check-ins, or work hours.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === LEAVE MANAGEMENT ===
     {
         name: 'requestLeave',
-        description: 'Submit a leave/time-off request. Use when employee wants to take a day off, request vacation, sick leave, or any absence.',
+        description: 'Submit a leave/time-off request. Use when employee wants to take a day off, vacation, or sick leave.',
         input_schema: {
             type: 'object',
             properties: {
-                date: {
-                    type: 'string',
-                    description: 'The date for leave in ISO format or relative (e.g., tomorrow, Friday, 2024-01-20)'
-                },
-                reason: {
-                    type: 'string',
-                    description: 'Reason for the leave request'
-                }
+                start_date: { type: 'string', description: 'Start date for leave' },
+                end_date: { type: 'string', description: 'End date for leave (same as start for single day)' },
+                leave_type: { type: 'string', description: 'Type of leave (annual, sick, personal, etc.)' },
+                reason: { type: 'string', description: 'Reason for the leave request' }
             },
-            required: ['date', 'reason']
+            required: ['start_date', 'reason']
         }
     },
     {
+        name: 'getLeaveBalance',
+        description: 'Check the employee\'s remaining leave balance. Use when employee asks about vacation days left.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === MESSAGING ===
+    {
         name: 'messageManager',
-        description: 'Send a message to the employee\'s direct manager. Use when employee wants to communicate with, notify, or inform their manager about something.',
+        description: 'Send a message to the employee\'s direct manager.',
         input_schema: {
             type: 'object',
             properties: {
-                content: {
-                    type: 'string',
-                    description: 'The message content to send to the manager'
-                }
+                content: { type: 'string', description: 'Message content to send' },
+                priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], description: 'Message priority' }
             },
             required: ['content']
         }
     },
     {
         name: 'messageHR',
-        description: 'Send a message to the HR department. Use when employee wants to report issues, ask HR questions, or communicate with Human Resources.',
+        description: 'Send a message to the HR department.',
         input_schema: {
             type: 'object',
             properties: {
-                content: {
-                    type: 'string',
-                    description: 'The message content to send to HR'
-                }
+                content: { type: 'string', description: 'Message content to send' },
+                priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], description: 'Message priority' }
             },
             required: ['content']
         }
     },
     {
-        name: 'getMyTasks',
-        description: 'Retrieve the employee\'s current task list. Use when employee asks about their tasks, todos, work items, or what they need to do.',
+        name: 'messageEmployee',
+        description: 'Send a message to another employee. Subject to hierarchy permissions (can message: manager, HR, same department colleagues).',
         input_schema: {
             type: 'object',
-            properties: {},
-            required: []
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee to message' },
+                content: { type: 'string', description: 'Message content' },
+                priority: { type: 'string', enum: ['low', 'normal', 'high', 'urgent'], description: 'Message priority' }
+            },
+            required: ['employee_name', 'content']
         }
     },
     {
-        name: 'getMyAttendance',
-        description: 'Get the employee\'s attendance records. Use when employee asks about their attendance, check-ins, punctuality, or work hours.',
+        name: 'escalateIssue',
+        description: 'Escalate an issue up the management chain. Sends to manager, and can chain up to higher management.',
         input_schema: {
             type: 'object',
-            properties: {},
-            required: []
+            properties: {
+                issue: { type: 'string', description: 'Description of the issue to escalate' },
+                urgency: { type: 'string', enum: ['normal', 'high', 'critical'], description: 'Urgency level' }
+            },
+            required: ['issue']
         }
+    },
+    {
+        name: 'announceToTeam',
+        description: 'Send an announcement to all direct reports. Only managers can use this.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                content: { type: 'string', description: 'Announcement content' },
+                priority: { type: 'string', enum: ['normal', 'high', 'urgent'], description: 'Priority level' }
+            },
+            required: ['content']
+        }
+    },
+    {
+        name: 'checkMessages',
+        description: 'Check unread messages and inbox summary.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === MEETINGS ===
+    {
+        name: 'scheduleMeeting',
+        description: 'Schedule a meeting with employees. Use when employee wants to set up a meeting, call, or sync.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Meeting title' },
+                attendees: { type: 'string', description: 'Comma-separated names of attendees' },
+                date: { type: 'string', description: 'Date for the meeting' },
+                time: { type: 'string', description: 'Time for the meeting (e.g., 2pm, 14:00)' },
+                duration: { type: 'integer', description: 'Duration in minutes (default 30)' },
+                description: { type: 'string', description: 'Meeting description or agenda' }
+            },
+            required: ['title', 'attendees', 'date', 'time']
+        }
+    },
+    {
+        name: 'getMyMeetings',
+        description: 'Get upcoming meetings for the employee.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === APPROVALS ===
+    {
+        name: 'requestApproval',
+        description: 'Request approval from manager for something (expense, purchase, overtime, travel, etc.).',
+        input_schema: {
+            type: 'object',
+            properties: {
+                request_type: { type: 'string', enum: ['expense', 'purchase', 'overtime', 'travel', 'other'], description: 'Type of approval' },
+                title: { type: 'string', description: 'Brief title of the request' },
+                description: { type: 'string', description: 'Detailed description' },
+                amount: { type: 'number', description: 'Amount if applicable (for expense/purchase)' }
+            },
+            required: ['request_type', 'title', 'description']
+        }
+    },
+    {
+        name: 'getPendingApprovals',
+        description: 'Get pending approval requests. For managers: shows requests to approve. For employees: shows their pending requests.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'approveRequest',
+        description: 'Approve a pending request. Only for managers reviewing requests.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                request_id: { type: 'string', description: 'ID of the request to approve' },
+                notes: { type: 'string', description: 'Optional approval notes' }
+            },
+            required: ['request_id']
+        }
+    },
+    {
+        name: 'rejectRequest',
+        description: 'Reject a pending request. Only for managers reviewing requests.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                request_id: { type: 'string', description: 'ID of the request to reject' },
+                reason: { type: 'string', description: 'Reason for rejection' }
+            },
+            required: ['request_id', 'reason']
+        }
+    },
+
+    // === TEAM MANAGEMENT (Managers) ===
+    {
+        name: 'checkTeamStatus',
+        description: 'Check team status including attendance and tasks. Only for managers.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === REMINDERS & SUMMARY ===
+    {
+        name: 'setReminder',
+        description: 'Set a reminder for a future time.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                content: { type: 'string', description: 'What to be reminded about' },
+                remind_at: { type: 'string', description: 'When to remind (e.g., "tomorrow 9am", "Friday 2pm", "in 2 hours")' },
+                priority: { type: 'string', enum: ['low', 'normal', 'high'], description: 'Reminder priority' }
+            },
+            required: ['content', 'remind_at']
+        }
+    },
+    {
+        name: 'getReminders',
+        description: 'Get active reminders.',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getWeeklySummary',
+        description: 'Get a weekly summary of tasks, attendance, and activities.',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -144,16 +305,38 @@ const buildSystemPrompt = (context) => {
         ? `${context.manager.name} (${context.manager.email})`
         : 'Not assigned';
 
-    return `You are BBC Assistant, an AI assistant for BBC Agents company. You help employees with their work-related questions and tasks.
+    // Determine role capabilities
+    const isManager = context.subordinates && context.subordinates.length > 0;
+    const isAdmin = context.role.name === 'Admin';
+    const isHOD = context.role.name === 'Head of Department';
 
-CURRENT EMPLOYEE INFORMATION:
+    const subordinatesInfo = isManager && context.subordinates
+        ? `\nDIRECT REPORTS (${context.subordinates.length}): ${context.subordinates.map(s => s.name).join(', ')}`
+        : '';
+
+    const roleCapabilities = isAdmin
+        ? 'ADMIN - Full access to all features and messaging'
+        : isHOD
+        ? 'HEAD OF DEPARTMENT - Can message department, other HODs, management; can delegate tasks'
+        : isManager
+        ? 'MANAGER - Can message team, other managers, HR; can delegate tasks and announce to team'
+        : 'EMPLOYEE - Can message manager, HR, and same department colleagues';
+
+    const meetingsInfo = context.upcomingMeetings !== undefined ? context.upcomingMeetings : 0;
+    const approvalsInfo = context.pendingApprovals !== undefined ? context.pendingApprovals : 0;
+
+    return `You are BBC Assistant, an AI assistant for BBC Agents company. You help employees with work tasks, messaging, meetings, and approvals.
+
+CURRENT DATE/TIME: ${new Date().toLocaleString()}
+
+EMPLOYEE PROFILE:
 - Name: ${context.employee.name}
 - Email: ${context.employee.email}
 - Department: ${context.department.name}
 - Role: ${context.role.name}
-- Status: ${context.employee.status}
-- Hire Date: ${new Date(context.employee.hire_date).toLocaleDateString()}
 - Manager: ${managerInfo}
+- Status: ${context.employee.status}
+- Permissions: ${roleCapabilities}${subordinatesInfo}
 
 PENDING TASKS (${context.tasks.length}):
 ${tasksInfo}
@@ -161,36 +344,65 @@ ${tasksInfo}
 THIS WEEK'S ATTENDANCE:
 ${attendanceInfo}
 
-UNREAD MESSAGES: ${context.unreadMessages}
+DASHBOARD:
+- Unread Messages: ${context.unreadMessages}
+- Upcoming Meetings (7 days): ${meetingsInfo}${isManager ? `\n- Pending Approvals to Review: ${approvalsInfo}` : ''}
 
-YOUR CAPABILITIES - USE TOOLS TO PERFORM ACTIONS:
-1. **createTask** - Create tasks for the employee (e.g., "Create a task to finish the report by Friday")
-2. **checkIn** - Record check-in when employee arrives (e.g., "I'm here", "check me in")
-3. **checkOut** - Record check-out when employee leaves (e.g., "I'm leaving", "check me out")
-4. **requestLeave** - Submit leave requests (e.g., "I need Friday off for a doctor appointment")
-5. **messageManager** - Send messages to employee's manager (e.g., "Tell my manager I'll be late")
-6. **messageHR** - Send messages to HR department (e.g., "Report to HR about the broken AC")
-7. **getMyTasks** - Show employee's tasks when asked
-8. **getMyAttendance** - Show attendance records when asked
+AVAILABLE CAPABILITIES - USE TOOLS TO PERFORM ACTIONS:
 
-IMPORTANT TOOL USAGE RULES:
-- When the employee wants to perform an action, USE THE APPROPRIATE TOOL - don't just describe what you would do
-- For check-in: Use checkIn tool when employee says "I'm here", "check me in", "good morning I'm arriving", etc.
-- For check-out: Use checkOut tool when employee says "I'm leaving", "bye", "logging off", "going home", etc.
-- For tasks: Use createTask tool when employee says "create a task", "add a todo", "remind me to", etc.
-- For leave: Use requestLeave tool for any day off, vacation, sick leave requests
-- For messaging: Use messageManager/messageHR when employee wants to communicate with them
-- Always confirm the action AFTER using the tool, not before
+📋 TASKS:
+- createTask - Create personal tasks
+- updateTask - Edit/modify existing tasks (title, description, priority, due date, status)
+- deleteTask - Remove/delete tasks
+- delegateTask - Delegate to subordinates (managers only)
+- getMyTasks - View task list
 
-GUIDELINES:
-- Be friendly but professional
-- Keep responses concise (2-4 sentences for simple questions)
-- Use the employee's name occasionally to personalize
-- ALWAYS use tools when the employee requests an action - don't just say you will do something
-- After using a tool, confirm what was done based on the tool result
-- If you don't have information about something, be honest about it
-- Format lists and important information clearly
-- Use markdown formatting for better readability (bold for emphasis, bullet points for lists)`;
+⏰ ATTENDANCE:
+- checkIn / checkOut - Record arrival/departure
+- getMyAttendance - View attendance records
+
+🏖️ LEAVE:
+- requestLeave - Submit leave request
+- getLeaveBalance - Check remaining leave days
+
+💬 MESSAGING:
+- messageManager - Message your manager
+- messageHR - Contact HR department
+- messageEmployee - Message colleague (hierarchy rules apply)
+- escalateIssue - Escalate problem up management chain
+- announceToTeam - Broadcast to direct reports (managers only)
+- checkMessages - View unread messages
+
+📅 MEETINGS:
+- scheduleMeeting - Book a meeting
+- getMyMeetings - View upcoming meetings
+
+✅ APPROVALS:
+- requestApproval - Request manager approval (expense, travel, overtime, etc.)
+- getPendingApprovals - View pending requests
+- approveRequest / rejectRequest - Process requests (managers only)
+
+👥 TEAM (Managers Only):
+- checkTeamStatus - View team attendance and tasks
+
+⏰ REMINDERS:
+- setReminder - Set a future reminder
+- getReminders - View active reminders
+- getWeeklySummary - Get weekly activity summary
+
+MESSAGING HIERARCHY RULES:
+- Employees can message: Their manager, HR, Same department colleagues
+- Managers can message: Their team, Other managers, HR, Their manager
+- HODs can message: Everyone in department, Other HODs, Management
+- Admins can message: Anyone
+
+CRITICAL RULES:
+1. ALWAYS use tools when action is requested - never just describe what you would do
+2. Check permissions before manager-only actions (delegateTask, announceToTeam, approveRequest)
+3. For messaging, validate recipient is allowed per hierarchy rules
+4. After using a tool, confirm the result to the user
+5. Be concise but helpful
+6. Use markdown for formatting (**bold**, bullet points, etc.)`;
 };
 
 /**

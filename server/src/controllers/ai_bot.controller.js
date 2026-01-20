@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { generateAIResponse } = require('../services/aiService');
+const cache = require('../utils/cache');
 
 // ============================================
 // HELPER FUNCTIONS
@@ -103,6 +104,10 @@ const handleCreateTask = async (employeeId, { title, description, priority, due_
             return { success: false, error: 'Employee not found' };
         }
 
+        if (!employee.user_id) {
+            return { success: false, error: 'Employee account not linked to user. Please contact HR.' };
+        }
+
         // Parse the due date
         const parsedDueDate = parseRelativeDate(due_date);
 
@@ -119,6 +124,9 @@ const handleCreateTask = async (employeeId, { title, description, priority, due_
             }
         });
 
+        // Clear task cache
+        cache.delByPrefix('tasks');
+
         return {
             success: true,
             message: `Task "${title}" created successfully`,
@@ -133,6 +141,146 @@ const handleCreateTask = async (employeeId, { title, description, priority, due_
     } catch (error) {
         console.error('handleCreateTask error:', error);
         return { success: false, error: 'Failed to create task' };
+    }
+};
+
+/**
+ * Handle updating an existing task
+ */
+const handleUpdateTask = async (employeeId, { task_id, task_title, new_title, description, priority, due_date, status }) => {
+    try {
+        // Get the employee's user_id
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            select: { user_id: true, name: true }
+        });
+
+        if (!employee) {
+            return { success: false, error: 'Employee not found' };
+        }
+
+        if (!employee.user_id) {
+            return { success: false, error: 'Employee account not linked to user. Please contact HR.' };
+        }
+
+        // Find the task - by ID or by title
+        let task;
+        if (task_id) {
+            task = await prisma.task.findFirst({
+                where: { id: task_id, user_id: employee.user_id }
+            });
+        } else if (task_title) {
+            task = await prisma.task.findFirst({
+                where: {
+                    user_id: employee.user_id,
+                    title: { contains: task_title, mode: 'insensitive' }
+                }
+            });
+        }
+
+        if (!task) {
+            return { success: false, error: `Task "${task_title || task_id}" not found` };
+        }
+
+        // Build update data - only include fields that were provided
+        const updateData = {};
+        if (new_title) updateData.title = new_title;
+        if (description !== undefined) updateData.description = description;
+        if (priority) updateData.priority = priority;
+        if (status) updateData.status = status;
+        if (due_date) {
+            const parsedDueDate = parseRelativeDate(due_date);
+            if (parsedDueDate) updateData.due_date = parsedDueDate;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return { success: false, error: 'No updates provided' };
+        }
+
+        // Update the task
+        const updatedTask = await prisma.task.update({
+            where: { id: task.id },
+            data: updateData
+        });
+
+        // Clear task cache
+        cache.delByPrefix('tasks');
+
+        return {
+            success: true,
+            message: `Task "${updatedTask.title}" updated successfully`,
+            task: {
+                id: updatedTask.id,
+                title: updatedTask.title,
+                description: updatedTask.description,
+                priority: updatedTask.priority,
+                due_date: updatedTask.due_date ? updatedTask.due_date.toLocaleDateString() : null,
+                status: updatedTask.status
+            }
+        };
+    } catch (error) {
+        console.error('handleUpdateTask error:', error);
+        return { success: false, error: 'Failed to update task' };
+    }
+};
+
+/**
+ * Handle deleting a task
+ */
+const handleDeleteTask = async (employeeId, { task_id, task_title }) => {
+    try {
+        // Get the employee's user_id
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            select: { user_id: true, name: true }
+        });
+
+        if (!employee) {
+            return { success: false, error: 'Employee not found' };
+        }
+
+        if (!employee.user_id) {
+            return { success: false, error: 'Employee account not linked to user. Please contact HR.' };
+        }
+
+        // Find the task - by ID or by title
+        let task;
+        if (task_id) {
+            task = await prisma.task.findFirst({
+                where: { id: task_id, user_id: employee.user_id }
+            });
+        } else if (task_title) {
+            task = await prisma.task.findFirst({
+                where: {
+                    user_id: employee.user_id,
+                    title: { contains: task_title, mode: 'insensitive' }
+                }
+            });
+        }
+
+        if (!task) {
+            return { success: false, error: `Task "${task_title || task_id}" not found` };
+        }
+
+        // Delete the task
+        await prisma.task.delete({
+            where: { id: task.id }
+        });
+
+        // Clear task cache
+        cache.delByPrefix('tasks');
+
+        return {
+            success: true,
+            message: `Task "${task.title}" deleted successfully`,
+            deletedTask: {
+                id: task.id,
+                title: task.title
+            }
+        };
+    } catch (error) {
+        console.error('handleDeleteTask error:', error);
+        return { success: false, error: 'Failed to delete task' };
     }
 };
 
@@ -187,6 +335,9 @@ const handleCheckIn = async (employeeId) => {
                 }
             });
         }
+
+        // Clear attendance cache so pages refresh with new data
+        cache.delByPrefix('attendance');
 
         return {
             success: true,
@@ -251,6 +402,9 @@ const handleCheckOut = async (employeeId) => {
             where: { id: attendance.id },
             data: { check_out: now }
         });
+
+        // Clear attendance cache so pages refresh with new data
+        cache.delByPrefix('attendance');
 
         return {
             success: true,
@@ -530,28 +684,927 @@ const handleGetMyAttendance = async (employeeId, context) => {
     };
 };
 
+// ============================================
+// NEW HANDLERS - MESSAGING
+// ============================================
+
+/**
+ * Check if employee can message another employee based on hierarchy
+ */
+const canMessageEmployee = async (senderId, recipientId, senderContext) => {
+    const recipient = await prisma.employee.findUnique({
+        where: { id: recipientId },
+        include: { department: true, role: true }
+    });
+
+    if (!recipient) return { allowed: false, reason: 'Recipient not found' };
+
+    const senderRole = senderContext.role.name;
+    const senderDeptId = senderContext.department.id;
+
+    // Admin can message anyone
+    if (senderRole === 'Admin') return { allowed: true };
+
+    // Can always message own manager
+    if (senderContext.manager && senderContext.manager.id === recipientId) {
+        return { allowed: true };
+    }
+
+    // Can message HR department members
+    if (recipient.department.name.toLowerCase().includes('hr')) {
+        return { allowed: true };
+    }
+
+    // Same department
+    if (recipient.department_id === senderDeptId) {
+        return { allowed: true };
+    }
+
+    // Managers can message other managers
+    if ((senderRole === 'Head of Department' || senderContext.subordinates?.length > 0) &&
+        (recipient.role.name === 'Head of Department' || recipient.role.name === 'Admin')) {
+        return { allowed: true };
+    }
+
+    // Check if recipient is a subordinate
+    if (senderContext.subordinates?.some(s => s.id === recipientId)) {
+        return { allowed: true };
+    }
+
+    return { allowed: false, reason: 'You can only message your manager, HR, or colleagues in your department' };
+};
+
+/**
+ * Handle messaging a specific employee
+ */
+const handleMessageEmployee = async (employeeId, { employee_name, content, priority = 'normal' }, context) => {
+    try {
+        // Find the recipient by name
+        const recipient = await prisma.employee.findFirst({
+            where: {
+                name: { contains: employee_name, mode: 'insensitive' }
+            },
+            include: { department: true }
+        });
+
+        if (!recipient) {
+            return { success: false, error: `Could not find employee "${employee_name}"` };
+        }
+
+        // Check permission
+        const permission = await canMessageEmployee(employeeId, recipient.id, context);
+        if (!permission.allowed) {
+            return { success: false, error: permission.reason };
+        }
+
+        // Get sender info
+        const sender = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            include: { department: true }
+        });
+
+        // Create message for recipient
+        await prisma.message.create({
+            data: {
+                employee_id: recipient.id,
+                sender_employee_id: employeeId,
+                content: `**Message from ${sender.name} (${sender.department.name}):**\n\n${content}`,
+                sender: 'employee',
+                message_type: 'request',
+                priority: priority,
+                status: 'pending',
+                metadata: JSON.stringify({ fromEmployee: employeeId, fromName: sender.name })
+            }
+        });
+
+        return {
+            success: true,
+            message: `Message sent to ${recipient.name}`,
+            recipient: recipient.name,
+            department: recipient.department.name
+        };
+    } catch (error) {
+        console.error('handleMessageEmployee error:', error);
+        return { success: false, error: 'Failed to send message' };
+    }
+};
+
+/**
+ * Handle escalating an issue
+ */
+const handleEscalateIssue = async (employeeId, { issue, urgency = 'normal' }, context) => {
+    try {
+        if (!context.manager) {
+            return { success: false, error: 'No manager assigned to escalate to' };
+        }
+
+        const priorityMap = { normal: 'high', high: 'urgent', critical: 'urgent' };
+        const priority = priorityMap[urgency] || 'high';
+
+        // Create escalation message to manager
+        await prisma.message.create({
+            data: {
+                employee_id: context.manager.id,
+                sender_employee_id: employeeId,
+                content: `**⚠️ ESCALATION from ${context.employee.name}**\n\n**Issue:** ${issue}\n**Urgency:** ${urgency}\n**Department:** ${context.department.name}\n\nPlease review and take action.`,
+                sender: 'employee',
+                message_type: 'escalation',
+                priority: priority,
+                status: 'pending',
+                metadata: JSON.stringify({
+                    action: 'escalation',
+                    fromEmployee: employeeId,
+                    urgency: urgency
+                })
+            }
+        });
+
+        return {
+            success: true,
+            message: `Issue escalated to ${context.manager.name}`,
+            escalatedTo: context.manager.name,
+            urgency: urgency
+        };
+    } catch (error) {
+        console.error('handleEscalateIssue error:', error);
+        return { success: false, error: 'Failed to escalate issue' };
+    }
+};
+
+/**
+ * Handle announcing to team (managers only)
+ */
+const handleAnnounceToTeam = async (employeeId, { content, priority = 'normal' }, context) => {
+    try {
+        // Check if user is a manager
+        const subordinates = await prisma.employee.findMany({
+            where: { manager_id: employeeId }
+        });
+
+        if (subordinates.length === 0) {
+            return { success: false, error: 'You have no direct reports to announce to' };
+        }
+
+        // Send announcement to all subordinates
+        for (const sub of subordinates) {
+            await prisma.message.create({
+                data: {
+                    employee_id: sub.id,
+                    sender_employee_id: employeeId,
+                    content: `**📢 Team Announcement from ${context.employee.name}:**\n\n${content}`,
+                    sender: 'employee',
+                    message_type: 'announcement',
+                    priority: priority,
+                    status: 'pending',
+                    metadata: JSON.stringify({ action: 'team_announcement', fromManager: employeeId })
+                }
+            });
+        }
+
+        return {
+            success: true,
+            message: `Announcement sent to ${subordinates.length} team member(s)`,
+            recipientCount: subordinates.length
+        };
+    } catch (error) {
+        console.error('handleAnnounceToTeam error:', error);
+        return { success: false, error: 'Failed to send announcement' };
+    }
+};
+
+/**
+ * Handle checking messages
+ */
+const handleCheckMessages = async (employeeId) => {
+    try {
+        const messages = await prisma.message.findMany({
+            where: {
+                employee_id: employeeId,
+                status: { in: ['pending', 'delivered'] },
+                sender: { not: 'employee' }
+            },
+            orderBy: { created_at: 'desc' },
+            take: 10,
+            include: {
+                senderEmployee: { select: { name: true, department: { select: { name: true } } } }
+            }
+        });
+
+        const unreadCount = messages.filter(m => m.status !== 'read').length;
+
+        return {
+            success: true,
+            unreadCount: unreadCount,
+            messages: messages.map(m => ({
+                id: m.id,
+                from: m.senderEmployee?.name || 'System',
+                preview: m.content.substring(0, 100) + (m.content.length > 100 ? '...' : ''),
+                priority: m.priority,
+                type: m.message_type,
+                time: m.created_at
+            }))
+        };
+    } catch (error) {
+        console.error('handleCheckMessages error:', error);
+        return { success: false, error: 'Failed to check messages' };
+    }
+};
+
+// ============================================
+// NEW HANDLERS - MEETINGS
+// ============================================
+
+/**
+ * Handle scheduling a meeting
+ */
+const handleScheduleMeeting = async (employeeId, { title, attendees, date, time, duration = 30, description }, context) => {
+    try {
+        // Parse attendee names
+        const attendeeNames = attendees.split(',').map(n => n.trim());
+        const attendeeRecords = await prisma.employee.findMany({
+            where: {
+                name: { in: attendeeNames.map(n => ({ contains: n, mode: 'insensitive' })) }
+            }
+        });
+
+        // Try to find attendees by partial name match
+        const foundAttendees = [];
+        for (const name of attendeeNames) {
+            const found = await prisma.employee.findFirst({
+                where: { name: { contains: name, mode: 'insensitive' } }
+            });
+            if (found) foundAttendees.push(found);
+        }
+
+        if (foundAttendees.length === 0) {
+            return { success: false, error: `Could not find any employees matching: ${attendees}` };
+        }
+
+        // Parse date and time
+        const meetingDate = parseRelativeDate(date);
+        if (!meetingDate) {
+            return { success: false, error: 'Could not parse meeting date' };
+        }
+
+        // Parse time
+        const timeMatch = time.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+        if (timeMatch) {
+            let hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2] || '0');
+            const ampm = timeMatch[3]?.toLowerCase();
+            if (ampm === 'pm' && hours < 12) hours += 12;
+            if (ampm === 'am' && hours === 12) hours = 0;
+            meetingDate.setHours(hours, minutes, 0, 0);
+        }
+
+        const endTime = new Date(meetingDate.getTime() + duration * 60000);
+
+        // Create meeting
+        const meeting = await prisma.meeting.create({
+            data: {
+                title: title,
+                description: description || null,
+                organizer_id: employeeId,
+                start_time: meetingDate,
+                end_time: endTime,
+                attendees: JSON.stringify(foundAttendees.map(a => a.id)),
+                status: 'scheduled'
+            }
+        });
+
+        // Notify attendees
+        for (const attendee of foundAttendees) {
+            await prisma.message.create({
+                data: {
+                    employee_id: attendee.id,
+                    sender_employee_id: employeeId,
+                    content: `**📅 Meeting Invitation**\n\n**Title:** ${title}\n**When:** ${meetingDate.toLocaleString()}\n**Duration:** ${duration} minutes\n**Organizer:** ${context.employee.name}\n${description ? `\n**Agenda:** ${description}` : ''}`,
+                    sender: 'employee',
+                    message_type: 'request',
+                    priority: 'normal',
+                    status: 'pending',
+                    metadata: JSON.stringify({ action: 'meeting_invite', meetingId: meeting.id })
+                }
+            });
+        }
+
+        return {
+            success: true,
+            message: `Meeting "${title}" scheduled for ${meetingDate.toLocaleString()}`,
+            meetingId: meeting.id,
+            attendees: foundAttendees.map(a => a.name),
+            startTime: meetingDate,
+            duration: duration
+        };
+    } catch (error) {
+        console.error('handleScheduleMeeting error:', error);
+        return { success: false, error: 'Failed to schedule meeting' };
+    }
+};
+
+/**
+ * Handle getting meetings
+ */
+const handleGetMyMeetings = async (employeeId) => {
+    try {
+        const now = new Date();
+
+        // Get meetings where user is organizer or attendee
+        const meetings = await prisma.meeting.findMany({
+            where: {
+                OR: [
+                    { organizer_id: employeeId },
+                    { attendees: { contains: employeeId } }
+                ],
+                start_time: { gte: now },
+                status: { not: 'cancelled' }
+            },
+            orderBy: { start_time: 'asc' },
+            take: 10,
+            include: {
+                organizer: { select: { name: true } }
+            }
+        });
+
+        return {
+            success: true,
+            meetings: meetings.map(m => ({
+                id: m.id,
+                title: m.title,
+                organizer: m.organizer.name,
+                startTime: m.start_time,
+                endTime: m.end_time,
+                status: m.status
+            })),
+            count: meetings.length
+        };
+    } catch (error) {
+        console.error('handleGetMyMeetings error:', error);
+        return { success: false, error: 'Failed to get meetings' };
+    }
+};
+
+// ============================================
+// NEW HANDLERS - APPROVALS
+// ============================================
+
+/**
+ * Handle requesting approval
+ */
+const handleRequestApproval = async (employeeId, { request_type, title, description, amount }, context) => {
+    try {
+        if (!context.manager) {
+            return { success: false, error: 'No manager assigned to request approval from' };
+        }
+
+        const approval = await prisma.approvalRequest.create({
+            data: {
+                requester_id: employeeId,
+                approver_id: context.manager.id,
+                request_type: request_type,
+                title: title,
+                description: description,
+                amount: amount || null,
+                status: 'pending',
+                priority: 'normal'
+            }
+        });
+
+        // Notify manager
+        await prisma.message.create({
+            data: {
+                employee_id: context.manager.id,
+                sender_employee_id: employeeId,
+                content: `**✅ Approval Request**\n\n**Type:** ${request_type}\n**Title:** ${title}\n**From:** ${context.employee.name}\n${amount ? `**Amount:** $${amount}\n` : ''}\n**Details:** ${description}\n\nPlease review and approve/reject.`,
+                sender: 'employee',
+                message_type: 'request',
+                priority: 'normal',
+                status: 'pending',
+                metadata: JSON.stringify({ action: 'approval_request', approvalId: approval.id })
+            }
+        });
+
+        return {
+            success: true,
+            message: `Approval request sent to ${context.manager.name}`,
+            requestId: approval.id,
+            type: request_type
+        };
+    } catch (error) {
+        console.error('handleRequestApproval error:', error);
+        return { success: false, error: 'Failed to submit approval request' };
+    }
+};
+
+/**
+ * Handle getting pending approvals
+ */
+const handleGetPendingApprovals = async (employeeId, context) => {
+    try {
+        // Get requests made by user
+        const myRequests = await prisma.approvalRequest.findMany({
+            where: { requester_id: employeeId, status: 'pending' },
+            include: { approver: { select: { name: true } } }
+        });
+
+        // Get requests to approve (if manager)
+        const toApprove = await prisma.approvalRequest.findMany({
+            where: { approver_id: employeeId, status: 'pending' },
+            include: { requester: { select: { name: true } } }
+        });
+
+        return {
+            success: true,
+            myPendingRequests: myRequests.map(r => ({
+                id: r.id,
+                type: r.request_type,
+                title: r.title,
+                approver: r.approver.name,
+                createdAt: r.created_at
+            })),
+            requestsToApprove: toApprove.map(r => ({
+                id: r.id,
+                type: r.request_type,
+                title: r.title,
+                requester: r.requester.name,
+                amount: r.amount,
+                createdAt: r.created_at
+            }))
+        };
+    } catch (error) {
+        console.error('handleGetPendingApprovals error:', error);
+        return { success: false, error: 'Failed to get approvals' };
+    }
+};
+
+/**
+ * Handle approving a request
+ */
+const handleApproveRequest = async (employeeId, { request_id, notes }) => {
+    try {
+        const request = await prisma.approvalRequest.findUnique({
+            where: { id: request_id },
+            include: { requester: true }
+        });
+
+        if (!request) {
+            return { success: false, error: 'Request not found' };
+        }
+
+        if (request.approver_id !== employeeId) {
+            return { success: false, error: 'You are not authorized to approve this request' };
+        }
+
+        await prisma.approvalRequest.update({
+            where: { id: request_id },
+            data: {
+                status: 'approved',
+                decision_notes: notes || null,
+                decided_at: new Date()
+            }
+        });
+
+        // Notify requester
+        await prisma.message.create({
+            data: {
+                employee_id: request.requester_id,
+                content: `**✅ Request Approved**\n\nYour ${request.request_type} request "${request.title}" has been approved.${notes ? `\n\n**Notes:** ${notes}` : ''}`,
+                sender: 'bot',
+                message_type: 'report',
+                status: 'pending'
+            }
+        });
+
+        return {
+            success: true,
+            message: `Request approved`,
+            requestTitle: request.title
+        };
+    } catch (error) {
+        console.error('handleApproveRequest error:', error);
+        return { success: false, error: 'Failed to approve request' };
+    }
+};
+
+/**
+ * Handle rejecting a request
+ */
+const handleRejectRequest = async (employeeId, { request_id, reason }) => {
+    try {
+        const request = await prisma.approvalRequest.findUnique({
+            where: { id: request_id },
+            include: { requester: true }
+        });
+
+        if (!request) {
+            return { success: false, error: 'Request not found' };
+        }
+
+        if (request.approver_id !== employeeId) {
+            return { success: false, error: 'You are not authorized to reject this request' };
+        }
+
+        await prisma.approvalRequest.update({
+            where: { id: request_id },
+            data: {
+                status: 'rejected',
+                decision_notes: reason,
+                decided_at: new Date()
+            }
+        });
+
+        // Notify requester
+        await prisma.message.create({
+            data: {
+                employee_id: request.requester_id,
+                content: `**❌ Request Rejected**\n\nYour ${request.request_type} request "${request.title}" has been rejected.\n\n**Reason:** ${reason}`,
+                sender: 'bot',
+                message_type: 'report',
+                status: 'pending'
+            }
+        });
+
+        return {
+            success: true,
+            message: `Request rejected`,
+            requestTitle: request.title
+        };
+    } catch (error) {
+        console.error('handleRejectRequest error:', error);
+        return { success: false, error: 'Failed to reject request' };
+    }
+};
+
+// ============================================
+// NEW HANDLERS - TEAM MANAGEMENT
+// ============================================
+
+/**
+ * Handle checking team status (managers only)
+ */
+const handleCheckTeamStatus = async (employeeId, context) => {
+    try {
+        const subordinates = await prisma.employee.findMany({
+            where: { manager_id: employeeId },
+            include: { department: true }
+        });
+
+        if (subordinates.length === 0) {
+            return { success: false, error: 'You have no direct reports' };
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Get today's attendance for team
+        const attendance = await prisma.attendance.findMany({
+            where: {
+                employee_id: { in: subordinates.map(s => s.id) },
+                date: { gte: today, lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+            }
+        });
+
+        // Get pending tasks for team
+        const tasks = await prisma.task.findMany({
+            where: {
+                user_id: { in: subordinates.filter(s => s.user_id).map(s => s.user_id) },
+                status: { not: 'done' }
+            }
+        });
+
+        const teamStatus = subordinates.map(sub => {
+            const att = attendance.find(a => a.employee_id === sub.id);
+            const subTasks = tasks.filter(t => t.user_id === sub.user_id);
+            return {
+                name: sub.name,
+                status: att ? (att.check_in ? 'Present' : 'Expected') : 'No record',
+                checkIn: att?.check_in ? new Date(att.check_in).toLocaleTimeString() : null,
+                pendingTasks: subTasks.length
+            };
+        });
+
+        const presentCount = teamStatus.filter(s => s.status === 'Present').length;
+
+        return {
+            success: true,
+            teamSize: subordinates.length,
+            presentToday: presentCount,
+            team: teamStatus
+        };
+    } catch (error) {
+        console.error('handleCheckTeamStatus error:', error);
+        return { success: false, error: 'Failed to get team status' };
+    }
+};
+
+/**
+ * Handle delegating a task (managers only)
+ */
+const handleDelegateTask = async (employeeId, { employee_name, title, description, priority, due_date }, context) => {
+    try {
+        // Find the subordinate
+        const subordinate = await prisma.employee.findFirst({
+            where: {
+                manager_id: employeeId,
+                name: { contains: employee_name, mode: 'insensitive' }
+            }
+        });
+
+        if (!subordinate) {
+            return { success: false, error: `"${employee_name}" is not your direct report or not found` };
+        }
+
+        if (!subordinate.user_id) {
+            return { success: false, error: `${subordinate.name} doesn't have a linked user account for tasks` };
+        }
+
+        const parsedDueDate = parseRelativeDate(due_date);
+
+        // Create task for subordinate
+        const task = await prisma.task.create({
+            data: {
+                title: title,
+                description: description || `Delegated by ${context.employee.name}`,
+                priority: priority || 'medium',
+                due_date: parsedDueDate,
+                status: 'todo',
+                user_id: subordinate.user_id,
+                project_id: 1
+            }
+        });
+
+        // Notify subordinate
+        await prisma.message.create({
+            data: {
+                employee_id: subordinate.id,
+                sender_employee_id: employeeId,
+                content: `**📋 Task Assigned**\n\n**Title:** ${title}\n**From:** ${context.employee.name}\n**Priority:** ${priority || 'medium'}\n${parsedDueDate ? `**Due:** ${parsedDueDate.toLocaleDateString()}` : ''}\n${description ? `\n**Description:** ${description}` : ''}`,
+                sender: 'employee',
+                message_type: 'request',
+                priority: 'normal',
+                status: 'pending',
+                metadata: JSON.stringify({ action: 'task_delegated', taskId: task.id })
+            }
+        });
+
+        return {
+            success: true,
+            message: `Task "${title}" delegated to ${subordinate.name}`,
+            taskId: task.id,
+            assignee: subordinate.name
+        };
+    } catch (error) {
+        console.error('handleDelegateTask error:', error);
+        return { success: false, error: 'Failed to delegate task' };
+    }
+};
+
+// ============================================
+// NEW HANDLERS - REMINDERS & SUMMARY
+// ============================================
+
+/**
+ * Handle setting a reminder
+ */
+const handleSetReminder = async (employeeId, { content, remind_at, priority = 'normal' }) => {
+    try {
+        const reminderTime = parseRelativeDate(remind_at);
+        if (!reminderTime) {
+            return { success: false, error: 'Could not parse reminder time' };
+        }
+
+        // Parse time if included
+        const timeMatch = remind_at.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+        if (timeMatch) {
+            let hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2] || '0');
+            const ampm = timeMatch[3]?.toLowerCase();
+            if (ampm === 'pm' && hours < 12) hours += 12;
+            if (ampm === 'am' && hours === 12) hours = 0;
+            reminderTime.setHours(hours, minutes, 0, 0);
+        }
+
+        const reminder = await prisma.reminder.create({
+            data: {
+                employee_id: employeeId,
+                content: content,
+                remind_at: reminderTime,
+                priority: priority,
+                is_sent: false
+            }
+        });
+
+        return {
+            success: true,
+            message: `Reminder set for ${reminderTime.toLocaleString()}`,
+            reminderId: reminder.id,
+            reminderTime: reminderTime
+        };
+    } catch (error) {
+        console.error('handleSetReminder error:', error);
+        return { success: false, error: 'Failed to set reminder' };
+    }
+};
+
+/**
+ * Handle getting reminders
+ */
+const handleGetReminders = async (employeeId) => {
+    try {
+        const reminders = await prisma.reminder.findMany({
+            where: {
+                employee_id: employeeId,
+                is_sent: false,
+                remind_at: { gte: new Date() }
+            },
+            orderBy: { remind_at: 'asc' },
+            take: 10
+        });
+
+        return {
+            success: true,
+            reminders: reminders.map(r => ({
+                id: r.id,
+                content: r.content,
+                remindAt: r.remind_at,
+                priority: r.priority
+            })),
+            count: reminders.length
+        };
+    } catch (error) {
+        console.error('handleGetReminders error:', error);
+        return { success: false, error: 'Failed to get reminders' };
+    }
+};
+
+/**
+ * Handle getting leave balance
+ */
+const handleGetLeaveBalance = async (employeeId) => {
+    try {
+        const currentYear = new Date().getFullYear();
+
+        const balances = await prisma.leaveBalance.findMany({
+            where: {
+                employee_id: employeeId,
+                year: currentYear
+            },
+            include: { leave_type: true }
+        });
+
+        if (balances.length === 0) {
+            return {
+                success: true,
+                message: 'No leave balances found for this year',
+                balances: []
+            };
+        }
+
+        return {
+            success: true,
+            year: currentYear,
+            balances: balances.map(b => ({
+                type: b.leave_type.name,
+                total: b.total_days,
+                used: b.used_days,
+                pending: b.pending_days,
+                remaining: b.total_days - b.used_days - b.pending_days
+            }))
+        };
+    } catch (error) {
+        console.error('handleGetLeaveBalance error:', error);
+        return { success: false, error: 'Failed to get leave balance' };
+    }
+};
+
+/**
+ * Handle getting weekly summary
+ */
+const handleGetWeeklySummary = async (employeeId, context) => {
+    try {
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // Attendance summary
+        const attendance = context.attendance || [];
+        const attendanceSummary = {
+            present: attendance.filter(a => a.status === 'present').length,
+            late: attendance.filter(a => a.status === 'late').length,
+            absent: attendance.filter(a => a.status === 'absent').length
+        };
+
+        // Tasks completed this week
+        const completedTasks = await prisma.task.count({
+            where: {
+                user_id: context.employee.user_id,
+                status: 'done',
+                updated_at: { gte: startOfWeek }
+            }
+        });
+
+        // Pending tasks
+        const pendingTasks = context.tasks?.length || 0;
+
+        // Messages received this week
+        const messagesReceived = await prisma.message.count({
+            where: {
+                employee_id: employeeId,
+                created_at: { gte: startOfWeek }
+            }
+        });
+
+        return {
+            success: true,
+            weekOf: startOfWeek.toLocaleDateString(),
+            summary: {
+                attendance: attendanceSummary,
+                tasksCompleted: completedTasks,
+                tasksPending: pendingTasks,
+                messagesReceived: messagesReceived
+            }
+        };
+    } catch (error) {
+        console.error('handleGetWeeklySummary error:', error);
+        return { success: false, error: 'Failed to get weekly summary' };
+    }
+};
+
 /**
  * Master action handler - routes to appropriate handler
  */
 const createActionHandler = (employeeId, context) => {
     return async (toolName, toolInput) => {
         switch (toolName) {
+            // Tasks
             case 'createTask':
                 return await handleCreateTask(employeeId, toolInput);
+            case 'updateTask':
+                return await handleUpdateTask(employeeId, toolInput);
+            case 'deleteTask':
+                return await handleDeleteTask(employeeId, toolInput);
+            case 'delegateTask':
+                return await handleDelegateTask(employeeId, toolInput, context);
+            case 'getMyTasks':
+                return await handleGetMyTasks(employeeId, context);
+
+            // Attendance
             case 'checkIn':
                 return await handleCheckIn(employeeId);
             case 'checkOut':
                 return await handleCheckOut(employeeId);
+            case 'getMyAttendance':
+                return await handleGetMyAttendance(employeeId, context);
+
+            // Leave
             case 'requestLeave':
                 return await handleLeaveRequest(employeeId, toolInput);
+            case 'getLeaveBalance':
+                return await handleGetLeaveBalance(employeeId);
+
+            // Messaging
             case 'messageManager':
                 return await handleMessageManager(employeeId, toolInput.content);
             case 'messageHR':
                 return await handleMessageHR(employeeId, toolInput.content);
-            case 'getMyTasks':
-                return await handleGetMyTasks(employeeId, context);
-            case 'getMyAttendance':
-                return await handleGetMyAttendance(employeeId, context);
+            case 'messageEmployee':
+                return await handleMessageEmployee(employeeId, toolInput, context);
+            case 'escalateIssue':
+                return await handleEscalateIssue(employeeId, toolInput, context);
+            case 'announceToTeam':
+                return await handleAnnounceToTeam(employeeId, toolInput, context);
+            case 'checkMessages':
+                return await handleCheckMessages(employeeId);
+
+            // Meetings
+            case 'scheduleMeeting':
+                return await handleScheduleMeeting(employeeId, toolInput, context);
+            case 'getMyMeetings':
+                return await handleGetMyMeetings(employeeId);
+
+            // Approvals
+            case 'requestApproval':
+                return await handleRequestApproval(employeeId, toolInput, context);
+            case 'getPendingApprovals':
+                return await handleGetPendingApprovals(employeeId, context);
+            case 'approveRequest':
+                return await handleApproveRequest(employeeId, toolInput);
+            case 'rejectRequest':
+                return await handleRejectRequest(employeeId, toolInput);
+
+            // Team Management
+            case 'checkTeamStatus':
+                return await handleCheckTeamStatus(employeeId, context);
+
+            // Reminders & Summary
+            case 'setReminder':
+                return await handleSetReminder(employeeId, toolInput);
+            case 'getReminders':
+                return await handleGetReminders(employeeId);
+            case 'getWeeklySummary':
+                return await handleGetWeeklySummary(employeeId, context);
+
             default:
                 return { success: false, error: `Unknown action: ${toolName}` };
         }
@@ -579,8 +1632,20 @@ const getEmployeeContext = async (employeeId) => {
 
     if (!employee) return null;
 
+    // Get subordinates (direct reports) for manager features
+    const subordinates = await prisma.employee.findMany({
+        where: { manager_id: employeeId },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            user_id: true,
+            department: { select: { name: true } }
+        }
+    });
+
     // Get pending tasks for this user
-    const tasks = await prisma.task.findMany({
+    const tasks = employee.user_id ? await prisma.task.findMany({
         where: {
             user_id: employee.user_id,
             status: { not: 'done' }
@@ -594,7 +1659,7 @@ const getEmployeeContext = async (employeeId) => {
             priority: true,
             due_date: true
         }
-    });
+    }) : [];
 
     // Get this week's attendance
     const today = new Date();
@@ -619,6 +1684,27 @@ const getEmployeeContext = async (employeeId) => {
         }
     });
 
+    // Get upcoming meetings (next 7 days)
+    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const upcomingMeetings = await prisma.meeting.count({
+        where: {
+            OR: [
+                { organizer_id: employeeId },
+                { attendees: { contains: employeeId } }
+            ],
+            start_time: { gte: today, lte: nextWeek },
+            status: { not: 'cancelled' }
+        }
+    });
+
+    // Get pending approvals count (for managers)
+    const pendingApprovals = subordinates.length > 0 ? await prisma.approvalRequest.count({
+        where: {
+            approver_id: employeeId,
+            status: 'pending'
+        }
+    }) : 0;
+
     return {
         employee: {
             id: employee.id,
@@ -626,7 +1712,8 @@ const getEmployeeContext = async (employeeId) => {
             email: employee.email,
             phone: employee.phone,
             status: employee.status,
-            hire_date: employee.hire_date
+            hire_date: employee.hire_date,
+            user_id: employee.user_id
         },
         department: {
             id: employee.department.id,
@@ -638,9 +1725,12 @@ const getEmployeeContext = async (employeeId) => {
             permissions: JSON.parse(employee.role.permissions || '[]')
         },
         manager: employee.manager,
+        subordinates: subordinates.length > 0 ? subordinates : null,
         tasks,
         attendance,
-        unreadMessages
+        unreadMessages,
+        upcomingMeetings,
+        pendingApprovals
     };
 };
 

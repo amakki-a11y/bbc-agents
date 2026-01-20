@@ -60,31 +60,120 @@ model Employee {
   status        String   @default("active") // active, on_leave, terminated
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
+  // Attendance
   attendances   Attendance[] @relation("EmployeeAttendance")
   approvedAttendances Attendance[] @relation("AttendanceApprover")
+  // Messages
   messages      Message[] @relation("EmployeeMessages")
+  sentMessages  Message[] @relation("SentMessages")
   routedMessages Message[] @relation("RoutedMessages")
+  // Leave
   leaves        Leave[] @relation("EmployeeLeaves")
   approvedLeaves Leave[] @relation("LeaveApprover")
   leaveBalances LeaveBalance[]
+  // Meetings
+  organizedMeetings Meeting[] @relation("MeetingOrganizer")
+  // Approvals
+  requestedApprovals ApprovalRequest[] @relation("ApprovalRequester")
+  approvalsToReview  ApprovalRequest[] @relation("ApprovalApprover")
+  // Reminders
+  reminders     Reminder[]
 }
 
 // AI Bot Message System
 model Message {
-  id           String   @id @default(cuid())
-  employee_id  String
-  employee     Employee @relation("EmployeeMessages", fields: [employee_id], references: [id])
-  content      String
-  sender       String   @default("employee") // employee, bot
-  message_type String   @default("question") // question, report, request, announcement
-  routed_to    String?
-  routedEmployee Employee? @relation("RoutedMessages", fields: [routed_to], references: [id])
-  status       String   @default("delivered") // pending, delivered, read, actioned
-  metadata     String?  // JSON string for storing actions taken
-  created_at   DateTime @default(now())
+  id              String    @id @default(cuid())
+  employee_id     String
+  employee        Employee  @relation("EmployeeMessages", fields: [employee_id], references: [id])
+  content         String
+  sender          String    @default("employee") // employee, bot, system
+  sender_employee_id String? // For employee-to-employee messages
+  senderEmployee  Employee? @relation("SentMessages", fields: [sender_employee_id], references: [id])
+  message_type    String    @default("question") // question, report, request, announcement, escalation, delegation
+  priority        String    @default("normal") // low, normal, high, urgent
+  routed_to       String?
+  routedEmployee  Employee? @relation("RoutedMessages", fields: [routed_to], references: [id])
+  status          String    @default("delivered") // pending, delivered, read, actioned
+  read_at         DateTime?
+  parent_message_id String?
+  parentMessage   Message?  @relation("MessageThread", fields: [parent_message_id], references: [id])
+  replies         Message[] @relation("MessageThread")
+  metadata        String?   // JSON string for storing actions taken
+  created_at      DateTime  @default(now())
 
   @@index([employee_id])
+  @@index([sender_employee_id])
   @@index([created_at])
+  @@index([status])
+  @@index([priority])
+}
+
+// Meeting System
+model Meeting {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  organizer_id String
+  organizer    Employee  @relation("MeetingOrganizer", fields: [organizer_id], references: [id])
+  start_time   DateTime
+  end_time     DateTime
+  location     String?   // Room name or video link
+  meeting_type String    @default("meeting") // meeting, one_on_one, team_sync, interview
+  status       String    @default("scheduled") // scheduled, in_progress, completed, cancelled
+  attendees    String    // JSON array of employee IDs
+  notes        String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@index([organizer_id])
+  @@index([start_time])
+  @@index([status])
+}
+
+// Approval Request System
+model ApprovalRequest {
+  id              String    @id @default(cuid())
+  requester_id    String
+  requester       Employee  @relation("ApprovalRequester", fields: [requester_id], references: [id])
+  approver_id     String
+  approver        Employee  @relation("ApprovalApprover", fields: [approver_id], references: [id])
+  request_type    String    // leave, expense, purchase, overtime, travel, other
+  title           String
+  description     String?
+  amount          Float?    // For expense/purchase requests
+  status          String    @default("pending") // pending, approved, rejected, cancelled
+  priority        String    @default("normal") // low, normal, high, urgent
+  decision_notes  String?
+  decided_at      DateTime?
+  due_date        DateTime? // When approval is needed by
+  metadata        String?   // JSON for additional data
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  @@index([requester_id])
+  @@index([approver_id])
+  @@index([status])
+  @@index([request_type])
+}
+
+// Reminder System
+model Reminder {
+  id          String    @id @default(cuid())
+  employee_id String
+  employee    Employee  @relation(fields: [employee_id], references: [id])
+  content     String
+  remind_at   DateTime
+  is_sent     Boolean   @default(false)
+  is_recurring Boolean  @default(false)
+  recurrence_pattern String? // daily, weekly, monthly
+  priority    String    @default("normal") // low, normal, high
+  related_type String?  // task, meeting, approval, general
+  related_id   String?  // ID of related entity
+  created_at  DateTime  @default(now())
+
+  @@index([employee_id])
+  @@index([remind_at])
+  @@index([is_sent])
 }
 
 model Attendance {
