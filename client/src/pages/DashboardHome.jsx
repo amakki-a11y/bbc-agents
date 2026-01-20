@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { http } from '../api/http';
 import {
     CheckSquare, Clock, Users, TrendingUp, Calendar, Plus, ArrowRight,
-    CheckCircle2, AlertCircle, Bell, FileText, UserCheck, LogIn
+    CheckCircle2, AlertCircle, Bell, FileText, UserCheck, LogIn, Target,
+    Zap, Activity, BarChart3, Sparkles
 } from 'lucide-react';
 
 const DashboardHome = () => {
@@ -28,11 +29,9 @@ const DashboardHome = () => {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            // Fetch tasks
             const tasksRes = await http.get('/api/tasks');
             const tasks = tasksRes.data || [];
 
-            // Calculate tasks due today
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const tomorrow = new Date(today);
@@ -44,7 +43,6 @@ const DashboardHome = () => {
                 return dueDate >= today && dueDate < tomorrow && t.status !== 'done';
             }).length;
 
-            // Get upcoming tasks (not done, sorted by due date)
             const upcoming = tasks
                 .filter(t => t.status !== 'done')
                 .sort((a, b) => {
@@ -57,24 +55,17 @@ const DashboardHome = () => {
             setUpcomingTasks(upcoming);
             setStats(prev => ({ ...prev, tasksDueToday }));
 
-            // Try to fetch attendance data
             try {
                 const attendanceRes = await http.get('/api/attendance/me/today');
                 setAttendanceStatus(attendanceRes.data);
-            } catch (e) {
-                // User may not have employee profile
-            }
+            } catch (e) {}
 
-            // Try to fetch employee count
             try {
                 const employeesRes = await http.get('/api/employees?limit=1');
                 const total = employeesRes.data?.pagination?.total || 0;
                 setStats(prev => ({ ...prev, teamMembers: total }));
-            } catch (e) {
-                // May not have permission
-            }
+            } catch (e) {}
 
-            // Mock recent activity (in real app, fetch from API)
             setRecentActivity([
                 { id: 1, type: 'task_completed', message: 'Completed "Review design specs"', time: '2 hours ago' },
                 { id: 2, type: 'check_in', message: 'Checked in at 9:00 AM', time: '5 hours ago' },
@@ -130,67 +121,107 @@ const DashboardHome = () => {
 
     const getPriorityColor = (priority) => {
         switch (priority) {
-            case 'urgent': return '#dc2626';
-            case 'high': return '#ea580c';
-            case 'medium': return '#2563eb';
-            case 'low': return '#16a34a';
-            default: return '#6b7280';
+            case 'urgent': return '#ef4444';
+            case 'high': return '#f97316';
+            case 'medium': return '#6366f1';
+            case 'low': return '#22c55e';
+            default: return '#94a3b8';
         }
     };
 
     const getActivityIcon = (type) => {
         switch (type) {
             case 'task_completed': return <CheckCircle2 size={16} style={{ color: '#10b981' }} />;
-            case 'check_in': return <LogIn size={16} style={{ color: '#3b82f6' }} />;
+            case 'check_in': return <LogIn size={16} style={{ color: '#6366f1' }} />;
             case 'task_assigned': return <FileText size={16} style={{ color: '#8b5cf6' }} />;
-            default: return <Bell size={16} style={{ color: '#6b7280' }} />;
+            default: return <Bell size={16} style={{ color: '#94a3b8' }} />;
         }
     };
 
-    const StatCard = ({ icon: Icon, label, value, color, bgColor }) => {
+    // Modern Stat Card Component
+    const StatCard = ({ icon: Icon, label, value, gradient, delay }) => {
         const [isHovered, setIsHovered] = useState(false);
+
         return (
             <div
+                className="animate-fadeInUp card-modern hover-lift"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 style={{
-                    background: 'white',
-                    borderRadius: '12px',
                     padding: '1.5rem',
-                    boxShadow: isHovered
-                        ? '0 10px 25px rgba(0,0,0,0.1)'
-                        : '0 1px 3px rgba(0,0,0,0.08)',
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     gap: '1rem',
-                    borderLeft: `4px solid ${color}`,
-                    transition: 'all 0.2s ease',
-                    transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
-                    cursor: 'default'
+                    cursor: 'default',
+                    animationDelay: delay
                 }}
             >
                 <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    background: bgColor,
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '14px',
+                    background: gradient,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'transform 0.2s ease',
-                    transform: isHovered ? 'scale(1.05)' : 'scale(1)'
+                    boxShadow: isHovered ? '0 8px 20px rgba(0,0,0,0.15)' : '0 4px 12px rgba(0,0,0,0.08)',
+                    transition: 'all 0.3s ease',
+                    transform: isHovered ? 'scale(1.05) rotate(-3deg)' : 'scale(1) rotate(0deg)'
                 }}>
-                    <Icon size={24} style={{ color }} />
+                    <Icon size={24} style={{ color: 'white' }} />
                 </div>
-                <div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1f2937' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{
+                        fontSize: '2rem',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        lineHeight: 1,
+                        marginBottom: '0.25rem'
+                    }}>
                         {value}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    <div style={{
+                        fontSize: '0.875rem',
+                        color: '#64748b',
+                        fontWeight: 500
+                    }}>
                         {label}
                     </div>
                 </div>
             </div>
+        );
+    };
+
+    // Quick Action Button Component
+    const QuickActionButton = ({ icon: Icon, label, onClick, gradient, hoverGradient }) => {
+        const [isHovered, setIsHovered] = useState(false);
+
+        return (
+            <button
+                onClick={onClick}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '1.25rem 1rem',
+                    background: isHovered ? hoverGradient : gradient,
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    transition: 'all 0.3s ease',
+                    transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+                    boxShadow: isHovered ? '0 12px 24px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+            >
+                <Icon size={26} />
+                {label}
+            </button>
         );
     };
 
@@ -201,72 +232,116 @@ const DashboardHome = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#f9fafb'
+                background: '#f8fafc'
             }}>
-                <div style={{ textAlign: 'center', color: '#6b7280' }}>
-                    Loading dashboard...
+                <div style={{ textAlign: 'center' }}>
+                    <div className="animate-spin" style={{
+                        width: 48,
+                        height: 48,
+                        border: '4px solid #e2e8f0',
+                        borderTopColor: '#6366f1',
+                        borderRadius: '50%',
+                        margin: '0 auto 1rem'
+                    }} />
+                    <div style={{ color: '#64748b', fontWeight: 500 }}>Loading dashboard...</div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div style={{
+        <div className="scrollbar-modern" style={{
             flex: 1,
-            background: '#f9fafb',
+            background: '#f8fafc',
             padding: '2rem',
             overflowY: 'auto'
         }}>
-            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                {/* Welcome Header with Gradient Card */}
-                <div style={{
-                    background: 'linear-gradient(135deg, #7b68ee 0%, #6366f1 50%, #8b5cf6 100%)',
-                    borderRadius: '16px',
-                    padding: '2rem',
+            <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
+                {/* Welcome Header Card */}
+                <div className="animate-fadeInUp" style={{
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+                    borderRadius: '24px',
+                    padding: '2.5rem',
                     marginBottom: '2rem',
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden',
-                    boxShadow: '0 4px 20px rgba(123, 104, 238, 0.3)'
+                    boxShadow: '0 20px 40px rgba(99, 102, 241, 0.3)'
                 }}>
-                    {/* Decorative circles */}
+                    {/* Decorative Elements */}
                     <div style={{
                         position: 'absolute',
-                        top: '-30px',
-                        right: '-30px',
+                        top: '-40px',
+                        right: '-40px',
+                        width: '180px',
+                        height: '180px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.1)',
+                        animation: 'float 6s ease-in-out infinite'
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '-30px',
+                        right: '100px',
                         width: '120px',
                         height: '120px',
                         borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.1)'
+                        background: 'rgba(255,255,255,0.08)',
+                        animation: 'float 8s ease-in-out infinite reverse'
                     }} />
                     <div style={{
                         position: 'absolute',
-                        bottom: '-20px',
-                        right: '80px',
-                        width: '80px',
-                        height: '80px',
+                        top: '30px',
+                        right: '200px',
+                        width: '60px',
+                        height: '60px',
                         borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.08)'
+                        background: 'rgba(255,255,255,0.06)',
+                        animation: 'float 5s ease-in-out infinite'
                     }} />
+
                     <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginBottom: '1rem'
+                        }}>
+                            <Sparkles size={24} style={{ opacity: 0.9 }} />
+                            <span style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                opacity: 0.9,
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px'
+                            }}>
+                                {formatDate()}
+                            </span>
+                        </div>
                         <h1 style={{
-                            fontSize: '1.75rem',
-                            fontWeight: 700,
+                            fontSize: '2rem',
+                            fontWeight: 800,
                             marginBottom: '0.5rem',
-                            margin: 0
+                            margin: 0,
+                            lineHeight: 1.2
                         }}>
                             {getGreeting()}, {user?.username || user?.email?.split('@')[0] || 'there'}!
                         </h1>
-                        <p style={{ opacity: 0.9, fontSize: '0.95rem', margin: '0.5rem 0 0' }}>
-                            {formatDate()}
+                        <p style={{
+                            opacity: 0.85,
+                            fontSize: '1rem',
+                            margin: '0.75rem 0 0',
+                            maxWidth: '500px'
+                        }}>
+                            Here's what's happening with your workspace today. Let's make it productive!
                         </p>
                     </div>
                 </div>
 
-                {/* Stats Row */}
+                {/* Stats Grid */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
                     gap: '1.25rem',
                     marginBottom: '2rem'
                 }}>
@@ -274,115 +349,132 @@ const DashboardHome = () => {
                         icon={CheckSquare}
                         label="Tasks Due Today"
                         value={stats.tasksDueToday}
-                        color="#7b68ee"
-                        bgColor="#f0edff"
+                        gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+                        delay="0ms"
                     />
                     <StatCard
                         icon={AlertCircle}
                         label="Pending Approvals"
                         value={stats.pendingApprovals}
-                        color="#f59e0b"
-                        bgColor="#fef3c7"
+                        gradient="linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
+                        delay="100ms"
                     />
                     <StatCard
-                        icon={TrendingUp}
+                        icon={Activity}
                         label="Attendance Rate"
                         value={`${stats.attendanceRate}%`}
-                        color="#10b981"
-                        bgColor="#ecfdf5"
+                        gradient="linear-gradient(135deg, #10b981 0%, #34d399 100%)"
+                        delay="200ms"
                     />
                     <StatCard
                         icon={Users}
                         label="Team Members"
                         value={stats.teamMembers}
-                        color="#7b68ee"
-                        bgColor="#f0edff"
+                        gradient="linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%)"
+                        delay="300ms"
                     />
                 </div>
 
-                {/* Two Column Layout */}
+                {/* Main Content Grid */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 400px',
+                    gridTemplateColumns: '1fr 380px',
                     gap: '1.5rem'
                 }}>
                     {/* Left Column */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        {/* My Tasks */}
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}>
+                        {/* Tasks Card */}
+                        <div className="card-modern animate-fadeInUp" style={{ animationDelay: '200ms' }}>
                             <div style={{
-                                padding: '1.25rem',
-                                borderBottom: '1px solid #e5e7eb',
+                                padding: '1.25rem 1.5rem',
+                                borderBottom: '1px solid #f1f5f9',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between'
                             }}>
-                                <h2 style={{
-                                    margin: 0,
-                                    fontSize: '1rem',
-                                    fontWeight: 600,
-                                    color: '#1f2937'
-                                }}>
-                                    My Tasks (Due Soon)
-                                </h2>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{
+                                        width: 36,
+                                        height: 36,
+                                        borderRadius: 10,
+                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <CheckSquare size={18} color="white" />
+                                    </div>
+                                    <div>
+                                        <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                                            My Tasks
+                                        </h2>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+                                            {upcomingTasks.length} tasks pending
+                                        </p>
+                                    </div>
+                                </div>
                                 <button
                                     onClick={() => window.location.href = '/projects/1'}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '4px',
-                                        background: 'none',
+                                        gap: '6px',
+                                        background: '#f1f5f9',
                                         border: 'none',
-                                        color: '#7b68ee',
-                                        fontSize: '0.875rem',
-                                        fontWeight: 500,
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '10px',
+                                        color: '#6366f1',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 600,
                                         cursor: 'pointer',
                                         transition: 'all 0.2s ease'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.color = '#6366f1';
-                                        e.currentTarget.style.gap = '6px';
+                                        e.currentTarget.style.background = '#e0e7ff';
+                                        e.currentTarget.style.gap = '10px';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.color = '#7b68ee';
-                                        e.currentTarget.style.gap = '4px';
+                                        e.currentTarget.style.background = '#f1f5f9';
+                                        e.currentTarget.style.gap = '6px';
                                     }}
                                 >
                                     View All <ArrowRight size={14} />
                                 </button>
                             </div>
                             <div style={{ padding: '0.5rem' }}>
-                                {upcomingTasks.length > 0 ? upcomingTasks.map(task => (
+                                {upcomingTasks.length > 0 ? upcomingTasks.map((task, idx) => (
                                     <div
                                         key={task.id}
+                                        className="animate-fadeInUp"
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '1rem',
-                                            padding: '0.875rem',
-                                            borderRadius: '8px',
+                                            padding: '1rem',
+                                            borderRadius: '12px',
                                             cursor: 'pointer',
-                                            transition: 'background 0.15s'
+                                            transition: 'all 0.2s ease',
+                                            animationDelay: `${idx * 50}ms`
                                         }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <div style={{
-                                            width: '20px',
-                                            height: '20px',
-                                            borderRadius: '50%',
-                                            border: '2px solid #d1d5db',
-                                            flexShrink: 0
+                                            width: '22px',
+                                            height: '22px',
+                                            borderRadius: '6px',
+                                            border: `2px solid ${getPriorityColor(task.priority)}`,
+                                            flexShrink: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transition: 'all 0.2s ease'
                                         }} />
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{
                                                 fontSize: '0.9rem',
-                                                fontWeight: 500,
-                                                color: '#1f2937',
+                                                fontWeight: 600,
+                                                color: '#1e293b',
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis'
@@ -390,28 +482,22 @@ const DashboardHome = () => {
                                                 {task.title}
                                             </div>
                                         </div>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.75rem'
-                                        }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             {task.priority && (
-                                                <span style={{
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 600,
-                                                    textTransform: 'uppercase',
+                                                <span className="badge-modern" style={{
+                                                    background: `${getPriorityColor(task.priority)}15`,
                                                     color: getPriorityColor(task.priority),
-                                                    background: `${getPriorityColor(task.priority)}10`,
-                                                    padding: '2px 6px',
-                                                    borderRadius: '4px'
+                                                    textTransform: 'capitalize',
+                                                    fontSize: '0.7rem'
                                                 }}>
                                                     {task.priority}
                                                 </span>
                                             )}
                                             <span style={{
                                                 fontSize: '0.8rem',
-                                                color: formatDueDate(task.due_date) === 'Overdue' ? '#dc2626' :
-                                                       formatDueDate(task.due_date) === 'Today' ? '#d97706' : '#6b7280'
+                                                fontWeight: 500,
+                                                color: formatDueDate(task.due_date) === 'Overdue' ? '#ef4444' :
+                                                       formatDueDate(task.due_date) === 'Today' ? '#f59e0b' : '#64748b'
                                             }}>
                                                 {formatDueDate(task.due_date)}
                                             </span>
@@ -419,52 +505,60 @@ const DashboardHome = () => {
                                     </div>
                                 )) : (
                                     <div style={{
-                                        padding: '2rem',
+                                        padding: '3rem',
                                         textAlign: 'center',
-                                        color: '#9ca3af'
+                                        color: '#94a3b8'
                                     }}>
-                                        <CheckCircle2 size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                                        <p style={{ margin: 0 }}>No upcoming tasks</p>
+                                        <CheckCircle2 size={40} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
+                                        <p style={{ margin: 0, fontWeight: 500 }}>All caught up!</p>
+                                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>No tasks due soon</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Recent Activity */}
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}>
+                        {/* Activity Card */}
+                        <div className="card-modern animate-fadeInUp" style={{ animationDelay: '300ms' }}>
                             <div style={{
-                                padding: '1.25rem',
-                                borderBottom: '1px solid #e5e7eb'
+                                padding: '1.25rem 1.5rem',
+                                borderBottom: '1px solid #f1f5f9',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem'
                             }}>
-                                <h2 style={{
-                                    margin: 0,
-                                    fontSize: '1rem',
-                                    fontWeight: 600,
-                                    color: '#1f2937'
+                                <div style={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 10,
+                                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                 }}>
+                                    <Activity size={18} color="white" />
+                                </div>
+                                <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
                                     Recent Activity
                                 </h2>
                             </div>
                             <div style={{ padding: '0.5rem' }}>
-                                {recentActivity.map(activity => (
+                                {recentActivity.map((activity, idx) => (
                                     <div
                                         key={activity.id}
+                                        className="animate-fadeInUp"
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '1rem',
-                                            padding: '0.875rem'
+                                            padding: '1rem',
+                                            animationDelay: `${idx * 50}ms`
                                         }}
                                     >
                                         <div style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '8px',
-                                            background: '#f3f4f6',
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: '10px',
+                                            background: '#f8fafc',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center'
@@ -472,16 +566,10 @@ const DashboardHome = () => {
                                             {getActivityIcon(activity.type)}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{
-                                                fontSize: '0.875rem',
-                                                color: '#374151'
-                                            }}>
+                                            <div style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
                                                 {activity.message}
                                             </div>
-                                            <div style={{
-                                                fontSize: '0.75rem',
-                                                color: '#9ca3af'
-                                            }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
                                                 {activity.time}
                                             </div>
                                         </div>
@@ -494,158 +582,70 @@ const DashboardHome = () => {
                     {/* Right Column */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         {/* Quick Actions */}
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                            padding: '1.25rem'
+                        <div className="card-modern animate-fadeInUp" style={{
+                            padding: '1.5rem',
+                            animationDelay: '150ms'
                         }}>
                             <h2 style={{
-                                margin: '0 0 1rem',
+                                margin: '0 0 1.25rem',
                                 fontSize: '1rem',
-                                fontWeight: 600,
-                                color: '#1f2937'
+                                fontWeight: 700,
+                                color: '#0f172a',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
                             }}>
+                                <Zap size={18} style={{ color: '#f59e0b' }} />
                                 Quick Actions
                             </h2>
                             <div style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
-                                gap: '0.75rem'
+                                gap: '0.875rem'
                             }}>
                                 {!attendanceStatus?.check_in && (
-                                    <button
+                                    <QuickActionButton
+                                        icon={Clock}
+                                        label="Check In"
                                         onClick={handleCheckIn}
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            padding: '1rem',
-                                            background: '#ecfdf5',
-                                            border: '1px solid #bbf7d0',
-                                            borderRadius: '10px',
-                                            cursor: 'pointer',
-                                            color: '#16a34a',
-                                            fontWeight: 500,
-                                            fontSize: '0.85rem',
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = '#d1fae5';
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = '#ecfdf5';
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                        }}
-                                    >
-                                        <Clock size={24} />
-                                        Check In
-                                    </button>
+                                        gradient="linear-gradient(135deg, #10b981 0%, #34d399 100%)"
+                                        hoverGradient="linear-gradient(135deg, #059669 0%, #10b981 100%)"
+                                    />
                                 )}
-                                <button
+                                <QuickActionButton
+                                    icon={Plus}
+                                    label="New Task"
                                     onClick={() => window.location.href = '/projects/1'}
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        padding: '1rem',
-                                        background: '#f0edff',
-                                        border: '1px solid #d4ccff',
-                                        borderRadius: '10px',
-                                        cursor: 'pointer',
-                                        color: '#7b68ee',
-                                        fontWeight: 500,
-                                        fontSize: '0.85rem',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = '#e8e3ff';
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = '#f0edff';
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                    }}
-                                >
-                                    <Plus size={24} />
-                                    New Task
-                                </button>
-                                <button
-                                    onClick={() => window.location.href = '/attendance'}
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        padding: '1rem',
-                                        background: '#fef3c7',
-                                        border: '1px solid #fcd34d',
-                                        borderRadius: '10px',
-                                        cursor: 'pointer',
-                                        color: '#d97706',
-                                        fontWeight: 500,
-                                        fontSize: '0.85rem',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = '#fde68a';
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = '#fef3c7';
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                    }}
-                                >
-                                    <Calendar size={24} />
-                                    View Calendar
-                                </button>
-                                <button
-                                    onClick={() => window.location.href = '/employees'}
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        padding: '1rem',
-                                        background: '#f0edff',
-                                        border: '1px solid #d4ccff',
-                                        borderRadius: '10px',
-                                        cursor: 'pointer',
-                                        color: '#7b68ee',
-                                        fontWeight: 500,
-                                        fontSize: '0.85rem',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = '#e8e3ff';
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = '#f0edff';
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                    }}
-                                >
-                                    <Users size={24} />
-                                    Team
-                                </button>
+                                    gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
+                                    hoverGradient="linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)"
+                                />
+                                <QuickActionButton
+                                    icon={Calendar}
+                                    label="Calendar"
+                                    onClick={() => window.location.href = '/calendar'}
+                                    gradient="linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
+                                    hoverGradient="linear-gradient(135deg, #d97706 0%, #f59e0b 100%)"
+                                />
+                                <QuickActionButton
+                                    icon={Target}
+                                    label="Goals"
+                                    onClick={() => window.location.href = '/goals'}
+                                    gradient="linear-gradient(135deg, #ec4899 0%, #f472b6 100%)"
+                                    hoverGradient="linear-gradient(135deg, #db2777 0%, #ec4899 100%)"
+                                />
                             </div>
                         </div>
 
-                        {/* Attendance Status */}
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                            padding: '1.25rem'
+                        {/* Attendance Card */}
+                        <div className="card-modern animate-fadeInUp" style={{
+                            padding: '1.5rem',
+                            animationDelay: '250ms'
                         }}>
                             <h2 style={{
                                 margin: '0 0 1rem',
                                 fontSize: '1rem',
-                                fontWeight: 600,
-                                color: '#1f2937'
+                                fontWeight: 700,
+                                color: '#0f172a'
                             }}>
                                 Today's Attendance
                             </h2>
@@ -654,79 +654,87 @@ const DashboardHome = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '1rem',
-                                    padding: '1rem',
-                                    background: '#f9fafb',
-                                    borderRadius: '8px'
+                                    padding: '1.25rem',
+                                    background: attendanceStatus.check_in
+                                        ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)'
+                                        : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                                    borderRadius: '14px',
+                                    border: attendanceStatus.check_in
+                                        ? '1px solid #a7f3d0'
+                                        : '1px solid #fecaca'
                                 }}>
                                     <div style={{
-                                        width: '48px',
-                                        height: '48px',
-                                        borderRadius: '50%',
-                                        background: attendanceStatus.check_in ? '#ecfdf5' : '#fef2f2',
+                                        width: '52px',
+                                        height: '52px',
+                                        borderRadius: '14px',
+                                        background: attendanceStatus.check_in
+                                            ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
+                                            : 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        boxShadow: attendanceStatus.check_in
+                                            ? '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                            : '0 4px 12px rgba(239, 68, 68, 0.3)'
                                     }}>
                                         {attendanceStatus.check_in ? (
-                                            <UserCheck size={24} style={{ color: '#16a34a' }} />
+                                            <UserCheck size={24} style={{ color: 'white' }} />
                                         ) : (
-                                            <Clock size={24} style={{ color: '#dc2626' }} />
+                                            <Clock size={24} style={{ color: 'white' }} />
                                         )}
                                     </div>
                                     <div>
                                         <div style={{
-                                            fontSize: '0.95rem',
-                                            fontWeight: 600,
-                                            color: '#1f2937'
+                                            fontSize: '1rem',
+                                            fontWeight: 700,
+                                            color: attendanceStatus.check_in ? '#047857' : '#dc2626'
                                         }}>
                                             {attendanceStatus.check_in ? 'Checked In' : 'Not Checked In'}
                                         </div>
                                         {attendanceStatus.check_in && (
-                                            <div style={{
-                                                fontSize: '0.8rem',
-                                                color: '#6b7280'
-                                            }}>
-                                                at {new Date(attendanceStatus.check_in).toLocaleTimeString()}
+                                            <div style={{ fontSize: '0.85rem', color: '#059669', marginTop: '2px' }}>
+                                                at {new Date(attendanceStatus.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             ) : (
                                 <div style={{
-                                    padding: '1rem',
-                                    background: '#f9fafb',
-                                    borderRadius: '8px',
+                                    padding: '1.5rem',
+                                    background: '#f8fafc',
+                                    borderRadius: '14px',
                                     textAlign: 'center',
-                                    color: '#6b7280',
-                                    fontSize: '0.875rem'
+                                    color: '#64748b'
                                 }}>
-                                    No attendance data available
+                                    <Clock size={32} style={{ marginBottom: '0.5rem', opacity: 0.4 }} />
+                                    <p style={{ margin: 0, fontWeight: 500 }}>No attendance data</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Team Updates */}
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                            padding: '1.25rem'
+                        <div className="card-modern animate-fadeInUp" style={{
+                            padding: '1.5rem',
+                            animationDelay: '350ms'
                         }}>
                             <h2 style={{
                                 margin: '0 0 1rem',
                                 fontSize: '1rem',
-                                fontWeight: 600,
-                                color: '#1f2937'
+                                fontWeight: 700,
+                                color: '#0f172a'
                             }}>
                                 Team Updates
                             </h2>
                             <div style={{
                                 padding: '2rem 1rem',
                                 textAlign: 'center',
-                                color: '#9ca3af'
+                                color: '#94a3b8',
+                                background: '#f8fafc',
+                                borderRadius: '14px'
                             }}>
-                                <Bell size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                                <p style={{ margin: 0, fontSize: '0.875rem' }}>No new updates</p>
+                                <Bell size={32} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
+                                <p style={{ margin: 0, fontWeight: 500 }}>No new updates</p>
+                                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>Check back later</p>
                             </div>
                         </div>
                     </div>

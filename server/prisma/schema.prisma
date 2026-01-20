@@ -9,105 +9,204 @@ generator client {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  email         String   @unique
-  password_hash String
-  created_at    DateTime @default(now())
-  avatar_url    String?
-  tasks         Task[]
-  events        Event[]
-  activities    Activity[]
+  id                  Int            @id @default(autoincrement())
+  email               String         @unique
+  password_hash       String
+  created_at          DateTime       @default(now())
+  avatar_url          String?
+  tasks               Task[]
+  events              Event[]
+  activities          Activity[]
   assignedActionItems ActionItem[]
-  projects      Project[]
-  taskTemplates TaskTemplate[]
-  notifications Notification[]
-  employee      Employee?
+  projects            Project[]
+  taskTemplates       TaskTemplate[]
+  notifications       Notification[]
+  employee            Employee?
 }
 
 // Company System Models
 
 model Department {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String     @id @default(cuid())
+  name        String     @unique
   description String?
-  created_at  DateTime @default(now())
+  created_at  DateTime   @default(now())
   employees   Employee[]
+  messages    Message[]  @relation("DepartmentMessages")
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  permissions String   // JSON string for permissions
-  created_at  DateTime @default(now())
+  id          String     @id @default(cuid())
+  name        String     @unique
+  permissions String // JSON string for permissions
+  created_at  DateTime   @default(now())
   employees   Employee[]
 }
 
 model Employee {
-  id            String   @id @default(cuid())
-  user_id       Int?     @unique
-  user          User?    @relation(fields: [user_id], references: [id])
-  name          String
-  email         String   @unique
-  phone         String?
+  id      String @id @default(cuid())
+  user_id Int?   @unique
+  user    User?  @relation(fields: [user_id], references: [id])
+
+  // Basic Info
+  name        String
+  email       String    @unique
+  phone       String?
+  photo       String? // Profile photo URL
+  dateOfBirth DateTime?
+  gender      String? // male, female, other, prefer_not_to_say
+
+  // Identity & Location
+  nationalId    String?
+  nationality   String?
+  country       String?
+  city          String?
+  address       String?
+  personalEmail String?
+  linkedIn      String?
+
+  // Work Setup
+  timezone       String @default("UTC")
+  workMode       String @default("office") // office, remote, hybrid
+  employmentType String @default("full_time") // full_time, part_time, contract, intern
+
+  // Department & Role
   department_id String
   department    Department @relation(fields: [department_id], references: [id])
   role_id       String
-  role          Role     @relation(fields: [role_id], references: [id])
+  role          Role       @relation(fields: [role_id], references: [id])
+  jobTitle      String? // Specific job title (e.g., "Senior Software Engineer")
   manager_id    String?
-  manager       Employee? @relation("EmployeeManager", fields: [manager_id], references: [id])
+  manager       Employee?  @relation("EmployeeManager", fields: [manager_id], references: [id])
   subordinates  Employee[] @relation("EmployeeManager")
-  hire_date     DateTime
-  status        String   @default("active") // active, on_leave, terminated
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+
+  // Employment Dates
+  hire_date       DateTime
+  startDate       DateTime? // Actual start date (may differ from hire date)
+  terminationDate DateTime?
+
+  // Probation Tracking
+  probationEndDate    DateTime?
+  probationStatus     String    @default("pending") // pending, in_progress, passed, failed, extended
+  probationExtended   Boolean   @default(false)
+  probationExtensions Int       @default(0)
+  probationNotes      String? // AI-generated probation summary
+
+  // Status
+  status String @default("active") // active, on_leave, terminated, resigned, probation
+
+  // AI-Analyzed Performance Metrics (0-100 scale)
+  performanceScore   Float? // Overall performance score
+  communicationScore Float? // Communication effectiveness
+  teamScore          Float? // Team collaboration
+  leadershipScore    Float? // Leadership potential
+  technicalScore     Float? // Technical proficiency
+  reliabilityScore   Float? // Attendance & deadline adherence
+
+  // Engagement & Sentiment
+  lastEngagementSurvey  DateTime?
+  engagementScore       Float? // 0-100 engagement level
+  sentimentTrend        String? // positive, neutral, negative, declining
+  lastSentimentAnalysis DateTime?
+
+  // Risk & Retention
+  attritionRisk     String? // low, medium, high, critical
+  retentionPriority String? // standard, important, critical
+  riskFactors       String? // JSON array of identified risk factors
+
+  // Compensation
+  baseSalary          Float?
+  currency            String    @default("USD")
+  salaryEffectiveDate DateTime?
+
+  // Emergency Contact
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+
+  // Onboarding
+  onboardingStatus      String    @default("not_started") // not_started, in_progress, completed
+  onboardingProgress    Int       @default(0) // 0-100 percentage
+  onboardingCompletedAt DateTime?
+  cvParsedAt            DateTime?
+  cvData                String? // JSON parsed CV data
+
+  // AI Analysis Timestamps
+  lastAnalyzedAt   DateTime?
+  aiProfileSummary String? // AI-generated employee profile summary
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
   // Attendance
-  attendances   Attendance[] @relation("EmployeeAttendance")
-  approvedAttendances Attendance[] @relation("AttendanceApprover")
+  attendances         Attendance[]      @relation("EmployeeAttendance")
+  approvedAttendances Attendance[]      @relation("AttendanceApprover")
   // Messages
-  messages      Message[] @relation("EmployeeMessages")
-  sentMessages  Message[] @relation("SentMessages")
-  routedMessages Message[] @relation("RoutedMessages")
+  messages            Message[]         @relation("EmployeeMessages")
+  sentMessages        Message[]         @relation("SentMessages")
+  routedMessages      Message[]         @relation("RoutedMessages")
   // Leave
-  leaves        Leave[] @relation("EmployeeLeaves")
-  approvedLeaves Leave[] @relation("LeaveApprover")
-  leaveBalances LeaveBalance[]
+  leaves              Leave[]           @relation("EmployeeLeaves")
+  approvedLeaves      Leave[]           @relation("LeaveApprover")
+  leaveBalances       LeaveBalance[]
   // Meetings
-  organizedMeetings Meeting[] @relation("MeetingOrganizer")
+  organizedMeetings   Meeting[]         @relation("MeetingOrganizer")
   // Approvals
-  requestedApprovals ApprovalRequest[] @relation("ApprovalRequester")
-  approvalsToReview  ApprovalRequest[] @relation("ApprovalApprover")
+  requestedApprovals  ApprovalRequest[] @relation("ApprovalRequester")
+  approvalsToReview   ApprovalRequest[] @relation("ApprovalApprover")
   // Reminders
-  reminders     Reminder[]
+  reminders           Reminder[]
   // Goals
-  createdGoals  Goal[]
+  createdGoals        Goal[]
   // Gamification
-  achievements  Achievement[]
-  points        EmployeePoints?
+  achievements        Achievement[]
+  points              EmployeePoints?
+
+  // Employee Lifecycle Relations
+  skills             EmployeeSkill[]
+  documents          EmployeeDocument[]
+  education          EmployeeEducation[]
+  experience         EmployeeExperience[]
+  probationReviews   ProbationReview[]
+  performanceReviews PerformanceReview[]
+  statusHistory      EmployeeStatusHistory[]
+  roleHistory        EmployeeRoleHistory[]
+  conductedReviews   PerformanceReview[]     @relation("ReviewConductor")
+
+  @@index([status])
+  @@index([department_id])
+  @@index([manager_id])
+  @@index([probationStatus])
+  @@index([attritionRisk])
 }
 
-// AI Bot Message System
+// AI Bot & Employee-to-Employee Message System
 model Message {
-  id              String    @id @default(cuid())
-  employee_id     String
-  employee        Employee  @relation("EmployeeMessages", fields: [employee_id], references: [id])
-  content         String
-  sender          String    @default("employee") // employee, bot, system
+  id                 String      @id @default(cuid())
+  employee_id        String // Recipient employee ID
+  employee           Employee    @relation("EmployeeMessages", fields: [employee_id], references: [id])
+  content            String
+  subject            String? // Message subject line
+  sender             String      @default("employee") // employee, bot, system
   sender_employee_id String? // For employee-to-employee messages
-  senderEmployee  Employee? @relation("SentMessages", fields: [sender_employee_id], references: [id])
-  message_type    String    @default("question") // question, report, request, announcement, escalation, delegation
-  priority        String    @default("normal") // low, normal, high, urgent
-  routed_to       String?
-  routedEmployee  Employee? @relation("RoutedMessages", fields: [routed_to], references: [id])
-  status          String    @default("delivered") // pending, delivered, read, actioned
-  read_at         DateTime?
-  parent_message_id String?
-  parentMessage   Message?  @relation("MessageThread", fields: [parent_message_id], references: [id])
-  replies         Message[] @relation("MessageThread")
-  metadata        String?   // JSON string for storing actions taken
-  created_at      DateTime  @default(now())
+  senderEmployee     Employee?   @relation("SentMessages", fields: [sender_employee_id], references: [id])
+  to_department_id   String? // For department-wide messages (null = direct message)
+  toDepartment       Department? @relation("DepartmentMessages", fields: [to_department_id], references: [id])
+  message_type       String      @default("question") // question, report, request, announcement, escalation, delegation, direct
+  priority           String      @default("normal") // low, normal, high, urgent
+  routed_to          String?
+  routedEmployee     Employee?   @relation("RoutedMessages", fields: [routed_to], references: [id])
+  status             String      @default("delivered") // pending, delivered, read, actioned
+  read_at            DateTime?
+  parent_message_id  String?
+  parentMessage      Message?    @relation("MessageThread", fields: [parent_message_id], references: [id])
+  replies            Message[]   @relation("MessageThread")
+  metadata           String? // JSON string for storing actions taken
+  created_at         DateTime    @default(now())
 
   @@index([employee_id])
   @@index([sender_employee_id])
+  @@index([to_department_id])
   @@index([created_at])
   @@index([status])
   @@index([priority])
@@ -115,20 +214,20 @@ model Message {
 
 // Meeting System
 model Meeting {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   title        String
   description  String?
   organizer_id String
-  organizer    Employee  @relation("MeetingOrganizer", fields: [organizer_id], references: [id])
+  organizer    Employee @relation("MeetingOrganizer", fields: [organizer_id], references: [id])
   start_time   DateTime
   end_time     DateTime
-  location     String?   // Room name or video link
-  meeting_type String    @default("meeting") // meeting, one_on_one, team_sync, interview
-  status       String    @default("scheduled") // scheduled, in_progress, completed, cancelled
-  attendees    String    // JSON array of employee IDs
+  location     String? // Room name or video link
+  meeting_type String   @default("meeting") // meeting, one_on_one, team_sync, interview
+  status       String   @default("scheduled") // scheduled, in_progress, completed, cancelled
+  attendees    String // JSON array of employee IDs
   notes        String?
-  created_at   DateTime  @default(now())
-  updated_at   DateTime  @updatedAt
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 
   @@index([organizer_id])
   @@index([start_time])
@@ -137,23 +236,23 @@ model Meeting {
 
 // Approval Request System
 model ApprovalRequest {
-  id              String    @id @default(cuid())
-  requester_id    String
-  requester       Employee  @relation("ApprovalRequester", fields: [requester_id], references: [id])
-  approver_id     String
-  approver        Employee  @relation("ApprovalApprover", fields: [approver_id], references: [id])
-  request_type    String    // leave, expense, purchase, overtime, travel, other
-  title           String
-  description     String?
-  amount          Float?    // For expense/purchase requests
-  status          String    @default("pending") // pending, approved, rejected, cancelled
-  priority        String    @default("normal") // low, normal, high, urgent
-  decision_notes  String?
-  decided_at      DateTime?
-  due_date        DateTime? // When approval is needed by
-  metadata        String?   // JSON for additional data
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  requester_id   String
+  requester      Employee  @relation("ApprovalRequester", fields: [requester_id], references: [id])
+  approver_id    String
+  approver       Employee  @relation("ApprovalApprover", fields: [approver_id], references: [id])
+  request_type   String // leave, expense, purchase, overtime, travel, other
+  title          String
+  description    String?
+  amount         Float? // For expense/purchase requests
+  status         String    @default("pending") // pending, approved, rejected, cancelled
+  priority       String    @default("normal") // low, normal, high, urgent
+  decision_notes String?
+  decided_at     DateTime?
+  due_date       DateTime? // When approval is needed by
+  metadata       String? // JSON for additional data
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
 
   @@index([requester_id])
   @@index([approver_id])
@@ -163,18 +262,18 @@ model ApprovalRequest {
 
 // Reminder System
 model Reminder {
-  id          String    @id @default(cuid())
-  employee_id String
-  employee    Employee  @relation(fields: [employee_id], references: [id])
-  content     String
-  remind_at   DateTime
-  is_sent     Boolean   @default(false)
-  is_recurring Boolean  @default(false)
+  id                 String   @id @default(cuid())
+  employee_id        String
+  employee           Employee @relation(fields: [employee_id], references: [id])
+  content            String
+  remind_at          DateTime
+  is_sent            Boolean  @default(false)
+  is_recurring       Boolean  @default(false)
   recurrence_pattern String? // daily, weekly, monthly
-  priority    String    @default("normal") // low, normal, high
-  related_type String?  // task, meeting, approval, general
-  related_id   String?  // ID of related entity
-  created_at  DateTime  @default(now())
+  priority           String   @default("normal") // low, normal, high
+  related_type       String? // task, meeting, approval, general
+  related_id         String? // ID of related entity
+  created_at         DateTime @default(now())
 
   @@index([employee_id])
   @@index([remind_at])
@@ -182,144 +281,144 @@ model Reminder {
 }
 
 model Attendance {
-  id           String   @id @default(cuid())
-  employee_id  String
-  employee     Employee @relation("EmployeeAttendance", fields: [employee_id], references: [id])
-  date         DateTime
-  check_in     DateTime?
-  check_out    DateTime?
-  status       String   @default("present") // present, late, absent, on_leave, half_day
-  notes        String?
-  approved_by  String?
-  approver     Employee? @relation("AttendanceApprover", fields: [approved_by], references: [id])
-  created_at   DateTime @default(now())
+  id          String    @id @default(cuid())
+  employee_id String
+  employee    Employee  @relation("EmployeeAttendance", fields: [employee_id], references: [id])
+  date        DateTime
+  check_in    DateTime?
+  check_out   DateTime?
+  status      String    @default("present") // present, late, absent, on_leave, half_day
+  notes       String?
+  approved_by String?
+  approver    Employee? @relation("AttendanceApprover", fields: [approved_by], references: [id])
+  created_at  DateTime  @default(now())
 
   @@index([employee_id])
   @@index([date])
 }
 
 model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  color       String   @default("#6366f1")
-  created_at  DateTime @default(now())
-  user_id     Int
-  user        User     @relation(fields: [user_id], references: [id])
-  tasks       Task[]
+  id            Int            @id @default(autoincrement())
+  name          String
+  description   String?
+  color         String         @default("#6366f1")
+  created_at    DateTime       @default(now())
+  user_id       Int
+  user          User           @relation(fields: [user_id], references: [id])
+  tasks         Task[]
   notifications Notification[]
 }
 
 model Task {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  status      String   @default("todo") 
-  priority    String?  
-  tags        String?  
-  due_date    DateTime?
-  start_date  DateTime?
+  id            Int       @id @default(autoincrement())
+  title         String
+  description   String?
+  status        String    @default("todo")
+  priority      String?
+  tags          String?
+  due_date      DateTime?
+  start_date    DateTime?
   time_estimate Int? // in minutes
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  user_id     Int
-  user        User     @relation(fields: [user_id], references: [id])
-  project_id  Int?
-  project     Project? @relation(fields: [project_id], references: [id])
-  
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  user_id       Int
+  user          User      @relation(fields: [user_id], references: [id])
+  project_id    Int?
+  project       Project?  @relation(fields: [project_id], references: [id])
+
   // Recurrence
   recurrenceType     String? // daily, weekly, monthly, yearly
-  recurrenceInterval Int?    // e.g., every 2 days
+  recurrenceInterval Int? // e.g., every 2 days
   recurrenceEndDate  DateTime?
-  
-  // Dependencies
-  blockedBy   Task[]   @relation("TaskDependencies")
-  blocking    Task[]   @relation("TaskDependencies")
 
-  subtasks    Subtask[]
-  actionItems ActionItem[]
-  customFields CustomField[]
-  attachments Attachment[]
-  activities  Activity[]
-  timeEntries TimeEntry[]
+  // Dependencies
+  blockedBy Task[] @relation("TaskDependencies")
+  blocking  Task[] @relation("TaskDependencies")
+
+  subtasks      Subtask[]
+  actionItems   ActionItem[]
+  customFields  CustomField[]
+  attachments   Attachment[]
+  activities    Activity[]
+  timeEntries   TimeEntry[]
   notifications Notification[]
 
   @@index([project_id])
 }
 
 model TaskTemplate {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  priority    String?
-  tags        String?
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  priority      String?
+  tags          String?
   time_estimate Int?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  user_id     Int
-  user        User     @relation(fields: [user_id], references: [id])
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  user_id       Int
+  user          User     @relation(fields: [user_id], references: [id])
 }
 
 model Subtask {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   title       String
-  is_complete Boolean  @default(false)
+  is_complete Boolean @default(false)
   task_id     Int
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  task        Task    @relation(fields: [task_id], references: [id], onDelete: Cascade)
 }
 
 model ActionItem {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   title       String
-  is_complete Boolean  @default(false)
+  is_complete Boolean   @default(false)
   due_date    DateTime?
   task_id     Int
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  task        Task      @relation(fields: [task_id], references: [id], onDelete: Cascade)
   assignee_id Int?
-  assignee    User?    @relation(fields: [assignee_id], references: [id])
+  assignee    User?     @relation(fields: [assignee_id], references: [id])
 }
 
 model CustomField {
-  id          Int      @id @default(autoincrement())
-  name        String
-  type        String   // text, number, dropdown, date, checkbox
-  value       String?
-  task_id     Int
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  id      Int     @id @default(autoincrement())
+  name    String
+  type    String // text, number, dropdown, date, checkbox
+  value   String?
+  task_id Int
+  task    Task    @relation(fields: [task_id], references: [id], onDelete: Cascade)
 }
 
 model Attachment {
-  id          Int      @id @default(autoincrement())
-  filename    String
-  file_url    String
-  size        Int
+  id             Int      @id @default(autoincrement())
+  filename       String
+  file_url       String
+  size           Int
   uploaded_by_id Int? // simplified for now
-  created_at  DateTime @default(now())
-  task_id     Int
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  created_at     DateTime @default(now())
+  task_id        Int
+  task           Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
 }
 
 model Activity {
-  id          Int      @id @default(autoincrement())
-  type        String   // status_change, comment, field_update, description_change, attachment_upload, attachment_delete
-  content     String
-  metadata    String?  // JSON string for additional data like old/new values
-  timestamp   DateTime @default(now())
-  user_id     Int?
-  user        User?    @relation(fields: [user_id], references: [id])
-  task_id     Int
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  type      String // status_change, comment, field_update, description_change, attachment_upload, attachment_delete
+  content   String
+  metadata  String? // JSON string for additional data like old/new values
+  timestamp DateTime @default(now())
+  user_id   Int?
+  user      User?    @relation(fields: [user_id], references: [id])
+  task_id   Int
+  task      Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
 }
 
 model TimeEntry {
-  id          Int      @id @default(autoincrement())
-  start_time  DateTime
-  end_time    DateTime?
-  duration    Int?     // in seconds
-  is_manual   Boolean  @default(false)
-  user_id     Int
-  task_id     Int
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  id         Int       @id @default(autoincrement())
+  start_time DateTime
+  end_time   DateTime?
+  duration   Int? // in seconds
+  is_manual  Boolean   @default(false)
+  user_id    Int
+  task_id    Int
+  task       Task      @relation(fields: [task_id], references: [id], onDelete: Cascade)
 }
 
 model Event {
@@ -334,17 +433,17 @@ model Event {
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  type      String
-  message   String
-  is_read   Boolean  @default(false)
+  id         Int      @id @default(autoincrement())
+  type       String
+  message    String
+  is_read    Boolean  @default(false)
   created_at DateTime @default(now())
-  user_id   Int
-  user      User     @relation(fields: [user_id], references: [id])
-  task_id   Int?
-  task      Task?    @relation(fields: [task_id], references: [id])
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id])
+  task_id    Int?
+  task       Task?    @relation(fields: [task_id], references: [id])
   project_id Int?
-  project   Project? @relation(fields: [project_id], references: [id])
+  project    Project? @relation(fields: [project_id], references: [id])
 
   @@index([user_id])
   @@index([is_read])
@@ -353,11 +452,11 @@ model Notification {
 // Leave Management Models
 
 model LeaveType {
-  id           String   @id @default(cuid())
-  name         String   @unique
-  days_allowed Int      @default(0)  // Annual allowance (0 = unlimited)
-  color        String   @default("#3b82f6")
-  created_at   DateTime @default(now())
+  id           String         @id @default(cuid())
+  name         String         @unique
+  days_allowed Int            @default(0) // Annual allowance (0 = unlimited)
+  color        String         @default("#3b82f6")
+  created_at   DateTime       @default(now())
   leaves       Leave[]
   balances     LeaveBalance[]
 }
@@ -368,18 +467,18 @@ model Leave {
   leave_type_id    String
   start_date       DateTime
   end_date         DateTime
-  days             Float     // Number of days (supports half days)
+  days             Float // Number of days (supports half days)
   reason           String?
-  status           String    @default("pending")  // pending, approved, rejected, cancelled
+  status           String    @default("pending") // pending, approved, rejected, cancelled
   approved_by      String?
   approved_at      DateTime?
   rejection_reason String?
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
 
-  employee         Employee  @relation("EmployeeLeaves", fields: [employee_id], references: [id])
-  leave_type       LeaveType @relation(fields: [leave_type_id], references: [id])
-  approver         Employee? @relation("LeaveApprover", fields: [approved_by], references: [id])
+  employee   Employee  @relation("EmployeeLeaves", fields: [employee_id], references: [id])
+  leave_type LeaveType @relation(fields: [leave_type_id], references: [id])
+  approver   Employee? @relation("LeaveApprover", fields: [approved_by], references: [id])
 
   @@index([employee_id])
   @@index([status])
@@ -387,16 +486,16 @@ model Leave {
 }
 
 model LeaveBalance {
-  id            String    @id @default(cuid())
+  id            String @id @default(cuid())
   employee_id   String
   leave_type_id String
   year          Int
-  total_days    Float     // Total allowance for the year
-  used_days     Float     @default(0)
-  pending_days  Float     @default(0)
+  total_days    Float // Total allowance for the year
+  used_days     Float  @default(0)
+  pending_days  Float  @default(0)
 
-  employee      Employee  @relation(fields: [employee_id], references: [id])
-  leave_type    LeaveType @relation(fields: [leave_type_id], references: [id])
+  employee   Employee  @relation(fields: [employee_id], references: [id])
+  leave_type LeaveType @relation(fields: [leave_type_id], references: [id])
 
   @@unique([employee_id, leave_type_id, year])
 }
@@ -404,27 +503,27 @@ model LeaveBalance {
 // Goals & OKR Tracking System
 
 model Goal {
-  id              Int       @id @default(autoincrement())
-  title           String
-  description     String?
-  goalType        String    // company, department, team, individual
-  targetValue     Float
-  currentValue    Float     @default(0)
-  unit            String    // tasks, hours, customers, dollars, percent
-  ownerType       String    // employee, department, company
-  ownerId         String?   // employee_id or department_id (null for company)
-  startDate       DateTime
-  dueDate         DateTime
-  status          String    @default("active") // active, completed, at_risk, failed
-  parentGoalId    Int?
-  parentGoal      Goal?     @relation("GoalHierarchy", fields: [parentGoalId], references: [id])
-  childGoals      Goal[]    @relation("GoalHierarchy")
-  autoTrackField  String?   // tasks_completed, hours_worked, attendance_rate
-  createdBy       String
-  creator         Employee  @relation(fields: [createdBy], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  milestones      GoalMilestone[]
+  id             Int             @id @default(autoincrement())
+  title          String
+  description    String?
+  goalType       String // company, department, team, individual
+  targetValue    Float
+  currentValue   Float           @default(0)
+  unit           String // tasks, hours, customers, dollars, percent
+  ownerType      String // employee, department, company
+  ownerId        String? // employee_id or department_id (null for company)
+  startDate      DateTime
+  dueDate        DateTime
+  status         String          @default("active") // active, completed, at_risk, failed
+  parentGoalId   Int?
+  parentGoal     Goal?           @relation("GoalHierarchy", fields: [parentGoalId], references: [id])
+  childGoals     Goal[]          @relation("GoalHierarchy")
+  autoTrackField String? // tasks_completed, hours_worked, attendance_rate
+  createdBy      String
+  creator        Employee        @relation(fields: [createdBy], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  milestones     GoalMilestone[]
 
   @@index([ownerType, ownerId])
   @@index([status])
@@ -448,16 +547,16 @@ model GoalMilestone {
 // Gamification System
 
 model Achievement {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   employeeId  String
-  employee    Employee  @relation(fields: [employeeId], references: [id])
-  type        String    // task_master, early_bird, streak_keeper, goal_crusher, team_player, perfect_week
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  type        String // task_master, early_bird, streak_keeper, goal_crusher, team_player, perfect_week
   title       String
   description String?
-  icon        String    @default("🏆")
-  points      Int       @default(10)
-  earnedAt    DateTime  @default(now())
-  metadata    String?   // JSON for extra data
+  icon        String   @default("🏆")
+  points      Int      @default(10)
+  earnedAt    DateTime @default(now())
+  metadata    String? // JSON for extra data
 
   @@index([employeeId])
   @@index([type])
@@ -465,19 +564,284 @@ model Achievement {
 }
 
 model EmployeePoints {
-  id            Int       @id @default(autoincrement())
-  employeeId    String    @unique
-  employee      Employee  @relation(fields: [employeeId], references: [id])
-  totalPoints   Int       @default(0)
-  weeklyPoints  Int       @default(0)
-  monthlyPoints Int       @default(0)
-  currentStreak Int       @default(0)
-  longestStreak Int       @default(0)
-  level         Int       @default(1)
-  lastActiveAt  DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id            Int      @id @default(autoincrement())
+  employeeId    String   @unique
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  totalPoints   Int      @default(0)
+  weeklyPoints  Int      @default(0)
+  monthlyPoints Int      @default(0)
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  level         Int      @default(1)
+  lastActiveAt  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([totalPoints])
   @@index([weeklyPoints])
   @@index([level])
+}
+
+// ===========================================
+// EMPLOYEE LIFECYCLE MANAGEMENT MODELS
+// ===========================================
+
+// Employee Skills Tracking
+model EmployeeSkill {
+  id           String    @id @default(cuid())
+  employee_id  String
+  employee     Employee  @relation(fields: [employee_id], references: [id])
+  skillName    String
+  category     String // technical, soft, language, certification
+  proficiency  String    @default("intermediate") // beginner, intermediate, advanced, expert
+  yearsOfExp   Float?
+  verified     Boolean   @default(false)
+  verifiedBy   String? // Manager who verified
+  verifiedAt   DateTime?
+  source       String    @default("manual") // manual, cv_parsed, assessment, linkedin
+  endorsements Int       @default(0)
+  lastUsedAt   DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@unique([employee_id, skillName])
+  @@index([employee_id])
+  @@index([category])
+  @@index([skillName])
+}
+
+// Employee Documents Storage
+model EmployeeDocument {
+  id             String    @id @default(cuid())
+  employee_id    String
+  employee       Employee  @relation(fields: [employee_id], references: [id])
+  documentType   String // cv, contract, id_proof, certificate, offer_letter, nda, policy_ack, other
+  title          String
+  description    String?
+  fileUrl        String
+  fileName       String
+  fileSize       Int? // Size in bytes
+  mimeType       String?
+  version        Int       @default(1)
+  status         String    @default("active") // active, archived, expired
+  expiryDate     DateTime?
+  uploadedBy     String? // Employee or admin who uploaded
+  isConfidential Boolean   @default(false)
+  aiParsed       Boolean   @default(false)
+  aiParsedData   String? // JSON of AI-extracted data
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  @@index([employee_id])
+  @@index([documentType])
+  @@index([status])
+}
+
+// Employee Education History
+model EmployeeEducation {
+  id           String    @id @default(cuid())
+  employee_id  String
+  employee     Employee  @relation(fields: [employee_id], references: [id])
+  institution  String
+  degree       String // Bachelor's, Master's, PhD, Diploma, Certificate
+  fieldOfStudy String
+  startDate    DateTime?
+  endDate      DateTime?
+  grade        String? // GPA or grade
+  achievements String? // Notable achievements, honors
+  isHighest    Boolean   @default(false) // Highest qualification
+  verified     Boolean   @default(false)
+  source       String    @default("manual") // manual, cv_parsed, linkedin
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@index([employee_id])
+  @@index([degree])
+}
+
+// Employee Previous Work Experience
+model EmployeeExperience {
+  id               String    @id @default(cuid())
+  employee_id      String
+  employee         Employee  @relation(fields: [employee_id], references: [id])
+  companyName      String
+  jobTitle         String
+  department       String?
+  location         String?
+  startDate        DateTime
+  endDate          DateTime?
+  isCurrent        Boolean   @default(false)
+  description      String?
+  achievements     String? // Key achievements in this role
+  reasonForLeaving String?
+  skills           String? // JSON array of skills used
+  verified         Boolean   @default(false)
+  source           String    @default("manual") // manual, cv_parsed, linkedin
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  @@index([employee_id])
+  @@index([companyName])
+}
+
+// Probation Review Records
+model ProbationReview {
+  id          String   @id @default(cuid())
+  employee_id String
+  employee    Employee @relation(fields: [employee_id], references: [id])
+  reviewDate  DateTime
+  reviewWeek  Int // Week 1, 2, 4, 8, 12, etc.
+  reviewType  String // weekly_checkin, monthly_review, mid_probation, final_review
+
+  // Ratings (1-5 scale)
+  performanceRating Int?
+  attendanceRating  Int?
+  attitudeRating    Int?
+  learningRating    Int?
+  teamworkRating    Int?
+  overallRating     Int?
+
+  // Feedback
+  strengths        String? // Observed strengths
+  improvements     String? // Areas for improvement
+  concerns         String? // Any concerns
+  managerNotes     String?
+  employeeFeedback String? // Employee's self-assessment
+
+  // AI Analysis
+  aiAnalysis       String? // AI-generated analysis
+  aiRecommendation String? // pass, extend, fail, monitor
+  riskFlags        String? // JSON array of identified risks
+
+  // Outcome
+  outcome        String? // on_track, needs_improvement, at_risk, extended, passed, failed
+  extensionWeeks Int? // If extended, by how many weeks
+  nextReviewDate DateTime?
+
+  conductedBy String? // Manager/HR who conducted
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([employee_id])
+  @@index([reviewDate])
+  @@index([outcome])
+}
+
+// Performance Reviews (Annual/Quarterly)
+model PerformanceReview {
+  id           String   @id @default(cuid())
+  employee_id  String
+  employee     Employee @relation(fields: [employee_id], references: [id])
+  reviewPeriod String // Q1 2024, Annual 2024, etc.
+  reviewType   String // quarterly, annual, mid_year, 360_degree
+  reviewDate   DateTime
+
+  // Self Assessment
+  selfAssessment String?
+  selfRating     Int? // 1-5
+
+  // Manager Assessment
+  managerAssessment String?
+  managerRating     Int? // 1-5
+
+  // Competency Ratings (1-5)
+  technicalSkills Int?
+  communication   Int?
+  teamwork        Int?
+  leadership      Int?
+  problemSolving  Int?
+  initiative      Int?
+  reliability     Int?
+
+  // Goals & Achievements
+  goalsSet      String? // JSON array of goals
+  goalsAchieved String? // JSON array of achieved goals
+  goalScore     Float? // Percentage of goals achieved
+
+  // Feedback
+  strengths       String?
+  improvements    String?
+  developmentPlan String? // Career development recommendations
+  trainingNeeds   String? // Identified training needs
+
+  // AI Analysis
+  aiAnalysis         String? // AI-generated comprehensive analysis
+  aiRecommendations  String? // AI career recommendations
+  promotionReadiness String? // not_ready, developing, ready, exceeds
+
+  // Compensation Review
+  salaryReviewRecommendation String? // no_change, increase, significant_increase
+  recommendedIncreasePercent Float?
+
+  // Final Outcome
+  overallRating    Int? // 1-5 final rating
+  status           String    @default("draft") // draft, pending_review, completed, acknowledged
+  employeeAck      Boolean   @default(false) // Employee acknowledged
+  employeeAckAt    DateTime?
+  employeeComments String? // Employee's comments on review
+
+  conductedBy String?
+  conductor   Employee? @relation("ReviewConductor", fields: [conductedBy], references: [id])
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([employee_id])
+  @@index([reviewPeriod])
+  @@index([reviewType])
+  @@index([status])
+}
+
+// Employee Status Change History
+model EmployeeStatusHistory {
+  id            String   @id @default(cuid())
+  employee_id   String
+  employee      Employee @relation(fields: [employee_id], references: [id])
+  fromStatus    String
+  toStatus      String
+  reason        String?
+  notes         String?
+  effectiveDate DateTime
+  changedBy     String? // Admin/HR who made the change
+  metadata      String? // JSON for additional context
+  created_at    DateTime @default(now())
+
+  @@index([employee_id])
+  @@index([effectiveDate])
+  @@index([toStatus])
+}
+
+// Employee Role/Position Change History (Promotions, Transfers)
+model EmployeeRoleHistory {
+  id          String   @id @default(cuid())
+  employee_id String
+  employee    Employee @relation(fields: [employee_id], references: [id])
+  changeType  String // promotion, demotion, lateral_transfer, department_change, title_change
+
+  // From
+  fromDepartment String?
+  fromRole       String?
+  fromJobTitle   String?
+  fromManager    String?
+  fromSalary     Float?
+
+  // To
+  toDepartment String?
+  toRole       String?
+  toJobTitle   String?
+  toManager    String?
+  toSalary     Float?
+
+  // Details
+  effectiveDate DateTime
+  reason        String?
+  approvedBy    String?
+  notes         String?
+
+  // Performance Context
+  performanceRatingAtChange Int? // Rating at time of change
+
+  created_at DateTime @default(now())
+
+  @@index([employee_id])
+  @@index([effectiveDate])
+  @@index([changeType])
 }

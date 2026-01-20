@@ -17,6 +17,14 @@ const checkPermission = (...requiredPermissions) => {
             return next();
         }
 
+        // Admin users bypass all permission checks
+        const isAdmin = req.employee?.role_name === 'Admin' ||
+                        userPermissions.includes('*') ||
+                        userPermissions.includes('admin');
+        if (isAdmin) {
+            return next();
+        }
+
         // Check if user has ANY of the required permissions
         const hasPermission = requiredPermissions.some(permission =>
             userPermissions.includes(permission)
@@ -45,6 +53,14 @@ const checkAllPermissions = (...requiredPermissions) => {
 
         // If no permissions required, allow access
         if (requiredPermissions.length === 0) {
+            return next();
+        }
+
+        // Admin users bypass all permission checks
+        const isAdmin = req.employee?.role_name === 'Admin' ||
+                        userPermissions.includes('*') ||
+                        userPermissions.includes('admin');
+        if (isAdmin) {
             return next();
         }
 

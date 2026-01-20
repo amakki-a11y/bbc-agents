@@ -176,7 +176,35 @@ const toolDefinitions = [
     },
     {
         name: 'checkMessages',
-        description: 'Check unread messages and inbox summary.',
+        description: 'Check unread messages and inbox summary. Use for "check messages", "any new messages?", "my inbox"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'readMessage',
+        description: 'Read a specific message from someone and mark it as read. Use for "read message from [name]", "open message from [name]", "what did [name] say?"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                sender_name: { type: 'string', description: 'Name of the person who sent the message' }
+            },
+            required: ['sender_name']
+        }
+    },
+    {
+        name: 'replyToMessage',
+        description: 'Reply to a message from someone. Use for "reply to [name]", "respond to [name]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                sender_name: { type: 'string', description: 'Name of the person to reply to' },
+                content: { type: 'string', description: 'Reply content' }
+            },
+            required: ['sender_name', 'content']
+        }
+    },
+    {
+        name: 'getMessageableContacts',
+        description: 'Get list of people the employee can message based on hierarchy rules. Use for "who can I message?", "my contacts", "message options"',
         input_schema: { type: 'object', properties: {}, required: [] }
     },
 
@@ -563,6 +591,276 @@ const toolDefinitions = [
         name: 'getStreaks',
         description: 'Get streak information for employees. Use for "streaks", "who has the longest streak?", "my streak"',
         input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === SMART INSIGHTS & PREDICTIONS (Phase 5) ===
+    {
+        name: 'getBurnoutRisk',
+        description: 'Identify employees at risk of burnout based on hours worked and overdue tasks. Use for "burnout risk", "who\'s overworked?", "stress check", "workload concerns"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                threshold_hours: { type: 'number', description: 'Hours per week threshold (default: 45)' },
+                threshold_overdue: { type: 'number', description: 'Overdue tasks threshold (default: 5)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getPerformanceTrends',
+        description: 'Compare task completion trends week-over-week by department or individual. Use for "performance trends", "how is [dept] trending?", "trending up/down?", "week over week"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                department_name: { type: 'string', description: 'Department name (omit for all departments)' },
+                employee_name: { type: 'string', description: 'Employee name (for individual trends)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getProjectRiskAnalysis',
+        description: 'Identify projects at risk of missing deadlines. Use for "project risks", "which projects are at risk?", "risky projects", "project concerns"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                overdue_threshold: { type: 'number', description: 'Percentage of overdue tasks to flag (default: 30)' },
+                days_threshold: { type: 'number', description: 'Days remaining with low progress (default: 7)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getWorkloadBalance',
+        description: 'Analyze task distribution across employees and suggest rebalancing. Use for "workload balance", "task distribution", "workload spread", "who has too much/little?"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                department_name: { type: 'string', description: 'Department to analyze (omit for all)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getPredictedDelays',
+        description: 'Predict tasks likely to miss deadlines based on progress patterns. Use for "predicted delays", "what might be late?", "delay forecast", "likely to miss deadline"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                days_no_progress: { type: 'number', description: 'Days without progress threshold (default: 3)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getRecognitionSuggestions',
+        description: 'Suggest employees who deserve recognition based on performance. Use for "who deserves recognition?", "star performers", "who to recognize?", "shout outs"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getAnomalyAlerts',
+        description: 'Detect unusual patterns in employee activity. Use for "anything unusual?", "anomalies", "strange patterns", "what\'s different?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === EMPLOYEE LIFECYCLE MANAGEMENT ===
+
+    // CV Parsing & Onboarding
+    {
+        name: 'parseEmployeeCV',
+        description: 'Parse CV/resume text and extract structured data (education, experience, skills). Use for "parse CV", "analyze resume", "extract CV data for [name]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee whose CV to parse' },
+                cv_text: { type: 'string', description: 'The CV/resume text content to parse' }
+            },
+            required: ['employee_name', 'cv_text']
+        }
+    },
+    {
+        name: 'getOnboardingStatus',
+        description: 'Get onboarding progress for new employees. Use for "onboarding status", "new employee progress", "[name]\'s onboarding"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of employee (omit for all new hires)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'updateOnboardingProgress',
+        description: 'Update onboarding progress percentage. Use for "update [name] onboarding to X%", "mark onboarding complete"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' },
+                progress: { type: 'integer', description: 'Progress percentage (0-100)' },
+                status: { type: 'string', enum: ['not_started', 'in_progress', 'completed'], description: 'Onboarding status' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getEmployeeProfile',
+        description: 'Get comprehensive employee profile including skills, education, experience. Use for "[name]\'s profile", "show [name] details", "employee info for [name]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' }
+            },
+            required: ['employee_name']
+        }
+    },
+
+    // Probation Management
+    {
+        name: 'getProbationStatus',
+        description: 'Get probation status and AI analysis for an employee. Use for "[name] probation status", "how is [name] doing in probation?", "probation progress"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of employee (omit for all on probation)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'createProbationReview',
+        description: 'Create a probation review for an employee with ratings. Use for "probation review for [name]", "rate [name]\'s probation"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' },
+                performance_rating: { type: 'integer', description: 'Performance rating 1-5' },
+                attendance_rating: { type: 'integer', description: 'Attendance rating 1-5' },
+                attitude_rating: { type: 'integer', description: 'Attitude rating 1-5' },
+                learning_rating: { type: 'integer', description: 'Learning/growth rating 1-5' },
+                teamwork_rating: { type: 'integer', description: 'Teamwork rating 1-5' },
+                strengths: { type: 'string', description: 'Observed strengths' },
+                improvements: { type: 'string', description: 'Areas for improvement' },
+                concerns: { type: 'string', description: 'Any concerns' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getProbationAlerts',
+        description: 'Get alerts for probations ending soon, overdue reviews, at-risk employees. Use for "probation alerts", "who\'s probation ending?", "probation concerns"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'extendProbation',
+        description: 'Extend an employee\'s probation period. Use for "extend [name] probation by X weeks"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' },
+                weeks: { type: 'integer', description: 'Number of weeks to extend' },
+                reason: { type: 'string', description: 'Reason for extension' }
+            },
+            required: ['employee_name', 'weeks']
+        }
+    },
+    {
+        name: 'completeProbation',
+        description: 'Mark probation as passed or failed. Use for "[name] passed probation", "confirm [name] employment", "fail [name] probation"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' },
+                outcome: { type: 'string', enum: ['passed', 'failed'], description: 'Probation outcome' },
+                notes: { type: 'string', description: 'Final notes' }
+            },
+            required: ['employee_name', 'outcome']
+        }
+    },
+
+    // Performance Analysis
+    {
+        name: 'analyzeEmployeePerformance',
+        description: 'Get AI analysis of employee performance across all metrics. Use for "[name] performance analysis", "analyze [name]", "performance insights for [name]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getAttritionRisk',
+        description: 'Analyze attrition/flight risk for employees. Use for "attrition risk", "who might leave?", "flight risk", "retention concerns", "[name] attrition risk"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of specific employee (omit for all high-risk)' }
+            },
+            required: []
+        }
+    },
+
+    // Employee Search & Discovery
+    {
+        name: 'searchEmployees',
+        description: 'Search employees by skills, department, status, etc. Use for "find employees with [skill]", "who knows [X]?", "search employees"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'Search query (name, email, job title)' },
+                skills: { type: 'string', description: 'Comma-separated skills to search for' },
+                department: { type: 'string', description: 'Department filter' },
+                status: { type: 'string', enum: ['active', 'on_leave', 'probation'], description: 'Employee status filter' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getEmployeesNeedingAttention',
+        description: 'Get all employees requiring HR/manager attention. Use for "who needs attention?", "HR alerts", "employee concerns", "people to check on"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // Department & Team Analytics
+    {
+        name: 'getDepartmentAnalytics',
+        description: 'Get analytics summary by department. Use for "department analytics", "[dept] stats", "team performance by department"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                department_name: { type: 'string', description: 'Specific department (omit for all departments)' }
+            },
+            required: []
+        }
+    },
+
+    // Skills Management
+    {
+        name: 'getEmployeeSkills',
+        description: 'Get skills for an employee or find employees by skill. Use for "[name]\'s skills", "who has [skill]?", "skill matrix"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of employee to get skills for' },
+                skill_name: { type: 'string', description: 'Skill name to search for across employees' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'addEmployeeSkill',
+        description: 'Add a skill to an employee\'s profile. Use for "add [skill] to [name]", "[name] knows [skill]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' },
+                skill_name: { type: 'string', description: 'Name of the skill' },
+                category: { type: 'string', enum: ['technical', 'soft', 'language', 'certification'], description: 'Skill category' },
+                proficiency: { type: 'string', enum: ['beginner', 'intermediate', 'advanced', 'expert'], description: 'Proficiency level' }
+            },
+            required: ['employee_name', 'skill_name']
+        }
     }
 ];
 
@@ -661,7 +959,7 @@ TOOLS AVAILABLE:
 Tasks: createTask, updateTask, deleteTask, getMyTasks, delegateTask
 Attendance: checkIn, checkOut, getMyAttendance
 Leave: requestLeave, getLeaveBalance
-Messages: messageManager, messageHR, messageEmployee, escalateIssue, announceToTeam, checkMessages
+Messages: messageManager, messageHR, messageEmployee, escalateIssue, announceToTeam, checkMessages, readMessage, replyToMessage, getMessageableContacts
 Meetings: scheduleMeeting, getMyMeetings
 Approvals: requestApproval, getPendingApprovals, approveRequest, rejectRequest
 Reminders: setReminder, getReminders, getWeeklySummary
@@ -678,6 +976,16 @@ createGoal ("set goal X", "create goal X for Y"), getGoals ("show goals", "my go
 
 GAMIFICATION:
 getLeaderboard ("leaderboard", "who's winning?"), getMyStats ("my stats", "my points", "my level"), getAchievements ("my achievements", "my badges"), getStreaks ("streaks", "my streak")
+
+SMART INSIGHTS (Phase 5):
+getBurnoutRisk ("burnout risk", "who's overworked?"), getPerformanceTrends ("performance trends", "how is [dept] trending?"), getProjectRiskAnalysis ("project risks", "risky projects"), getWorkloadBalance ("workload balance", "task distribution"), getPredictedDelays ("predicted delays", "what might be late?"), getRecognitionSuggestions ("who deserves recognition?", "star performers"), getAnomalyAlerts ("anything unusual?", "anomalies")
+
+EMPLOYEE LIFECYCLE (HR/Manager tools):
+CV & Onboarding: parseEmployeeCV ("parse CV", "analyze resume"), getOnboardingStatus ("onboarding status"), updateOnboardingProgress ("update onboarding"), getEmployeeProfile ("[name]'s profile")
+Probation: getProbationStatus ("[name] probation"), createProbationReview ("probation review for [name]"), getProbationAlerts ("probation alerts"), extendProbation ("extend probation"), completeProbation ("confirm employment", "pass/fail probation")
+Performance: analyzeEmployeePerformance ("analyze [name]", "performance insights"), getAttritionRisk ("who might leave?", "flight risk")
+Discovery: searchEmployees ("find employees with [skill]", "who knows [X]?"), getEmployeesNeedingAttention ("who needs attention?", "HR alerts"), getDepartmentAnalytics ("department stats")
+Skills: getEmployeeSkills ("[name]'s skills", "who has [skill]?"), addEmployeeSkill ("add [skill] to [name]")
 
 VOICE COMMAND EXAMPLES:
 - "Who's in?" → "8 in office: John, Sarah, Mike +5 more"
@@ -699,6 +1007,39 @@ VOICE COMMAND EXAMPLES:
 - "Leaderboard" → "🏆 This Week: 🥇 Sarah (150 pts) 🥈 Ahmed (120 pts) 🥉 John (95 pts)"
 - "My stats" → "📊 Level 5 | 450 pts | 🔥 7-day streak | 12 achievements"
 - "My achievements" → "🏆 5 badges: Task Master, Early Bird, Streak Keeper, Goal Crusher, Team Player"
+- "Burnout risk" → "⚠️ Burnout risk: Ahmed (52 hrs), Sarah (6 overdue tasks)"
+- "Performance trends" → "📈 Marketing: +23% vs last week | 📉 Sales: -12%"
+- "Project risks" → "🚨 At risk: Website Redesign (40% done, due in 5 days)"
+- "Workload balance" → "⚖️ Imbalanced: Ahmed (12 tasks) vs Mike (2 tasks)"
+- "Predicted delays" → "⚠️ Likely delays: Q1 Report (no progress, due in 2 days)"
+- "Who deserves recognition?" → "🌟 Recognize: Sarah (15 tasks, 10-day streak)"
+- "Anything unusual?" → "🔍 Unusual: John - 0 tasks this week (usually 8+)"
+
+EMPLOYEE LIFECYCLE EXAMPLES:
+- "Ahmed's profile" → "📋 Ahmed: Software Engineer, Engineering. Skills: Python, JavaScript +3. 2 yrs experience"
+- "Probation status" → "📊 3 on probation: Sarah (week 6, on track), Mike (week 10, needs review), Lisa (week 2, new)"
+- "Who might leave?" → "⚠️ Flight risk: Ahmed (high - no promotion in 2 yrs), Sarah (medium - declining engagement)"
+- "Find employees with Python" → "🔍 Found 5: Ahmed (expert), Sarah (advanced), John (intermediate) +2 more"
+- "Who needs attention?" → "🚨 Attention: 2 probation ending, 3 high attrition risk, 1 overdue review"
+- "Department analytics" → "📊 Engineering: 12 staff, 78 avg performance | Marketing: 8 staff, 82 avg"
+- "Sarah's onboarding" → "📋 Sarah onboarding: 60% complete, in_progress. Pending: IT setup, policy review"
+
+MESSAGING VOICE COMMANDS:
+- "Message my manager" / "tell my boss" → messageManager
+- "Contact HR" / "message HR about..." → messageHR
+- "Message [name]" / "send to [name]" → messageEmployee (checks hierarchy first)
+- "Escalate [issue]" / "escalate to manager" → escalateIssue (urgent, sends to manager)
+- "Announce to my team" / "tell my team" → announceToTeam (managers only)
+- "Check messages" / "any new messages?" / "my inbox" → checkMessages
+- "Read message from [name]" / "what did [name] say?" → readMessage
+- "Reply to [name]" / "respond to [name]" → replyToMessage
+- "Who can I message?" / "my contacts" → getMessageableContacts
+
+HIERARCHY RULES FOR MESSAGING:
+- Admin/HR: Can message anyone
+- Employee: Manager, HR, same department only
+- Manager: Team, other managers, HR, own manager
+- HOD: Department, other HODs, management
 
 RULES:
 1. ALWAYS use tools - never fake responses

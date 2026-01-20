@@ -4,52 +4,47 @@ import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
-    CalendarOff
+    CalendarOff, Target, Sparkles, X
 } from 'lucide-react';
 import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
 import BotButton from '../components/bot/BotButton';
 import DashboardHome from './DashboardHome';
 
-// NavItem component with hover effects
+// Modern NavItem component with dark theme
 const NavItem = ({ icon: Icon, label, href, badge }) => {
-    const [isHovered, setIsHovered] = useState(false);
     const isActive = window.location.pathname === href;
 
     return (
         <div
             onClick={() => window.location.href = href}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            className={`sidebar-modern-item ${isActive ? 'active' : ''}`}
             style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '0.75rem',
-                padding: '0.6rem 0.75rem',
-                borderRadius: '8px',
+                padding: '0.7rem 0.875rem',
                 cursor: 'pointer',
-                marginBottom: '2px',
-                color: isActive ? '#7b68ee' : (isHovered ? '#1f2937' : '#4b5563'),
-                background: isActive ? '#f0edff' : (isHovered ? '#f3f4f6' : 'transparent'),
+                fontSize: '0.875rem',
                 fontWeight: isActive ? 600 : 500,
-                transition: 'all 0.15s ease'
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Icon size={18} style={{ color: isActive ? '#7b68ee' : (isHovered ? '#4b5563' : '#6b7280') }} />
+                <Icon size={18} style={{ opacity: isActive ? 1 : 0.7 }} />
                 {label}
             </div>
             {badge > 0 && (
                 <span style={{
-                    background: '#ef4444',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)',
                     color: 'white',
                     fontSize: '0.65rem',
-                    fontWeight: 600,
-                    padding: '2px 6px',
+                    fontWeight: 700,
+                    padding: '2px 7px',
                     borderRadius: '10px',
                     minWidth: '18px',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
                 }}>
                     {badge > 99 ? '99+' : badge}
                 </span>
@@ -68,6 +63,7 @@ const Dashboard = ({ children }) => {
     const [showCreateProject, setShowCreateProject] = useState(false);
     const [projectHoverId, setProjectHoverId] = useState(null);
     const [unreadInbox, setUnreadInbox] = useState(0);
+    const [searchFocused, setSearchFocused] = useState(false);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -128,57 +124,103 @@ const Dashboard = ({ children }) => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-dark)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc' }}>
 
-            {/* A) Top Header Bar (Purple) */}
+            {/* Modern Header Bar */}
             <header style={{
-                height: '48px',
-                background: 'var(--header-bg)',
+                height: '64px',
+                background: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0 1rem',
-                color: 'white',
-                flexShrink: 0
+                padding: '0 1.5rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                borderBottom: '1px solid #e2e8f0',
+                flexShrink: 0,
+                zIndex: 50
             }}>
-                {/* Left: Workspace dropdown */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}>
-                    <div style={{ background: 'white', color: 'var(--header-bg)', width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>A</div>
-                    AI Workspace
-                    <ChevronDown size={14} />
-                </div>
-
-                {/* Center: Search input */}
-                <div style={{ flex: 1, maxWidth: '500px', margin: '0 2rem' }}>
+                {/* Left: Logo & Workspace */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{
-                        background: 'rgba(255,255,255,0.2)',
-                        borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '0.25rem 0.75rem',
-                        color: 'white'
+                        gap: '0.75rem',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                        <div style={{
+                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            width: 36,
+                            height: 36,
+                            borderRadius: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+                        }}>
+                            <Sparkles size={20} color="white" />
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>BBC Agents</div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>AI Workspace</div>
+                        </div>
+                        <ChevronDown size={16} style={{ color: '#94a3b8' }} />
+                    </div>
+                </div>
+
+                {/* Center: Search */}
+                <div style={{ flex: 1, maxWidth: '480px', margin: '0 2rem' }}>
+                    <div style={{
+                        background: searchFocused ? 'white' : '#f1f5f9',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0.625rem 1rem',
+                        border: searchFocused ? '2px solid #6366f1' : '2px solid transparent',
+                        boxShadow: searchFocused ? '0 0 0 4px rgba(99, 102, 241, 0.1)' : 'none',
+                        transition: 'all 0.2s ease'
                     }}>
-                        <Search size={14} style={{ opacity: 0.8 }} />
+                        <Search size={18} style={{ color: '#94a3b8', flexShrink: 0 }} />
                         <input
-                            placeholder="Search"
+                            placeholder="Search anything..."
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: 'white',
-                                padding: '0.25rem 0.5rem',
+                                color: '#1e293b',
+                                padding: '0 0.75rem',
                                 width: '100%',
                                 outline: 'none',
                                 fontSize: '0.9rem'
                             }}
                         />
+                        <kbd style={{
+                            background: '#e2e8f0',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.7rem',
+                            color: '#64748b',
+                            fontFamily: 'inherit',
+                            fontWeight: 500
+                        }}>⌘K</kbd>
                     </div>
                 </div>
 
-                {/* Right: Icons + Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button className="btn" style={{ background: 'rgba(255,255,255,0.2)', padding: '0.3rem 0.8rem', fontSize: '0.8rem', color: 'white' }}>Upgrade</button>
-                    <button className="btn" style={{ background: 'white', color: 'var(--header-bg)', padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>New</button>
-                    <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.2)' }} />
+                {/* Right: Actions & User */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button className="btn-modern btn-modern-primary" style={{ padding: '0.5rem 1rem' }}>
+                        <Plus size={16} />
+                        New
+                    </button>
+
+                    <div style={{ width: 1, height: 28, background: '#e2e8f0' }} />
+
                     <NotificationBell />
 
                     {/* User Avatar Dropdown */}
@@ -186,18 +228,20 @@ const Dashboard = ({ children }) => {
                         <div
                             onClick={() => setShowUserMenu(!showUserMenu)}
                             style={{
-                                width: 32,
-                                height: 32,
-                                background: '#4ecdc4',
-                                borderRadius: '50%',
+                                width: 40,
+                                height: 40,
+                                background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                                borderRadius: '12px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '0.85rem',
-                                fontWeight: 'bold',
+                                fontSize: '1rem',
+                                fontWeight: 700,
+                                color: 'white',
                                 cursor: 'pointer',
-                                border: showUserMenu ? '2px solid white' : '2px solid transparent',
-                                transition: 'border 0.2s'
+                                border: showUserMenu ? '2px solid #6366f1' : '2px solid transparent',
+                                transition: 'all 0.2s ease',
+                                boxShadow: showUserMenu ? '0 0 0 4px rgba(99, 102, 241, 0.2)' : 'none'
                             }}
                         >
                             {user?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -206,62 +250,56 @@ const Dashboard = ({ children }) => {
                         {/* Dropdown Menu */}
                         {showUserMenu && (
                             <>
-                                {/* Backdrop to close menu */}
                                 <div
                                     onClick={() => setShowUserMenu(false)}
-                                    style={{
-                                        position: 'fixed',
-                                        inset: 0,
-                                        zIndex: 999
-                                    }}
+                                    style={{ position: 'fixed', inset: 0, zIndex: 999 }}
                                 />
-                                <div style={{
+                                <div className="animate-fadeInDown" style={{
                                     position: 'absolute',
-                                    top: 'calc(100% + 8px)',
+                                    top: 'calc(100% + 12px)',
                                     right: 0,
-                                    width: '240px',
+                                    width: '260px',
                                     background: 'white',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                    borderRadius: '16px',
+                                    boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
                                     overflow: 'hidden',
-                                    zIndex: 1000
+                                    zIndex: 1000,
+                                    border: '1px solid #e2e8f0'
                                 }}>
                                     {/* User Info */}
                                     <div style={{
-                                        padding: '16px',
-                                        borderBottom: '1px solid #e5e7eb',
-                                        background: '#f9fafb'
+                                        padding: '1.25rem',
+                                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                                        borderBottom: '1px solid #e2e8f0'
                                     }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                             <div style={{
-                                                width: 44,
-                                                height: 44,
-                                                background: 'linear-gradient(135deg, #7b68ee, #6366f1)',
-                                                borderRadius: '50%',
+                                                width: 52,
+                                                height: 52,
+                                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                borderRadius: '14px',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 color: 'white',
-                                                fontWeight: 600,
-                                                fontSize: '16px'
+                                                fontWeight: 700,
+                                                fontSize: '1.25rem',
+                                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
                                             }}>
                                                 {user?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{
-                                                    fontWeight: 600,
-                                                    color: '#1f2937',
-                                                    fontSize: '14px',
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis'
+                                                    fontWeight: 700,
+                                                    color: '#0f172a',
+                                                    fontSize: '0.95rem',
+                                                    marginBottom: '2px'
                                                 }}>
                                                     {user?.username || 'User'}
                                                 </div>
                                                 <div style={{
-                                                    color: '#6b7280',
-                                                    fontSize: '12px',
-                                                    whiteSpace: 'nowrap',
+                                                    color: '#64748b',
+                                                    fontSize: '0.8rem',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis'
                                                 }}>
@@ -272,62 +310,66 @@ const Dashboard = ({ children }) => {
                                     </div>
 
                                     {/* Menu Items */}
-                                    <div style={{ padding: '8px' }}>
-                                        <div
-                                            onClick={() => { setShowUserMenu(false); window.location.href = '/profile'; }}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                                padding: '10px 12px',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                color: '#374151',
-                                                fontSize: '14px'
-                                            }}
-                                            className="sidebar-item"
-                                        >
-                                            <User size={18} color="#6b7280" />
-                                            Profile
-                                        </div>
-                                        <div
-                                            onClick={() => { setShowUserMenu(false); window.location.href = '/settings'; }}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                                padding: '10px 12px',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                color: '#374151',
-                                                fontSize: '14px'
-                                            }}
-                                            className="sidebar-item"
-                                        >
-                                            <Settings size={18} color="#6b7280" />
-                                            Settings
-                                        </div>
+                                    <div style={{ padding: '0.5rem' }}>
+                                        {[
+                                            { icon: User, label: 'Profile', href: '/profile' },
+                                            { icon: Settings, label: 'Settings', href: '/settings' }
+                                        ].map(item => (
+                                            <div
+                                                key={item.href}
+                                                onClick={() => { setShowUserMenu(false); window.location.href = item.href; }}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    padding: '0.75rem 1rem',
+                                                    borderRadius: '10px',
+                                                    cursor: 'pointer',
+                                                    color: '#475569',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 500,
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = '#f1f5f9';
+                                                    e.currentTarget.style.color = '#0f172a';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = 'transparent';
+                                                    e.currentTarget.style.color = '#475569';
+                                                }}
+                                            >
+                                                <item.icon size={18} style={{ opacity: 0.7 }} />
+                                                {item.label}
+                                            </div>
+                                        ))}
                                     </div>
 
                                     {/* Logout */}
-                                    <div style={{ padding: '8px', borderTop: '1px solid #e5e7eb' }}>
+                                    <div style={{ padding: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
                                         <div
                                             onClick={handleLogout}
                                             style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '12px',
-                                                padding: '10px 12px',
-                                                borderRadius: '8px',
+                                                padding: '0.75rem 1rem',
+                                                borderRadius: '10px',
                                                 cursor: 'pointer',
-                                                color: '#dc2626',
-                                                fontSize: '14px',
-                                                fontWeight: 500
+                                                color: '#ef4444',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                transition: 'all 0.15s ease'
                                             }}
-                                            className="sidebar-item"
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = '#fef2f2';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = 'transparent';
+                                            }}
                                         >
-                                            <LogOut size={18} color="#dc2626" />
-                                            Logout
+                                            <LogOut size={18} />
+                                            Sign out
                                         </div>
                                     </div>
                                 </div>
@@ -338,185 +380,217 @@ const Dashboard = ({ children }) => {
             </header>
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* B) Left Sidebar Navigation */}
-                <aside style={{
-                    width: '240px',
-                    background: '#ffffff',
-                    borderRight: '1px solid #e5e7eb',
+                {/* Modern Dark Sidebar */}
+                <aside className="sidebar-modern scrollbar-dark" style={{
+                    width: '260px',
                     display: 'flex',
                     flexDirection: 'column',
                     fontSize: '0.875rem',
-                    color: '#4b5563'
+                    overflowY: 'auto'
                 }}>
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 0.75rem' }}>
-                        <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
-                        <NavItem icon={TrendingUp} label="Analytics" href="/analytics" />
-                        <NavItem icon={Copy} label="Templates" href="/templates" />
-
-                        {/* Projects Dropdown */}
-                        <div
-                            onClick={() => setIsProjectsOpen(!isProjectsOpen)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '0.6rem 0.75rem',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                marginBottom: '2px',
-                                marginTop: '0.5rem',
-                                background: isProjectsOpen ? '#f3f4f6' : 'transparent',
-                                color: '#1f2937',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <Folder size={18} style={{ color: '#7b68ee' }} /> Projects
-                            </div>
-                            <ChevronDown
-                                size={14}
-                                style={{
-                                    transition: 'transform 0.2s ease',
-                                    transform: isProjectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                    color: '#6b7280'
-                                }}
-                            />
+                    <div style={{ flex: 1, padding: '1rem 0.75rem' }}>
+                        {/* Main Navigation */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
+                            <NavItem icon={TrendingUp} label="Analytics" href="/analytics" />
+                            <NavItem icon={Copy} label="Templates" href="/templates" />
                         </div>
 
-                        {/* Projects List */}
-                        {isProjectsOpen && (
-                            <div style={{ paddingLeft: '0.5rem' }}>
-                                {projects.filter(p => !p.archived).map(project => (
+                        {/* Projects Section */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <div
+                                onClick={() => setIsProjectsOpen(!isProjectsOpen)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '0.5rem 0.875rem',
+                                    cursor: 'pointer',
+                                    color: '#64748b',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Folder size={14} />
+                                    Projects
+                                </div>
+                                <ChevronDown
+                                    size={14}
+                                    style={{
+                                        transition: 'transform 0.2s ease',
+                                        transform: isProjectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+                                    }}
+                                />
+                            </div>
+
+                            {isProjectsOpen && (
+                                <div style={{ marginTop: '0.25rem' }}>
+                                    {projects.filter(p => !p.archived).map(project => (
+                                        <div
+                                            key={project.id}
+                                            onMouseEnter={() => setProjectHoverId(project.id)}
+                                            onMouseLeave={() => setProjectHoverId(null)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                                cursor: 'pointer',
+                                                color: '#94a3b8',
+                                                fontSize: '0.85rem',
+                                                borderRadius: '8px',
+                                                transition: 'all 0.15s ease',
+                                                background: projectHoverId === project.id ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+                                            }}
+                                        >
+                                            <div
+                                                onClick={() => window.location.href = `/projects/${project.id}`}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}
+                                            >
+                                                <div style={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    background: project.color || '#6366f1',
+                                                    boxShadow: `0 0 8px ${project.color || '#6366f1'}40`
+                                                }} />
+                                                <span style={{
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    color: projectHoverId === project.id ? '#e2e8f0' : '#94a3b8'
+                                                }}>
+                                                    {project.name}
+                                                </span>
+                                            </div>
+                                            {projectHoverId === project.id && (
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleArchiveProject(project.id); }}
+                                                        style={{
+                                                            background: 'rgba(255,255,255,0.1)',
+                                                            border: 'none',
+                                                            padding: '4px',
+                                                            cursor: 'pointer',
+                                                            color: '#94a3b8',
+                                                            borderRadius: '4px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        <Archive size={12} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                     <div
-                                        key={project.id}
-                                        onMouseEnter={() => setProjectHoverId(project.id)}
-                                        onMouseLeave={() => setProjectHoverId(null)}
+                                        onClick={() => setShowCreateProject(true)}
                                         style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '0.4rem 0.75rem 0.4rem 2rem',
-                                            marginBottom: '1px', cursor: 'pointer', color: '#666', fontSize: '0.85rem',
-                                            borderRadius: '4px',
-                                            background: projectHoverId === project.id ? '#f4f4f5' : 'transparent'
+                                            padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                            color: '#64748b',
+                                            fontSize: '0.8rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            cursor: 'pointer',
+                                            borderRadius: '8px',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.color = '#94a3b8';
+                                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.color = '#64748b';
+                                            e.currentTarget.style.background = 'transparent';
                                         }}
                                     >
-                                        <div
-                                            onClick={() => window.location.href = `/projects/${project.id}`}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}
-                                        >
-                                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: project.color || '#6366f1' }} />
-                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {project.name}
-                                            </span>
-                                        </div>
-                                        {projectHoverId === project.id && (
-                                            <div style={{ display: 'flex', gap: '2px' }}>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); /* TODO: Edit */ }}
-                                                    style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', color: '#9ca3af', borderRadius: '4px' }}
-                                                >
-                                                    <Edit3 size={12} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleArchiveProject(project.id); }}
-                                                    style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', color: '#9ca3af', borderRadius: '4px' }}
-                                                >
-                                                    <Archive size={12} />
-                                                </button>
-                                            </div>
-                                        )}
+                                        <Plus size={14} /> Add Project
                                     </div>
-                                ))}
-                                <div
-                                    onClick={() => setShowCreateProject(true)}
-                                    style={{
-                                        padding: '0.4rem 0.75rem 0.4rem 2rem', color: '#888', fontSize: '0.8rem',
-                                        display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginTop: '0.2rem',
-                                        borderRadius: '4px'
-                                    }}
-                                    className="sidebar-item"
-                                >
-                                    <Plus size={14} /> Create Project
                                 </div>
-                            </div>
-                        )}
-
-                        <NavItem icon={Calendar} label="Calendar" href="/calendar" />
-                        <NavItem icon={Bot} label="AI Assistant" href="/bot" />
-                        <NavItem icon={Inbox} label="Inbox" href="/inbox" badge={unreadInbox} />
-
-                        {/* Company Section Divider */}
-                        <div style={{
-                            margin: '1.25rem 0 0.75rem',
-                            padding: '0.5rem 0.75rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            color: '#9ca3af',
-                            letterSpacing: '0.5px'
-                        }}>
-                            Company
+                            )}
                         </div>
-                        <NavItem icon={Users} label="Employees" href="/employees" />
-                        <NavItem icon={Building2} label="Departments" href="/departments" />
-                        <NavItem icon={Shield} label="Roles" href="/roles" />
-                        <NavItem icon={Clock} label="Attendance" href="/attendance" />
-                        <NavItem icon={CalendarOff} label="Leave" href="/leave" />
-                        <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" />
+
+                        {/* Tools Section */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <NavItem icon={Calendar} label="Calendar" href="/calendar" />
+                            <NavItem icon={Bot} label="AI Assistant" href="/bot" />
+                            <NavItem icon={Target} label="Goals" href="/goals" />
+                            <NavItem icon={Inbox} label="Inbox" href="/inbox" badge={unreadInbox} />
+                        </div>
+
+                        {/* Company Section */}
+                        <div>
+                            <div style={{
+                                padding: '0.5rem 0.875rem',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                color: '#64748b',
+                                letterSpacing: '0.5px'
+                            }}>
+                                Company
+                            </div>
+                            <NavItem icon={Users} label="Employees" href="/employees" />
+                            <NavItem icon={Building2} label="Departments" href="/departments" />
+                            <NavItem icon={Shield} label="Roles" href="/roles" />
+                            <NavItem icon={Clock} label="Attendance" href="/attendance" />
+                            <NavItem icon={CalendarOff} label="Leave" href="/leave" />
+                            <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" />
+                        </div>
                     </div>
 
                     {/* Bottom Sidebar */}
-                    <div style={{ padding: '1rem 0.75rem', borderTop: '1px solid #e5e7eb' }}>
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                padding: '0.5rem 0.75rem',
-                                marginBottom: '2px',
-                                cursor: 'pointer',
-                                color: '#6b7280',
-                                borderRadius: '8px',
-                                transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#f3f4f6';
-                                e.currentTarget.style.color = '#1f2937';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = '#6b7280';
-                            }}
-                        >
-                            <UserPlus size={16} /> Invite
-                        </div>
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                padding: '0.5rem 0.75rem',
-                                cursor: 'pointer',
-                                color: '#6b7280',
-                                borderRadius: '8px',
-                                transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#f3f4f6';
-                                e.currentTarget.style.color = '#1f2937';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = '#6b7280';
-                            }}
-                        >
-                            <HelpCircle size={16} /> Help
-                        </div>
+                    <div style={{
+                        padding: '1rem 0.75rem',
+                        borderTop: '1px solid #334155'
+                    }}>
+                        {[
+                            { icon: UserPlus, label: 'Invite Team' },
+                            { icon: HelpCircle, label: 'Help & Support' }
+                        ].map(item => (
+                            <div
+                                key={item.label}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    padding: '0.6rem 0.875rem',
+                                    cursor: 'pointer',
+                                    color: '#64748b',
+                                    borderRadius: '8px',
+                                    fontSize: '0.85rem',
+                                    transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                    e.currentTarget.style.color = '#94a3b8';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = '#64748b';
+                                }}
+                            >
+                                <item.icon size={16} />
+                                {item.label}
+                            </div>
+                        ))}
                     </div>
                 </aside>
 
-                {/* C) Main Content Area */}
-                <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'white' }}>
+                {/* Main Content Area */}
+                <main style={{
+                    flex: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: '#f8fafc'
+                }}>
                     {children ? children : <DashboardHome />}
                 </main>
             </div>
@@ -535,7 +609,7 @@ const Dashboard = ({ children }) => {
     );
 };
 
-// Create Project Modal Component
+// Modern Create Project Modal Component
 const CreateProjectModal = ({ onClose, onCreate }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -544,7 +618,7 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
 
     const PRESET_COLORS = [
         '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
-        '#f97316', '#eab308', '#22c55e', '#14b8a6'
+        '#f97316', '#eab308', '#22c55e', '#06b6d4'
     ];
 
     const handleSubmit = async (e) => {
@@ -559,36 +633,64 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-        }}>
-            <div style={{
-                background: 'white',
-                borderRadius: '16px',
-                width: '100%',
-                maxWidth: '450px',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-            }}>
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ width: '100%', maxWidth: '480px' }}>
+                {/* Header */}
                 <div style={{
                     padding: '1.5rem',
-                    borderBottom: '1px solid #e5e7eb'
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
                 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#1f2937' }}>
-                        Create New Project
-                    </h2>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                            Create Project
+                        </h2>
+                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                            Add a new project to your workspace
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: '#f1f5f9',
+                            border: 'none',
+                            borderRadius: '10px',
+                            width: 36,
+                            height: 36,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#e2e8f0';
+                            e.currentTarget.style.color = '#0f172a';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f1f5f9';
+                            e.currentTarget.style.color = '#64748b';
+                        }}
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* Project Name */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
-                                Project Name *
+                            <label style={{
+                                display: 'block',
+                                marginBottom: '0.5rem',
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                color: '#374151'
+                            }}>
+                                Project Name
                             </label>
                             <input
                                 type="text"
@@ -597,57 +699,61 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                                 placeholder="e.g., Marketing Campaign"
                                 required
                                 autoFocus
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    fontSize: '0.95rem',
-                                    outline: 'none'
-                                }}
+                                className="input-modern"
                             />
                         </div>
 
+                        {/* Description */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
-                                Description
+                            <label style={{
+                                display: 'block',
+                                marginBottom: '0.5rem',
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                color: '#374151'
+                            }}>
+                                Description <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span>
                             </label>
                             <textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Brief project description..."
                                 rows={3}
+                                className="input-modern"
                                 style={{
-                                    width: '100%',
-                                    padding: '0.75rem',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    fontSize: '0.95rem',
-                                    outline: 'none',
                                     resize: 'vertical',
                                     fontFamily: 'inherit'
                                 }}
                             />
                         </div>
 
+                        {/* Color */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
-                                Color
+                            <label style={{
+                                display: 'block',
+                                marginBottom: '0.75rem',
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                color: '#374151'
+                            }}>
+                                Project Color
                             </label>
-                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
                                 {PRESET_COLORS.map(c => (
                                     <button
                                         key={c}
                                         type="button"
                                         onClick={() => setColor(c)}
                                         style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '8px',
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '12px',
                                             background: c,
-                                            border: color === c ? '3px solid #1f2937' : '3px solid transparent',
+                                            border: color === c ? '3px solid #0f172a' : '3px solid transparent',
                                             cursor: 'pointer',
-                                            transition: 'all 0.15s'
+                                            transition: 'all 0.2s ease',
+                                            transform: color === c ? 'scale(1.1)' : 'scale(1)',
+                                            boxShadow: color === c ? `0 4px 12px ${c}50` : 'none'
                                         }}
                                     />
                                 ))}
@@ -655,40 +761,28 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                         </div>
                     </div>
 
+                    {/* Footer */}
                     <div style={{
                         padding: '1rem 1.5rem',
-                        borderTop: '1px solid #e5e7eb',
+                        borderTop: '1px solid #e2e8f0',
                         display: 'flex',
                         justifyContent: 'flex-end',
-                        gap: '0.75rem'
+                        gap: '0.75rem',
+                        background: '#f8fafc'
                     }}>
                         <button
                             type="button"
                             onClick={onClose}
-                            style={{
-                                padding: '0.625rem 1.25rem',
-                                background: '#f3f4f6',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '0.9rem',
-                                fontWeight: 500,
-                                color: '#4b5563',
-                                cursor: 'pointer'
-                            }}
+                            className="btn-modern btn-modern-secondary"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading || !name.trim()}
+                            className="btn-modern btn-modern-primary"
                             style={{
-                                padding: '0.625rem 1.25rem',
-                                background: loading || !name.trim() ? '#d1d5db' : '#4f46e5',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '0.9rem',
-                                fontWeight: 500,
-                                color: 'white',
+                                opacity: loading || !name.trim() ? 0.5 : 1,
                                 cursor: loading || !name.trim() ? 'not-allowed' : 'pointer'
                             }}
                         >

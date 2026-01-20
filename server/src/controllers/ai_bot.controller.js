@@ -3,6 +3,26 @@ const prisma = new PrismaClient();
 const { generateAIResponse } = require('../services/aiService');
 const cache = require('../utils/cache');
 
+// Employee Lifecycle handlers
+const {
+    handleParseEmployeeCV,
+    handleGetOnboardingStatus,
+    handleUpdateOnboardingProgress,
+    handleGetEmployeeProfile,
+    handleGetProbationStatus,
+    handleCreateProbationReview,
+    handleGetProbationAlerts,
+    handleExtendProbation,
+    handleCompleteProbation,
+    handleAnalyzeEmployeePerformance,
+    handleGetAttritionRisk,
+    handleSearchEmployees,
+    handleGetEmployeesNeedingAttention,
+    handleGetDepartmentAnalytics,
+    handleGetEmployeeSkills,
+    handleAddEmployeeSkill
+} = require('./employeeLifecycle.handlers');
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -908,6 +928,209 @@ const handleCheckMessages = async (employeeId) => {
         console.error('handleCheckMessages error:', error);
         return { success: false, error: 'Failed to check messages' };
     }
+};
+
+/**
+ * Handle reading a message from a specific sender
+ */
+const handleReadMessage = async (employeeId, { sender_name }) => {
+    try {
+        // Find sender by name
+        const sender = await prisma.employee.findFirst({
+            where: { name: { contains: sender_name, mode: 'insensitive' } }
+        });
+
+        if (!sender) {
+            return { success: false, error: `Could not find employee "${sender_name}"` };
+        }
+
+        // Find the latest message from this sender
+        const message = await prisma.message.findFirst({
+            where: {
+                employee_id: employeeId,
+                sender_employee_id: sender.id
+            },
+            orderBy: { created_at: 'desc' },
+            include: {
+                senderEmployee: { select: { name: true, department: { select: { name: true } } } }
+            }
+        });
+
+        if (!message) {
+            return { success: false, error: `No messages from ${sender_name}` };
+        }
+
+        // Mark as read
+        await prisma.message.update({
+            where: { id: message.id },
+            data: {
+                read_at: new Date(),
+                status: 'read'
+            }
+        });
+
+        const timeAgo = getTimeAgo(message.created_at);
+
+        return {
+            success: true,
+            message: {
+                id: message.id,
+                from: message.senderEmployee?.name || sender_name,
+                department: message.senderEmployee?.department?.name || 'Unknown',
+                content: message.content,
+                subject: message.subject,
+                priority: message.priority,
+                type: message.message_type,
+                sentAt: message.created_at,
+                timeAgo: timeAgo
+            }
+        };
+    } catch (error) {
+        console.error('handleReadMessage error:', error);
+        return { success: false, error: 'Failed to read message' };
+    }
+};
+
+/**
+ * Handle replying to a message
+ */
+const handleReplyToMessage = async (employeeId, { sender_name, content }, context) => {
+    try {
+        // Find sender by name
+        const recipient = await prisma.employee.findFirst({
+            where: { name: { contains: sender_name, mode: 'insensitive' } },
+            include: { department: true }
+        });
+
+        if (!recipient) {
+            return { success: false, error: `Could not find employee "${sender_name}"` };
+        }
+
+        // Check permission using existing function
+        const permission = await canMessageEmployee(employeeId, recipient.id, context);
+        if (!permission.allowed) {
+            return { success: false, error: permission.reason };
+        }
+
+        // Find the original message to link as parent
+        const originalMessage = await prisma.message.findFirst({
+            where: {
+                employee_id: employeeId,
+                sender_employee_id: recipient.id
+            },
+            orderBy: { created_at: 'desc' }
+        });
+
+        // Create reply message
+        await prisma.message.create({
+            data: {
+                employee_id: recipient.id,
+                sender_employee_id: employeeId,
+                content: content,
+                subject: originalMessage ? `Re: ${originalMessage.subject || 'Your message'}` : null,
+                sender: 'employee',
+                message_type: 'direct',
+                priority: 'normal',
+                status: 'delivered',
+                parent_message_id: originalMessage?.id || null,
+                metadata: JSON.stringify({ isReply: true, replyTo: originalMessage?.id })
+            }
+        });
+
+        return {
+            success: true,
+            message: `Reply sent to ${recipient.name}`,
+            recipient: recipient.name,
+            department: recipient.department?.name
+        };
+    } catch (error) {
+        console.error('handleReplyToMessage error:', error);
+        return { success: false, error: 'Failed to send reply' };
+    }
+};
+
+/**
+ * Handle getting list of messageable contacts based on hierarchy
+ */
+const handleGetMessageableContacts = async (employeeId, context) => {
+    try {
+        const contacts = {
+            manager: null,
+            directReports: [],
+            sameDepartment: [],
+            hr: []
+        };
+
+        // Manager
+        if (context.manager) {
+            contacts.manager = {
+                id: context.manager.id,
+                name: context.manager.name,
+                email: context.manager.email
+            };
+        }
+
+        // Direct reports (for managers)
+        if (context.subordinates && context.subordinates.length > 0) {
+            contacts.directReports = context.subordinates.map(s => ({
+                id: s.id,
+                name: s.name
+            }));
+        }
+
+        // Same department colleagues
+        const deptColleagues = await prisma.employee.findMany({
+            where: {
+                department_id: context.department.id,
+                id: { not: employeeId }
+            },
+            select: { id: true, name: true, email: true }
+        });
+        contacts.sameDepartment = deptColleagues;
+
+        // HR department
+        const hrEmployees = await prisma.employee.findMany({
+            where: {
+                department: { name: { contains: 'HR', mode: 'insensitive' } }
+            },
+            select: { id: true, name: true, email: true }
+        });
+        contacts.hr = hrEmployees;
+
+        const totalContacts =
+            (contacts.manager ? 1 : 0) +
+            contacts.directReports.length +
+            contacts.sameDepartment.length +
+            contacts.hr.length;
+
+        return {
+            success: true,
+            totalContacts,
+            contacts,
+            yourRole: context.role.name,
+            yourDepartment: context.department.name,
+            isManager: context.subordinates?.length > 0
+        };
+    } catch (error) {
+        console.error('handleGetMessageableContacts error:', error);
+        return { success: false, error: 'Failed to get contacts' };
+    }
+};
+
+/**
+ * Helper function to format time ago
+ */
+const getTimeAgo = (date) => {
+    const now = new Date();
+    const diff = now - new Date(date);
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'just now';
 };
 
 // ============================================
@@ -3321,6 +3544,519 @@ const handleGetStreaks = async (employeeId) => {
     }
 };
 
+// ============================================
+// SMART INSIGHTS & PREDICTIONS (Phase 5)
+// ============================================
+
+/**
+ * Handle burnout risk analysis
+ */
+const handleGetBurnoutRisk = async ({ threshold_hours = 45, threshold_overdue = 5 }) => {
+    try {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - 7);
+        weekStart.setHours(0, 0, 0, 0);
+        const now = new Date();
+
+        // Get all employees with their attendance and tasks
+        const employees = await prisma.employee.findMany({
+            where: { status: 'active' },
+            include: {
+                attendances: {
+                    where: {
+                        date: { gte: weekStart }
+                    }
+                },
+                user: {
+                    include: {
+                        tasks: {
+                            where: {
+                                status: { not: 'done' },
+                                due_date: { lt: now }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const atRisk = [];
+
+        for (const emp of employees) {
+            // Calculate hours worked this week
+            let hoursWorked = 0;
+            for (const att of emp.attendances) {
+                if (att.check_in && att.check_out) {
+                    const diff = new Date(att.check_out) - new Date(att.check_in);
+                    hoursWorked += diff / (1000 * 60 * 60);
+                }
+            }
+
+            // Count overdue tasks
+            const overdueTasks = emp.user?.tasks?.length || 0;
+
+            // Check thresholds
+            const reasons = [];
+            if (hoursWorked >= threshold_hours) {
+                reasons.push(`${Math.round(hoursWorked)} hrs`);
+            }
+            if (overdueTasks >= threshold_overdue) {
+                reasons.push(`${overdueTasks} overdue tasks`);
+            }
+
+            if (reasons.length > 0) {
+                atRisk.push({ name: emp.name, reasons: reasons.join(', ') });
+            }
+        }
+
+        if (atRisk.length === 0) {
+            return {
+                success: true,
+                message: '✅ No burnout risks detected. Workload looks healthy!'
+            };
+        }
+
+        const riskList = atRisk.slice(0, 5).map(r => `${r.name} (${r.reasons})`).join(', ');
+        const extra = atRisk.length > 5 ? ` +${atRisk.length - 5} more` : '';
+
+        return {
+            success: true,
+            message: `⚠️ Burnout risk: ${riskList}${extra}`,
+            data: atRisk
+        };
+    } catch (error) {
+        console.error('handleGetBurnoutRisk error:', error);
+        return { success: false, error: 'Failed to analyze burnout risk' };
+    }
+};
+
+/**
+ * Handle performance trends analysis
+ */
+const handleGetPerformanceTrends = async ({ department_name, employee_name }) => {
+    try {
+        const now = new Date();
+        const thisWeekStart = new Date(now);
+        thisWeekStart.setDate(thisWeekStart.getDate() - 7);
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+        // Build filter
+        let where = {};
+        if (department_name) {
+            const dept = await prisma.department.findFirst({
+                where: { name: { contains: department_name, mode: 'insensitive' } }
+            });
+            if (dept) {
+                where.user = { employee: { department_id: dept.id } };
+            }
+        }
+        if (employee_name) {
+            const emp = await prisma.employee.findFirst({
+                where: { name: { contains: employee_name, mode: 'insensitive' } }
+            });
+            if (emp) {
+                where.user_id = emp.user_id;
+            }
+        }
+
+        // Get tasks completed this week
+        const thisWeekTasks = await prisma.task.count({
+            where: {
+                ...where,
+                status: 'done',
+                updated_at: { gte: thisWeekStart }
+            }
+        });
+
+        // Get tasks completed last week
+        const lastWeekTasks = await prisma.task.count({
+            where: {
+                ...where,
+                status: 'done',
+                updated_at: { gte: lastWeekStart, lt: thisWeekStart }
+            }
+        });
+
+        // Calculate trend
+        let trend = 0;
+        if (lastWeekTasks > 0) {
+            trend = Math.round(((thisWeekTasks - lastWeekTasks) / lastWeekTasks) * 100);
+        } else if (thisWeekTasks > 0) {
+            trend = 100; // New activity
+        }
+
+        const trendIcon = trend >= 0 ? '📈' : '📉';
+        const trendSign = trend >= 0 ? '+' : '';
+        const subject = employee_name || department_name || 'Company';
+
+        return {
+            success: true,
+            message: `${trendIcon} ${subject}: ${trendSign}${trend}% vs last week (${thisWeekTasks} vs ${lastWeekTasks} tasks)`,
+            data: { thisWeek: thisWeekTasks, lastWeek: lastWeekTasks, trend }
+        };
+    } catch (error) {
+        console.error('handleGetPerformanceTrends error:', error);
+        return { success: false, error: 'Failed to analyze performance trends' };
+    }
+};
+
+/**
+ * Handle project risk analysis
+ */
+const handleGetProjectRiskAnalysis = async ({ overdue_threshold = 30, days_threshold = 7 }) => {
+    try {
+        const now = new Date();
+        const thresholdDate = new Date(now);
+        thresholdDate.setDate(thresholdDate.getDate() + days_threshold);
+
+        // Get all projects with their tasks
+        const projects = await prisma.project.findMany({
+            include: {
+                tasks: true
+            }
+        });
+
+        const atRisk = [];
+
+        for (const project of projects) {
+            if (project.tasks.length === 0) continue;
+
+            const totalTasks = project.tasks.length;
+            const doneTasks = project.tasks.filter(t => t.status === 'done').length;
+            const overdueTasks = project.tasks.filter(t =>
+                t.status !== 'done' && t.due_date && new Date(t.due_date) < now
+            ).length;
+
+            const progress = Math.round((doneTasks / totalTasks) * 100);
+            const overduePercent = Math.round((overdueTasks / totalTasks) * 100);
+
+            // Check for upcoming deadlines with low progress
+            const upcomingDeadlines = project.tasks.filter(t =>
+                t.status !== 'done' && t.due_date &&
+                new Date(t.due_date) >= now &&
+                new Date(t.due_date) <= thresholdDate
+            );
+
+            const reasons = [];
+            if (overduePercent >= overdue_threshold) {
+                reasons.push(`${overduePercent}% overdue`);
+            }
+            if (upcomingDeadlines.length > 0 && progress < 50) {
+                const minDeadline = Math.min(...upcomingDeadlines.map(t => new Date(t.due_date)));
+                const daysLeft = Math.ceil((minDeadline - now) / (1000 * 60 * 60 * 24));
+                reasons.push(`${progress}% done, due in ${daysLeft}d`);
+            }
+
+            if (reasons.length > 0) {
+                atRisk.push({ name: project.name, progress, reasons: reasons.join(', ') });
+            }
+        }
+
+        if (atRisk.length === 0) {
+            return {
+                success: true,
+                message: '✅ No projects at risk. All on track!'
+            };
+        }
+
+        const riskList = atRisk.slice(0, 3).map(r => `${r.name} (${r.reasons})`).join(', ');
+        const extra = atRisk.length > 3 ? ` +${atRisk.length - 3} more` : '';
+
+        return {
+            success: true,
+            message: `🚨 At risk: ${riskList}${extra}`,
+            data: atRisk
+        };
+    } catch (error) {
+        console.error('handleGetProjectRiskAnalysis error:', error);
+        return { success: false, error: 'Failed to analyze project risks' };
+    }
+};
+
+/**
+ * Handle workload balance analysis
+ */
+const handleGetWorkloadBalance = async ({ department_name }) => {
+    try {
+        // Build employee filter
+        let employeeWhere = { status: 'active' };
+        if (department_name) {
+            const dept = await prisma.department.findFirst({
+                where: { name: { contains: department_name, mode: 'insensitive' } }
+            });
+            if (dept) {
+                employeeWhere.department_id = dept.id;
+            }
+        }
+
+        // Get employees with pending tasks count
+        const employees = await prisma.employee.findMany({
+            where: employeeWhere,
+            include: {
+                user: {
+                    include: {
+                        tasks: {
+                            where: { status: { not: 'done' } }
+                        }
+                    }
+                }
+            }
+        });
+
+        const workloads = employees
+            .filter(e => e.user)
+            .map(e => ({
+                name: e.name,
+                taskCount: e.user.tasks?.length || 0
+            }))
+            .sort((a, b) => b.taskCount - a.taskCount);
+
+        if (workloads.length === 0) {
+            return { success: true, message: 'No employees found to analyze.' };
+        }
+
+        const max = workloads[0];
+        const min = workloads[workloads.length - 1];
+        const avg = Math.round(workloads.reduce((s, w) => s + w.taskCount, 0) / workloads.length);
+        const diff = max.taskCount - min.taskCount;
+
+        // Check if imbalanced (difference > 5 tasks)
+        if (diff > 5) {
+            return {
+                success: true,
+                message: `⚖️ Imbalanced: ${max.name} (${max.taskCount} tasks) vs ${min.name} (${min.taskCount} tasks). Avg: ${avg}. Consider rebalancing?`,
+                data: { workloads, avg, max, min }
+            };
+        }
+
+        return {
+            success: true,
+            message: `✅ Workload balanced. Range: ${min.taskCount}-${max.taskCount} tasks (avg ${avg})`,
+            data: { workloads, avg }
+        };
+    } catch (error) {
+        console.error('handleGetWorkloadBalance error:', error);
+        return { success: false, error: 'Failed to analyze workload balance' };
+    }
+};
+
+/**
+ * Handle predicted delays analysis
+ */
+const handleGetPredictedDelays = async ({ days_no_progress = 3 }) => {
+    try {
+        const now = new Date();
+        const progressThreshold = new Date(now);
+        progressThreshold.setDate(progressThreshold.getDate() - days_no_progress);
+
+        // Find tasks approaching deadline with no recent progress
+        const riskyTasks = await prisma.task.findMany({
+            where: {
+                status: { not: 'done' },
+                due_date: { gte: now },
+                updated_at: { lt: progressThreshold }
+            },
+            include: {
+                user: {
+                    include: {
+                        employee: { select: { name: true } }
+                    }
+                }
+            },
+            orderBy: { due_date: 'asc' },
+            take: 10
+        });
+
+        if (riskyTasks.length === 0) {
+            return {
+                success: true,
+                message: '✅ No predicted delays. All tasks progressing normally!'
+            };
+        }
+
+        const delays = riskyTasks.map(t => {
+            const daysLeft = Math.ceil((new Date(t.due_date) - now) / (1000 * 60 * 60 * 24));
+            const owner = t.user?.employee?.name || 'Unassigned';
+            return { title: t.title, daysLeft, owner, status: t.status };
+        });
+
+        const delayList = delays.slice(0, 3).map(d =>
+            `'${d.title}' (no progress, due in ${d.daysLeft}d)`
+        ).join(', ');
+        const extra = delays.length > 3 ? ` +${delays.length - 3} more` : '';
+
+        return {
+            success: true,
+            message: `⚠️ Likely delays: ${delayList}${extra}`,
+            data: delays
+        };
+    } catch (error) {
+        console.error('handleGetPredictedDelays error:', error);
+        return { success: false, error: 'Failed to predict delays' };
+    }
+};
+
+/**
+ * Handle recognition suggestions
+ */
+const handleGetRecognitionSuggestions = async () => {
+    try {
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - 7);
+
+        // Get top performers by tasks completed this week
+        const employees = await prisma.employee.findMany({
+            where: { status: 'active' },
+            include: {
+                user: {
+                    include: {
+                        tasks: {
+                            where: {
+                                status: 'done',
+                                updated_at: { gte: weekStart }
+                            }
+                        }
+                    }
+                },
+                points: true,
+                attendances: {
+                    where: { date: { gte: weekStart } }
+                }
+            }
+        });
+
+        const candidates = [];
+
+        for (const emp of employees) {
+            const tasksCompleted = emp.user?.tasks?.length || 0;
+            const streak = emp.points?.currentStreak || 0;
+            const attendanceCount = emp.attendances.length;
+            const perfectAttendance = attendanceCount >= 5; // Full work week
+
+            const reasons = [];
+            if (tasksCompleted >= 10) reasons.push(`${tasksCompleted} tasks`);
+            if (streak >= 5) reasons.push(`${streak}-day streak`);
+            if (perfectAttendance) reasons.push('100% attendance');
+
+            if (reasons.length > 0) {
+                candidates.push({
+                    name: emp.name,
+                    reasons: reasons.join(', '),
+                    score: tasksCompleted + streak * 2 + (perfectAttendance ? 10 : 0)
+                });
+            }
+        }
+
+        candidates.sort((a, b) => b.score - a.score);
+
+        if (candidates.length === 0) {
+            return {
+                success: true,
+                message: '📊 No standout performers this week. Keep encouraging the team!'
+            };
+        }
+
+        const recList = candidates.slice(0, 3).map(c => `${c.name} (${c.reasons})`).join(', ');
+
+        return {
+            success: true,
+            message: `🌟 Recognize: ${recList}`,
+            data: candidates.slice(0, 5)
+        };
+    } catch (error) {
+        console.error('handleGetRecognitionSuggestions error:', error);
+        return { success: false, error: 'Failed to get recognition suggestions' };
+    }
+};
+
+/**
+ * Handle anomaly detection
+ */
+const handleGetAnomalyAlerts = async () => {
+    try {
+        const now = new Date();
+        const thisWeekStart = new Date(now);
+        thisWeekStart.setDate(thisWeekStart.getDate() - 7);
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+        const anomalies = [];
+
+        // Get employees with their activity
+        const employees = await prisma.employee.findMany({
+            where: { status: 'active' },
+            include: {
+                user: true,
+                attendances: {
+                    where: { date: { gte: lastWeekStart } }
+                }
+            }
+        });
+
+        for (const emp of employees) {
+            if (!emp.user) continue;
+
+            // Get task completion counts for comparison
+            const thisWeekTasks = await prisma.task.count({
+                where: {
+                    user_id: emp.user.id,
+                    status: 'done',
+                    updated_at: { gte: thisWeekStart }
+                }
+            });
+
+            const lastWeekTasks = await prisma.task.count({
+                where: {
+                    user_id: emp.user.id,
+                    status: 'done',
+                    updated_at: { gte: lastWeekStart, lt: thisWeekStart }
+                }
+            });
+
+            // Detect significant drops (>50% decrease with meaningful previous activity)
+            if (lastWeekTasks >= 5 && thisWeekTasks < lastWeekTasks * 0.5) {
+                anomalies.push({
+                    name: emp.name,
+                    type: 'activity_drop',
+                    detail: `${thisWeekTasks} tasks this week (usually ${lastWeekTasks}+)`
+                });
+            }
+
+            // Detect missed check-ins (active employee, no attendance this week)
+            const thisWeekAttendance = emp.attendances.filter(a => new Date(a.date) >= thisWeekStart);
+            const workDaysSoFar = Math.min(5, Math.ceil((now - thisWeekStart) / (1000 * 60 * 60 * 24)));
+
+            if (thisWeekAttendance.length === 0 && workDaysSoFar >= 2) {
+                anomalies.push({
+                    name: emp.name,
+                    type: 'no_checkins',
+                    detail: 'No check-ins this week'
+                });
+            }
+        }
+
+        if (anomalies.length === 0) {
+            return {
+                success: true,
+                message: '✅ No unusual patterns detected. Everything looks normal!'
+            };
+        }
+
+        const anomalyList = anomalies.slice(0, 3).map(a => `${a.name} - ${a.detail}`).join(', ');
+        const extra = anomalies.length > 3 ? ` +${anomalies.length - 3} more` : '';
+
+        return {
+            success: true,
+            message: `🔍 Unusual: ${anomalyList}${extra}`,
+            data: anomalies
+        };
+    } catch (error) {
+        console.error('handleGetAnomalyAlerts error:', error);
+        return { success: false, error: 'Failed to detect anomalies' };
+    }
+};
+
 /**
  * Master action handler - routes to appropriate handler
  */
@@ -3366,6 +4102,12 @@ const createActionHandler = (employeeId, context) => {
                 return await handleAnnounceToTeam(employeeId, toolInput, context);
             case 'checkMessages':
                 return await handleCheckMessages(employeeId);
+            case 'readMessage':
+                return await handleReadMessage(employeeId, toolInput);
+            case 'replyToMessage':
+                return await handleReplyToMessage(employeeId, toolInput, context);
+            case 'getMessageableContacts':
+                return await handleGetMessageableContacts(employeeId, context);
 
             // Meetings
             case 'scheduleMeeting':
@@ -3464,6 +4206,56 @@ const createActionHandler = (employeeId, context) => {
                 return await handleGetAchievements(employeeId, toolInput);
             case 'getStreaks':
                 return await handleGetStreaks(employeeId);
+
+            // Smart Insights & Predictions (Phase 5)
+            case 'getBurnoutRisk':
+                return await handleGetBurnoutRisk(toolInput);
+            case 'getPerformanceTrends':
+                return await handleGetPerformanceTrends(toolInput);
+            case 'getProjectRiskAnalysis':
+                return await handleGetProjectRiskAnalysis(toolInput);
+            case 'getWorkloadBalance':
+                return await handleGetWorkloadBalance(toolInput);
+            case 'getPredictedDelays':
+                return await handleGetPredictedDelays(toolInput);
+            case 'getRecognitionSuggestions':
+                return await handleGetRecognitionSuggestions();
+            case 'getAnomalyAlerts':
+                return await handleGetAnomalyAlerts();
+
+            // Employee Lifecycle Management
+            case 'parseEmployeeCV':
+                return await handleParseEmployeeCV(toolInput);
+            case 'getOnboardingStatus':
+                return await handleGetOnboardingStatus(toolInput);
+            case 'updateOnboardingProgress':
+                return await handleUpdateOnboardingProgress(toolInput);
+            case 'getEmployeeProfile':
+                return await handleGetEmployeeProfile(toolInput);
+            case 'getProbationStatus':
+                return await handleGetProbationStatus(toolInput);
+            case 'createProbationReview':
+                return await handleCreateProbationReview(employeeId, toolInput);
+            case 'getProbationAlerts':
+                return await handleGetProbationAlerts();
+            case 'extendProbation':
+                return await handleExtendProbation(toolInput);
+            case 'completeProbation':
+                return await handleCompleteProbation(toolInput);
+            case 'analyzeEmployeePerformance':
+                return await handleAnalyzeEmployeePerformance(toolInput);
+            case 'getAttritionRisk':
+                return await handleGetAttritionRisk(toolInput);
+            case 'searchEmployees':
+                return await handleSearchEmployees(toolInput);
+            case 'getEmployeesNeedingAttention':
+                return await handleGetEmployeesNeedingAttention();
+            case 'getDepartmentAnalytics':
+                return await handleGetDepartmentAnalytics(toolInput);
+            case 'getEmployeeSkills':
+                return await handleGetEmployeeSkills(toolInput);
+            case 'addEmployeeSkill':
+                return await handleAddEmployeeSkill(toolInput);
 
             default:
                 return { success: false, error: `Unknown action: ${toolName}` };
