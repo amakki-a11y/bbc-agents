@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "postinstall": "prisma generate",
     "test": "cross-env DATABASE_URL=\"file:./test.db\" jest --runInBand",
     "test:watch": "cross-env DATABASE_URL=\"file:./test.db\" jest --watch --runInBand",
     "pretest": "cross-env DATABASE_URL=\"file:./test.db\" npx prisma db push"
