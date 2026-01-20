@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "start": "serve dist -s -l 3000",
+        "start": "npm run build && serve dist -s -l 3000",
         "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 100",
         "preview": "vite preview",
         "test": "vitest",
