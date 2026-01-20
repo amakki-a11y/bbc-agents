@@ -2515,6 +2515,216 @@ const handleGetEndOfDayWrapup = async (employeeId) => {
 };
 
 /**
+ * Daily Briefing - comprehensive morning update
+ */
+const handleGetDailyBriefing = async (employeeId, context) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+
+        const employeeName = context.employee.name;
+        const isAdmin = context.role.name === 'Admin';
+        const isManager = context.subordinates && context.subordinates.length > 0;
+
+        // ========== COMPANY PULSE ==========
+        const totalActive = await prisma.employee.count({ where: { status: 'active' } });
+        const checkedInToday = await prisma.attendance.count({
+            where: { date: { gte: today, lt: tomorrow }, check_in: { not: null } }
+        });
+        const attendanceRate = totalActive > 0 ? Math.round((checkedInToday / totalActive) * 100) : 0;
+
+        // On leave today
+        const onLeaveToday = await prisma.attendance.count({
+            where: { date: { gte: today, lt: tomorrow }, status: 'on_leave' }
+        });
+
+        // Absent without notice (no attendance record at all)
+        const employeesWithAttendance = await prisma.attendance.findMany({
+            where: { date: { gte: today, lt: tomorrow } },
+            select: { employee_id: true }
+        });
+        const presentIds = new Set(employeesWithAttendance.map(a => a.employee_id));
+        const absentWithoutNotice = totalActive - presentIds.size;
+
+        // Tasks completed yesterday (company-wide)
+        const completedYesterday = await prisma.task.count({
+            where: { status: 'done', updated_at: { gte: yesterday, lt: today } }
+        });
+
+        // ========== NEEDS ATTENTION ==========
+        // Pending approvals for this user (if manager/admin)
+        let pendingApprovals = 0;
+        if (isManager || isAdmin) {
+            pendingApprovals = await prisma.approvalRequest.count({
+                where: { approver_id: employeeId, status: 'pending' }
+            });
+        }
+
+        // Overdue tasks (personal for employees, company-wide for admins/managers)
+        let overdueTasks = 0;
+        if (isAdmin) {
+            overdueTasks = await prisma.task.count({
+                where: { status: { not: 'done' }, due_date: { lt: today } }
+            });
+        } else if (context.employee.user_id) {
+            overdueTasks = await prisma.task.count({
+                where: { user_id: context.employee.user_id, status: { not: 'done' }, due_date: { lt: today } }
+            });
+        }
+
+        // Escalated issues (messages with priority urgent/high for managers)
+        let escalatedIssues = 0;
+        if (isManager || isAdmin) {
+            escalatedIssues = await prisma.message.count({
+                where: { employee_id: employeeId, priority: { in: ['urgent', 'high'] }, status: { not: 'read' } }
+            });
+        }
+
+        // ========== YOUR DAY ==========
+        // User's meetings today
+        const myMeetingsToday = await prisma.meeting.count({
+            where: {
+                OR: [
+                    { organizer_id: employeeId },
+                    { attendees: { contains: employeeId } }
+                ],
+                start_time: { gte: today, lt: tomorrow },
+                status: { not: 'cancelled' }
+            }
+        });
+
+        // User's tasks due today
+        let myTasksDueToday = 0;
+        if (context.employee.user_id) {
+            myTasksDueToday = await prisma.task.count({
+                where: { user_id: context.employee.user_id, due_date: { gte: today, lt: tomorrow }, status: { not: 'done' } }
+            });
+        }
+
+        // Unread messages
+        const unreadMessages = context.unreadMessages || 0;
+
+        // ========== AI INSIGHT ==========
+        let insight = '';
+
+        // Find top performer this week
+        const tasksThisWeek = await prisma.task.findMany({
+            where: { status: 'done', updated_at: { gte: startOfWeek } },
+            include: { user: { include: { employee: { select: { name: true } } } } }
+        });
+
+        const performerCounts = {};
+        for (const task of tasksThisWeek) {
+            const name = task.user?.employee?.name;
+            if (name) performerCounts[name] = (performerCounts[name] || 0) + 1;
+        }
+
+        const topPerformer = Object.entries(performerCounts).sort((a, b) => b[1] - a[1])[0];
+
+        // Find someone struggling (5+ overdue)
+        const strugglingEmployee = await prisma.task.groupBy({
+            by: ['user_id'],
+            where: { status: { not: 'done' }, due_date: { lt: today } },
+            _count: { id: true },
+            having: { id: { _count: { gte: 5 } } },
+            take: 1
+        });
+
+        let strugglingName = null;
+        let strugglingCount = 0;
+        if (strugglingEmployee.length > 0) {
+            const user = await prisma.user.findUnique({
+                where: { id: strugglingEmployee[0].user_id },
+                include: { employee: { select: { name: true } } }
+            });
+            strugglingName = user?.employee?.name;
+            strugglingCount = strugglingEmployee[0]._count.id;
+        }
+
+        // Find project near completion
+        const projects = await prisma.project.findMany({
+            include: { tasks: { select: { status: true } } }
+        });
+        let nearCompleteProject = null;
+        for (const project of projects) {
+            if (project.tasks.length >= 5) {
+                const done = project.tasks.filter(t => t.status === 'done').length;
+                const rate = Math.round((done / project.tasks.length) * 100);
+                if (rate >= 80 && rate < 100) {
+                    nearCompleteProject = { name: project.name, rate };
+                    break;
+                }
+            }
+        }
+
+        // Pick insight
+        if (topPerformer && topPerformer[1] >= 10) {
+            insight = `💡 ${topPerformer[0]} completed ${topPerformer[1]} tasks this week - top performer!`;
+        } else if (strugglingName && (isManager || isAdmin)) {
+            insight = `💡 ${strugglingName} has ${strugglingCount} overdue tasks - may need support`;
+        } else if (nearCompleteProject) {
+            insight = `💡 Project "${nearCompleteProject.name}" is ${nearCompleteProject.rate}% complete - almost there!`;
+        } else if (attendanceRate === 100) {
+            insight = `💡 100% attendance today - great team commitment!`;
+        } else if (topPerformer) {
+            insight = `💡 ${topPerformer[0]} leads with ${topPerformer[1]} tasks completed this week`;
+        }
+
+        // ========== BUILD BRIEFING ==========
+        const greeting = new Date().getHours() < 12 ? 'Good morning' : 'Good afternoon';
+
+        let briefing = `☀️ ${greeting}, ${employeeName}! Here's your briefing:\n\n`;
+
+        briefing += `📊 **COMPANY PULSE**\n`;
+        briefing += `• ${checkedInToday}/${totalActive} employees in office (${attendanceRate}%)\n`;
+        if (onLeaveToday > 0 || absentWithoutNotice > 0) {
+            const absenceInfo = [];
+            if (onLeaveToday > 0) absenceInfo.push(`${onLeaveToday} on leave`);
+            if (absentWithoutNotice > 0) absenceInfo.push(`${absentWithoutNotice} absent`);
+            briefing += `• ${absenceInfo.join(', ')}\n`;
+        }
+        briefing += `• ${completedYesterday} tasks completed yesterday\n\n`;
+
+        // Needs attention section (only if there are issues)
+        const hasIssues = pendingApprovals > 0 || overdueTasks > 0 || escalatedIssues > 0;
+        if (hasIssues) {
+            briefing += `🚨 **NEEDS ATTENTION**\n`;
+            if (pendingApprovals > 0) briefing += `• ${pendingApprovals} pending approvals waiting for you\n`;
+            if (overdueTasks > 0) briefing += `• ${overdueTasks} overdue tasks\n`;
+            if (escalatedIssues > 0) briefing += `• ${escalatedIssues} escalated issues\n`;
+            briefing += `\n`;
+        }
+
+        briefing += `🎯 **YOUR DAY**\n`;
+        briefing += `• ${myMeetingsToday} meetings scheduled\n`;
+        briefing += `• ${myTasksDueToday} tasks due today\n`;
+        briefing += `• ${unreadMessages} messages unread\n`;
+
+        if (insight) {
+            briefing += `\n${insight}`;
+        }
+
+        return {
+            success: true,
+            briefing: {
+                companyPulse: { checkedIn: checkedInToday, total: totalActive, attendanceRate, onLeave: onLeaveToday, absentWithoutNotice, completedYesterday },
+                needsAttention: { pendingApprovals, overdueTasks, escalatedIssues },
+                yourDay: { meetings: myMeetingsToday, tasksDue: myTasksDueToday, unreadMessages },
+                insight
+            },
+            message: briefing
+        };
+    } catch (error) {
+        console.error('handleGetDailyBriefing error:', error);
+        return { success: false, error: 'Failed to generate briefing' };
+    }
+};
+
+/**
  * Master action handler - routes to appropriate handler
  */
 const createActionHandler = (employeeId, context) => {
@@ -2631,6 +2841,8 @@ const createActionHandler = (employeeId, context) => {
                 return await handleGetPulseCheck();
             case 'getEndOfDayWrapup':
                 return await handleGetEndOfDayWrapup(employeeId);
+            case 'getDailyBriefing':
+                return await handleGetDailyBriefing(employeeId, context);
 
             default:
                 return { success: false, error: `Unknown action: ${toolName}` };

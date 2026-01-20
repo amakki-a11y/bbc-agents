@@ -449,6 +449,11 @@ const toolDefinitions = [
         name: 'getEndOfDayWrapup',
         description: 'End of day summary: today\'s accomplishments + tomorrow preview. Use for "wrap up", "end of day", "EOD summary"',
         input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getDailyBriefing',
+        description: 'Daily briefing with company pulse, issues needing attention, personal day overview, and AI insights. Use for "briefing", "good morning", "morning", "what did I miss", "catch me up", "daily update"',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -557,7 +562,7 @@ Presence: getWhosInOffice ("who's in?"), getWhosAbsent ("who's out?"), checkEmpl
 Analytics: getEmployeeHoursWorked ("how much did X work?"), getEmployeeProductivity, getTaskLeaderboard ("top performers", "who's killing it?"), getTeamAttendanceRate
 Task Mgmt: assignTask ("assign X to Y"), getEmployeeProgress ("show X's progress"), getOverdueTasks ("what's overdue?"), reassignTask ("reassign X to Y")
 Reports: getDailyStandupReport, getRedFlags ("red flags", "what needs attention?"), getProjectStatus
-Quick: getWhoNeedsHelp ("who needs help?"), getPulseCheck ("pulse check", "company status"), getEndOfDayWrapup ("wrap up", "end of day")
+Quick: getWhoNeedsHelp ("who needs help?"), getPulseCheck ("pulse check"), getEndOfDayWrapup ("wrap up"), getDailyBriefing ("briefing", "good morning", "what did I miss")
 
 VOICE COMMAND EXAMPLES:
 - "Who's in?" → "8 in office: John, Sarah, Mike +5 more"
@@ -572,13 +577,14 @@ VOICE COMMAND EXAMPLES:
 - "Pulse check" → "📊 82% attendance | 12 tasks due | 2 issues"
 - "Red flags" → "🚨 3 overdue, 2 pending approvals, 1 absent without notice"
 - "Wrap up" → "Today: 8 done, 2 pending. Tomorrow: 3 meetings, 5 tasks due"
+- "Good morning" / "Briefing" → Full daily briefing with pulse, issues, your day, AI insight
 
 RULES:
 1. ALWAYS use tools - never fake responses
-2. Max 2 sentences per response
+2. Max 2 sentences per response (except getDailyBriefing which returns formatted briefing)
 3. Numbers first, then names
 4. Use "+X more" for long lists (>5 items)
-5. Emojis: 🚨 alerts, ✓ confirmations, 📊 stats, 🥇🥈🥉 rankings`;
+5. Emojis: 🚨 alerts, ✓ confirmations, 📊 stats, 🥇🥈🥉 rankings, ☀️ briefings`;
 };
 
 /**
