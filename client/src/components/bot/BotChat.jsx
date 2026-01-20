@@ -110,7 +110,7 @@ const MessageBubble = ({ message, isBot, onCopy, onRetry }) => {
                         justifyContent: 'center',
                         color: 'white',
                         flexShrink: 0,
-                        boxShadow: '0 2px 4px rgba(123, 104, 238, 0.2)'
+                        boxShadow: '0 3px 4px rgba(123, 104, 238, 0.2)'
                     }}>
                         <Bot size={14} />
                     </div>
