@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X, Loader } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import axios from 'axios';
+import { http } from '../../api/http';
 
 const QuickAdd = ({ onTaskAdded }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -24,8 +24,7 @@ const QuickAdd = ({ onTaskAdded }) => {
                 // For now, sending without projectId hoping it's optional or handled.
             };
 
-            // NOTE: Adjust endpoint if necessary based on API structure
-            const response = await axios.post('http://localhost:3000/api/tasks', payload);
+            const response = await http.post('/api/tasks', payload);
 
             if (onTaskAdded) {
                 onTaskAdded(response.data);

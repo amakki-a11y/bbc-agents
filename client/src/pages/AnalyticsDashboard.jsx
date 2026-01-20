@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { http } from '../api/http';
 import StatsOverview from '../components/widgets/StatsOverview';
 import TaskChart from '../components/widgets/TaskChart';
 import ActivityFeed from '../components/widgets/ActivityFeed';
@@ -18,11 +18,11 @@ const AnalyticsDashboard = () => {
         try {
             // Fetch tasks and events in parallel
             const [tasksRes, eventsRes] = await Promise.all([
-                axios.get('http://localhost:3000/api/tasks'),
-                axios.get('http://localhost:3000/api/events')
+                http.get('/api/tasks'),
+                http.get('/api/events').catch(() => ({ data: [] })) // Events may not exist
             ]);
-            setTasks(tasksRes.data);
-            setEvents(eventsRes.data);
+            setTasks(tasksRes.data || []);
+            setEvents(eventsRes.data || []);
             setLastUpdated(new Date());
         } catch (error) {
             console.error("Failed to fetch dashboard data", error);

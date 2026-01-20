@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { http } from '../api/http';
 import { Send, Loader2 } from 'lucide-react';
 
 const AICommandPanel = ({ onCommandSuccess }) => {
@@ -14,12 +14,12 @@ const AICommandPanel = ({ onCommandSuccess }) => {
         setLoading(true);
         setResponseMsg('');
         try {
-            const res = await axios.post('http://localhost:3000/ai/command', { command });
+            const res = await http.post('/api/bot/message', { content: command });
 
             if (res.data.intent?.action === 'unknown') {
                 setResponseMsg("I didn't quite catch that. Try starting with 'Create task' or 'Schedule meeting'.");
             } else {
-                setResponseMsg(res.data.message || 'Done!');
+                setResponseMsg(res.data.botMessage?.content || res.data.message || 'Done!');
                 setCommand('');
                 if (onCommandSuccess) onCommandSuccess();
             }

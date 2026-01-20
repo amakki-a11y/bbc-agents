@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Send, Paperclip, Smile, Bell } from 'lucide-react';
-import axios from 'axios';
+import { http } from '../../api/http';
 
 const ActivityPanel = ({ taskId, activities: initialActivities }) => {
     const [activities, setActivities] = useState([]);
@@ -32,9 +32,8 @@ const ActivityPanel = ({ taskId, activities: initialActivities }) => {
         setActivities([newActivity, ...activities]); // Prepend logic
         setComment("");
 
-        // API call
         try {
-            await axios.post(`http://localhost:3000/api/tasks/details/${taskId}/comments`, { content: comment });
+            await http.post(`/api/tasks/details/${taskId}/comments`, { content: comment });
         } catch (e) { console.error(e); }
     };
 

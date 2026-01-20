@@ -3,18 +3,17 @@ import TaskLayout from './TaskLayout';
 import PropertyGrid from './PropertyGrid';
 import ActivityPanel from './ActivityPanel';
 import { Sparkles, FileText, CheckSquare, List } from 'lucide-react';
-import axios from 'axios';
+import { http } from '../../api/http';
 
 const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
     const [task, setTask] = useState(initialTask);
-    const [activeTab, setActiveTab] = useState('details'); // details, subtasks, actionItems
+    const [activeTab, setActiveTab] = useState('details');
     const [description, setDescription] = useState(initialTask.description || "");
     const [newSubtask, setNewSubtask] = useState("");
 
-    // Fetch full details including sub-resources
     const loadDetails = async () => {
         try {
-            const res = await axios.get(`http://localhost:3000/api/tasks/details/${initialTask.id}`);
+            const res = await http.get(`/api/tasks/details/${initialTask.id}`);
             setTask(res.data);
             setDescription(res.data.description || "");
         } catch (e) { console.error(e); }
@@ -27,17 +26,11 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
     const handlePropertyUpdate = async (updates) => {
         try {
             if (onUpdate) {
-                // If parent provided onUpdate logic (e.g. from Context), use it.
-                // onUpdate is expected to be async and might return the updated task or void.
                 await onUpdate(task.id, updates);
-                // We don't strictly need to reloadDetails if onUpdate updates the context and we are observing it,
-                // but if this component maintains local 'task' state, we should update it.
-                // Ideally, 'initialTask' prop would update, but we are using local state 'task'.
-                // Let's assume onUpdate might restart the data flow or we just update local state optimistically.
                 setTask(prev => ({ ...prev, ...updates }));
             } else {
-                await axios.put(`http://localhost:3000/api/tasks/details/${task.id}`, updates);
-                loadDetails(); // Reload to get updated activities/data
+                await http.put(`/api/tasks/details/${task.id}`, updates);
+                loadDetails();
             }
         } catch (e) { console.error("Update failed", e); }
     };
@@ -49,7 +42,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
     const handleAddSubtask = async (e) => {
         if (e.key === 'Enter' && newSubtask.trim()) {
             try {
-                await axios.post(`http://localhost:3000/api/tasks/details/${task.id}/subtasks`, { title: newSubtask });
+                await http.post(`/api/tasks/details/${task.id}/subtasks`, { title: newSubtask });
                 setNewSubtask("");
                 loadDetails();
             } catch (e) { console.error(e); }
@@ -58,7 +51,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
 
     const handleToggleSubtask = async (subtaskId, currentStatus) => {
         try {
-            await axios.put(`http://localhost:3000/api/tasks/details/subtasks/${subtaskId}`, { is_complete: !currentStatus });
+            await http.put(`/api/tasks/details/subtasks/${subtaskId}`, { is_complete: !currentStatus });
             loadDetails();
         } catch (e) { console.error(e); }
     };

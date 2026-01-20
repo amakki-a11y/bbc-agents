@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { useAuth } from './AuthContext'; // and axios usually ...
+import { useAuth } from './AuthContext';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const NotificationContext = createContext();
 
@@ -17,9 +19,7 @@ export const NotificationProvider = ({ children }) => {
     // Initialize Socket
     useEffect(() => {
         if (user && token) {
-            // For dev, assume localhost:3000. In prod, this should be env var.
-            // We can use the same host as api usually.
-            const newSocket = io('http://localhost:3000', {
+            const newSocket = io(API_BASE_URL, {
                 auth: { token }
             });
 
