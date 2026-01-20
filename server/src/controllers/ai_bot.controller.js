@@ -1644,14 +1644,16 @@ const getEmployeeContext = async (employeeId) => {
         }
     });
 
-    // Get pending tasks for this user
-    const tasks = employee.user_id ? await prisma.task.findMany({
+    // Get ALL tasks for this user (so bot can count done/pending accurately)
+    const allTasks = employee.user_id ? await prisma.task.findMany({
         where: {
-            user_id: employee.user_id,
-            status: { not: 'done' }
+            user_id: employee.user_id
         },
-        orderBy: { due_date: 'asc' },
-        take: 10,
+        orderBy: [
+            { status: 'asc' },
+            { due_date: 'asc' }
+        ],
+        take: 50,
         select: {
             id: true,
             title: true,
@@ -1660,6 +1662,9 @@ const getEmployeeContext = async (employeeId) => {
             due_date: true
         }
     }) : [];
+
+    // Also keep pending tasks for backwards compatibility
+    const tasks = allTasks.filter(t => t.status !== 'done');
 
     // Get this week's attendance
     const today = new Date();
@@ -1727,6 +1732,7 @@ const getEmployeeContext = async (employeeId) => {
         manager: employee.manager,
         subordinates: subordinates.length > 0 ? subordinates : null,
         tasks,
+        allTasks,
         attendance,
         unreadMessages,
         upcomingMeetings,
