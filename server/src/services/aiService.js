@@ -434,6 +434,21 @@ const toolDefinitions = [
             },
             required: ['project_name']
         }
+    },
+    {
+        name: 'getWhoNeedsHelp',
+        description: 'Find employees struggling: overdue tasks, low completion, behind schedule. Use for "who needs help?", "who\'s struggling?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getPulseCheck',
+        description: 'Quick company status: attendance %, tasks due, issues. Use for "pulse check", "company status", "how are we doing?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getEndOfDayWrapup',
+        description: 'End of day summary: today\'s accomplishments + tomorrow preview. Use for "wrap up", "end of day", "EOD summary"',
+        input_schema: { type: 'object', properties: {}, required: [] }
     }
 ];
 
@@ -538,21 +553,32 @@ Approvals: requestApproval, getPendingApprovals, approveRequest, rejectRequest
 Reminders: setReminder, getReminders, getWeeklySummary
 
 EXECUTIVE TOOLS (managers/admins):
-Presence: getWhosInOffice, getWhosAbsent, checkEmployeeAvailability, getDepartmentStatus
-Analytics: getEmployeeHoursWorked, getEmployeeProductivity, getTaskLeaderboard, getTeamAttendanceRate
-Task Mgmt: assignTask, getEmployeeProgress, getOverdueTasks, reassignTask
-Reports: getDailyStandupReport, getRedFlags, getProjectStatus
+Presence: getWhosInOffice ("who's in?"), getWhosAbsent ("who's out?"), checkEmployeeAvailability ("is X in?"), getDepartmentStatus
+Analytics: getEmployeeHoursWorked ("how much did X work?"), getEmployeeProductivity, getTaskLeaderboard ("top performers", "who's killing it?"), getTeamAttendanceRate
+Task Mgmt: assignTask ("assign X to Y"), getEmployeeProgress ("show X's progress"), getOverdueTasks ("what's overdue?"), reassignTask ("reassign X to Y")
+Reports: getDailyStandupReport, getRedFlags ("red flags", "what needs attention?"), getProjectStatus
+Quick: getWhoNeedsHelp ("who needs help?"), getPulseCheck ("pulse check", "company status"), getEndOfDayWrapup ("wrap up", "end of day")
 
-EXECUTIVE RESPONSE EXAMPLES:
-- "Who's in?" → "8 in office: John, Sarah, Mike, Lisa, Tom, Ana, Bob, Sue"
-- "Show John's progress" → "John: 5 done, 2 in progress, 1 overdue"
-- "What's overdue?" → "3 overdue: Task A (John, 2d), Task B (Sarah, 1d), Task C (Mike, 5d)"
+VOICE COMMAND EXAMPLES:
+- "Who's in?" → "8 in office: John, Sarah, Mike +5 more"
+- "Who's out?" → "3 absent: Ahmed (no show), Lisa (sick), Tom (vacation)"
+- "Is Sarah in?" → "Yes, Sarah checked in at 8:45 AM"
+- "How much did Ahmed work?" → "Ahmed: 38.5 hours this week"
+- "Show Ahmed's progress" → "Ahmed: 5 done, 3 in progress, 2 pending, 1 overdue"
+- "Who's killing it?" → "🥇 Sarah (18) 🥈 Ahmed (15) 🥉 John (12)"
+- "Who needs help?" → "⚠️ Mike: 5 overdue tasks. Lisa: 0 completed this week"
+- "What's overdue?" → "4 overdue: Report (John, 2d), Design (Sarah, 1d) +2 more"
+- "Assign 'Review report' to Ahmed" → "✓ Assigned 'Review report' to Ahmed"
+- "Pulse check" → "📊 82% attendance | 12 tasks due | 2 issues"
+- "Red flags" → "🚨 3 overdue, 2 pending approvals, 1 absent without notice"
+- "Wrap up" → "Today: 8 done, 2 pending. Tomorrow: 3 meetings, 5 tasks due"
 
 RULES:
-1. ALWAYS use tools for actions - never fake responses
-2. Be brief - confirm actions in 1 line
-3. For task counts, use the TASK STATUS DEFINITIONS above
-4. List names comma-separated, not bullet points for short lists`;
+1. ALWAYS use tools - never fake responses
+2. Max 2 sentences per response
+3. Numbers first, then names
+4. Use "+X more" for long lists (>5 items)
+5. Emojis: 🚨 alerts, ✓ confirmations, 📊 stats, 🥇🥈🥉 rankings`;
 };
 
 /**
