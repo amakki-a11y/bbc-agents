@@ -94,7 +94,7 @@ body {
 .input-field {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  color: white;
+  color: #1f2937;
   padding: 0.75rem;
   border-radius: 8px;
   width: 100%;
