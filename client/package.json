@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "start": "serve dist -s -l 3000",
         "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 100",
         "preview": "vite preview",
         "test": "vitest",
@@ -23,6 +24,7 @@
         "react-hook-form": "^7.71.1",
         "react-router-dom": "^6.30.3",
         "recharts": "^3.6.0",
+        "serve": "^14.2.5",
         "socket.io-client": "^4.8.3",
         "vite-plugin-compression": "^0.5.1",
         "web-vitals": "^5.1.0",
