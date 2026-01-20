@@ -11,7 +11,14 @@ const {
     updateEmployee,
     deleteEmployee,
     getHierarchy,
-    getMyProfile
+    getMyProfile,
+    getFullProfile,
+    getEmployeeDocuments,
+    addEmployeeDocument,
+    getEmployeeSkills,
+    addEmployeeSkill,
+    deleteEmployeeSkill,
+    getEmployeeHistory
 } = require('../controllers/employees.controller');
 
 router.use(authenticateToken);
@@ -24,6 +31,54 @@ router.get('/hierarchy', getHierarchy);
 
 // Get all employees (no permission required - all authenticated users)
 router.get('/', getEmployees);
+
+// Get full employee profile with all data (no permission required)
+router.get('/:id/full-profile', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    validate
+], getFullProfile);
+
+// Get employee documents
+router.get('/:id/documents', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    validate
+], getEmployeeDocuments);
+
+// Add employee document
+router.post('/:id/documents', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    check('documentType').notEmpty().withMessage('Document type is required'),
+    check('title').trim().notEmpty().withMessage('Title is required'),
+    validate
+], addEmployeeDocument);
+
+// Get employee skills
+router.get('/:id/skills', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    validate
+], getEmployeeSkills);
+
+// Add employee skill
+router.post('/:id/skills', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    check('skillName').trim().notEmpty().withMessage('Skill name is required'),
+    check('category').optional().isIn(['technical', 'soft', 'language', 'certification']),
+    check('proficiency').optional().isIn(['beginner', 'intermediate', 'advanced', 'expert']),
+    validate
+], addEmployeeSkill);
+
+// Delete employee skill
+router.delete('/:id/skills/:skillId', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    check('skillId').notEmpty().withMessage('Skill ID is required'),
+    validate
+], deleteEmployeeSkill);
+
+// Get employee history (roles and status changes)
+router.get('/:id/history', [
+    check('id').notEmpty().withMessage('Employee ID is required'),
+    validate
+], getEmployeeHistory);
 
 // Get single employee (no permission required - all authenticated users)
 router.get('/:id', [

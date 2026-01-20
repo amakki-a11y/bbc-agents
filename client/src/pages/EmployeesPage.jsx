@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { http } from '../api/http';
 import Dashboard from './Dashboard';
 import EmployeeDetailsModal from '../components/employees/EmployeeDetailsModal';
 import EmployeeForm from '../components/employees/EmployeeForm';
-import { Search, Plus, Filter, Users, Building2, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Filter, Users, Building2, Shield, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 
 const EmployeesPage = () => {
+    const navigate = useNavigate();
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [roles, setRoles] = useState([]);
@@ -348,6 +350,7 @@ const EmployeesPage = () => {
                                     <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Role</th>
                                     <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Manager</th>
                                     <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status</th>
+                                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -397,6 +400,33 @@ const EmployeesPage = () => {
                                         </td>
                                         <td style={{ padding: '16px' }}>
                                             {getStatusBadge(employee.status)}
+                                        </td>
+                                        <td style={{ padding: '16px', textAlign: 'right' }}>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/employees/${employee.id}`);
+                                                }}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '13px',
+                                                    fontWeight: 500,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                            >
+                                                <ExternalLink size={14} />
+                                                View Profile
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}

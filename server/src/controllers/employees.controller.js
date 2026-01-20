@@ -280,6 +280,278 @@ const getMyProfile = async (req, res) => {
     }
 };
 
+// Get full employee profile with all related data
+const getFullProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Get employee with all relations
+        const employee = await prisma.employee.findUnique({
+            where: { id },
+            include: {
+                department: true,
+                role: true,
+                manager: { select: { id: true, name: true, email: true } },
+                subordinates: { select: { id: true, name: true, email: true, status: true } },
+                user: { select: { id: true, email: true, avatar_url: true } }
+            }
+        });
+
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        // Get documents
+        const documents = await prisma.employeeDocument.findMany({
+            where: { employee_id: id },
+            orderBy: { created_at: 'desc' }
+        });
+
+        // Get skills
+        const skills = await prisma.employeeSkill.findMany({
+            where: { employee_id: id },
+            orderBy: [{ category: 'asc' }, { proficiency: 'desc' }]
+        });
+
+        // Get role history
+        const roleHistory = await prisma.employeeRoleHistory.findMany({
+            where: { employee_id: id },
+            orderBy: { effectiveDate: 'desc' }
+        });
+
+        // Get status history
+        const statusHistory = await prisma.employeeStatusHistory.findMany({
+            where: { employee_id: id },
+            orderBy: { effectiveDate: 'desc' }
+        });
+
+        // Get performance reviews
+        const reviews = await prisma.performanceReview.findMany({
+            where: { employee_id: id },
+            orderBy: { reviewDate: 'desc' },
+            take: 5
+        });
+
+        // Get goals
+        const goals = await prisma.goal.findMany({
+            where: {
+                ownerType: 'employee',
+                ownerId: id
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+        });
+
+        // Get achievements
+        const achievements = await prisma.achievement.findMany({
+            where: { employeeId: id },
+            orderBy: { earnedAt: 'desc' },
+            take: 10
+        });
+
+        // Get gamification points
+        const points = await prisma.employeePoints.findUnique({
+            where: { employeeId: id }
+        });
+
+        // Calculate stats
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        // Task count (using Messages as proxy for activity or custom calculation)
+        const attendanceRecords = await prisma.attendance.findMany({
+            where: {
+                employee_id: id,
+                date: { gte: thirtyDaysAgo }
+            }
+        });
+
+        const presentDays = attendanceRecords.filter(a =>
+            a.status === 'present' || a.status === 'late'
+        ).length;
+        const workingDays = attendanceRecords.length || 1;
+        const attendanceRate = Math.round((presentDays / workingDays) * 100);
+
+        const completedGoals = goals.filter(g => g.status === 'completed').length;
+
+        res.json({
+            employee,
+            documents,
+            skills,
+            history: {
+                roles: roleHistory,
+                statuses: statusHistory
+            },
+            performance: {
+                reviews,
+                goals,
+                achievements
+            },
+            stats: {
+                tasksCompleted: 0, // Would need task tracking per employee
+                goalsAchieved: `${completedGoals}/${goals.length}`,
+                attendanceRate,
+                currentStreak: points?.currentStreak || 0,
+                totalPoints: points?.totalPoints || 0,
+                level: points?.level || 1
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching full profile:', error);
+        res.status(500).json({ error: 'Failed to fetch employee profile' });
+    }
+};
+
+// Get employee documents
+const getEmployeeDocuments = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const documents = await prisma.employeeDocument.findMany({
+            where: { employee_id: id },
+            orderBy: { created_at: 'desc' }
+        });
+
+        res.json(documents);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+};
+
+// Add employee document
+const addEmployeeDocument = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { documentType, title, fileUrl, fileName, fileSize, mimeType, expiryDate } = req.body;
+
+        if (!documentType || !title) {
+            return res.status(400).json({ error: 'documentType and title are required' });
+        }
+
+        const document = await prisma.employeeDocument.create({
+            data: {
+                employee_id: id,
+                documentType,
+                title,
+                fileUrl: fileUrl || '',
+                fileName: fileName || title,
+                fileSize: fileSize ? parseInt(fileSize) : null,
+                mimeType,
+                expiryDate: expiryDate ? new Date(expiryDate) : null,
+                status: 'active'
+            }
+        });
+
+        res.status(201).json(document);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to add document' });
+    }
+};
+
+// Get employee skills
+const getEmployeeSkills = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const skills = await prisma.employeeSkill.findMany({
+            where: { employee_id: id },
+            orderBy: [{ category: 'asc' }, { proficiency: 'desc' }]
+        });
+
+        res.json(skills);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch skills' });
+    }
+};
+
+// Add employee skill
+const addEmployeeSkill = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { skillName, category, proficiency, yearsOfExp } = req.body;
+
+        if (!skillName) {
+            return res.status(400).json({ error: 'skillName is required' });
+        }
+
+        // Check for duplicate skill
+        const existing = await prisma.employeeSkill.findFirst({
+            where: {
+                employee_id: id,
+                skillName: skillName
+            }
+        });
+
+        if (existing) {
+            return res.status(400).json({ error: 'Skill already exists for this employee' });
+        }
+
+        const skill = await prisma.employeeSkill.create({
+            data: {
+                employee_id: id,
+                skillName,
+                category: category || 'technical',
+                proficiency: proficiency || 'intermediate',
+                yearsOfExp: yearsOfExp ? parseFloat(yearsOfExp) : null,
+                source: 'manual'
+            }
+        });
+
+        res.status(201).json(skill);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to add skill' });
+    }
+};
+
+// Delete employee skill
+const deleteEmployeeSkill = async (req, res) => {
+    try {
+        const { id, skillId } = req.params;
+
+        await prisma.employeeSkill.delete({
+            where: { id: skillId }
+        });
+
+        res.status(204).send();
+    } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Skill not found' });
+        }
+        console.error(error);
+        res.status(500).json({ error: 'Failed to delete skill' });
+    }
+};
+
+// Get employee history (roles and status changes)
+const getEmployeeHistory = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [roleHistory, statusHistory] = await Promise.all([
+            prisma.employeeRoleHistory.findMany({
+                where: { employee_id: id },
+                orderBy: { effectiveDate: 'desc' }
+            }),
+            prisma.employeeStatusHistory.findMany({
+                where: { employee_id: id },
+                orderBy: { effectiveDate: 'desc' }
+            })
+        ]);
+
+        res.json({
+            roles: roleHistory,
+            statuses: statusHistory
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch history' });
+    }
+};
+
 module.exports = {
     getEmployees,
     getEmployee,
@@ -287,5 +559,12 @@ module.exports = {
     updateEmployee,
     deleteEmployee,
     getHierarchy,
-    getMyProfile
+    getMyProfile,
+    getFullProfile,
+    getEmployeeDocuments,
+    addEmployeeDocument,
+    getEmployeeSkills,
+    addEmployeeSkill,
+    deleteEmployeeSkill,
+    getEmployeeHistory
 };

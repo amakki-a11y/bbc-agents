@@ -23,6 +23,7 @@ const LeavePage = React.lazy(() => import('./pages/LeavePage'));
 const OrgChartPage = React.lazy(() => import('./pages/OrgChartPage'));
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const GoalsPage = React.lazy(() => import('./pages/GoalsPage'));
+const EmployeeProfilePage = React.lazy(() => import('./pages/EmployeeProfilePage'));
 
 function App() {
     return (
@@ -40,6 +41,7 @@ function App() {
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
                                 <Route path="/employees" element={<ProtectedRoute><EmployeesPage /></ProtectedRoute>} />
+                                <Route path="/employees/:id" element={<ProtectedRoute><EmployeeProfilePage /></ProtectedRoute>} />
                                 <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
                                 <Route path="/roles" element={<ProtectedRoute><RolesPage /></ProtectedRoute>} />
                                 <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
