@@ -278,6 +278,162 @@ const toolDefinitions = [
         name: 'getWeeklySummary',
         description: 'Get a weekly summary of tasks, attendance, and activities.',
         input_schema: { type: 'object', properties: {}, required: [] }
+    },
+
+    // === EXECUTIVE: PEOPLE & PRESENCE ===
+    {
+        name: 'getWhosInOffice',
+        description: 'Get list of employees currently in the office (checked in but not checked out today). Use for "who\'s in?", "who\'s at work?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getWhosAbsent',
+        description: 'Get employees who are absent today (no attendance record). Use for "who\'s absent?", "who\'s missing?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'checkEmployeeAvailability',
+        description: 'Check if a specific employee is available/in office. Use for "is [name] available?", "is [name] in?"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee to check' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getDepartmentStatus',
+        description: 'Get attendance status of all employees in a department. Use for "show [dept] team status"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                department_name: { type: 'string', description: 'Department name (e.g., Engineering, HR, Sales)' }
+            },
+            required: ['department_name']
+        }
+    },
+
+    // === EXECUTIVE: PERFORMANCE & ANALYTICS ===
+    {
+        name: 'getEmployeeHoursWorked',
+        description: 'Get total hours worked by an employee this week. Use for "how much did [name] work?"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' },
+                period: { type: 'string', enum: ['today', 'week', 'month'], description: 'Time period (default: week)' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getEmployeeProductivity',
+        description: 'Get productivity metrics: tasks completed, hours worked, attendance rate. Use for "show [name]\'s productivity"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getTaskLeaderboard',
+        description: 'Get ranking of employees by tasks completed. Use for "who completed most tasks?", "top performers"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                period: { type: 'string', enum: ['week', 'month'], description: 'Time period (default: week)' },
+                limit: { type: 'integer', description: 'Number of top performers to show (default: 5)' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'getTeamAttendanceRate',
+        description: 'Get attendance rate percentage for team/department. Use for "team attendance rate", "attendance this week"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                department_name: { type: 'string', description: 'Optional department name (omit for all employees)' }
+            },
+            required: []
+        }
+    },
+
+    // === EXECUTIVE: TASK MANAGEMENT ===
+    {
+        name: 'assignTask',
+        description: 'Create and assign a task to a specific employee. Use for "assign [task] to [name]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of employee to assign task to' },
+                title: { type: 'string', description: 'Task title' },
+                description: { type: 'string', description: 'Task description' },
+                priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Priority level' },
+                due_date: { type: 'string', description: 'Due date' }
+            },
+            required: ['employee_name', 'title']
+        }
+    },
+    {
+        name: 'getEmployeeProgress',
+        description: 'Get an employee\'s task progress grouped by status. Use for "show [name]\'s progress"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Name of the employee' }
+            },
+            required: ['employee_name']
+        }
+    },
+    {
+        name: 'getOverdueTasks',
+        description: 'Get all overdue tasks (due date passed, not done). Use for "what\'s overdue?", "overdue tasks"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                employee_name: { type: 'string', description: 'Optional: filter by employee name' }
+            },
+            required: []
+        }
+    },
+    {
+        name: 'reassignTask',
+        description: 'Reassign an existing task to a different employee. Use for "reassign [task] to [name]"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                task_title: { type: 'string', description: 'Title of the task to reassign' },
+                new_employee_name: { type: 'string', description: 'Name of new assignee' }
+            },
+            required: ['task_title', 'new_employee_name']
+        }
+    },
+
+    // === EXECUTIVE: QUICK REPORTS ===
+    {
+        name: 'getDailyStandupReport',
+        description: 'Get daily standup report: who\'s in, today\'s tasks, meetings. Use for "daily standup", "morning report"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getRedFlags',
+        description: 'Get issues needing attention: overdue tasks, absences, pending approvals. Use for "show red flags", "what needs attention?"',
+        input_schema: { type: 'object', properties: {}, required: [] }
+    },
+    {
+        name: 'getProjectStatus',
+        description: 'Get status of tasks in a specific project. Use for "project [X] status", "how\'s project [X]?"',
+        input_schema: {
+            type: 'object',
+            properties: {
+                project_name: { type: 'string', description: 'Name of the project' }
+            },
+            required: ['project_name']
+        }
     }
 ];
 
@@ -373,18 +529,30 @@ QUICK STATS:
 - Upcoming Meetings: ${meetingsInfo}${isManager ? ` | Pending Approvals: ${approvalsInfo}` : ''}
 
 TOOLS AVAILABLE:
-Tasks: createTask, updateTask, deleteTask, getMyTasks, delegateTask (managers)
+Tasks: createTask, updateTask, deleteTask, getMyTasks, delegateTask
 Attendance: checkIn, checkOut, getMyAttendance
 Leave: requestLeave, getLeaveBalance
-Messages: messageManager, messageHR, messageEmployee, escalateIssue, announceToTeam (managers), checkMessages
+Messages: messageManager, messageHR, messageEmployee, escalateIssue, announceToTeam, checkMessages
 Meetings: scheduleMeeting, getMyMeetings
 Approvals: requestApproval, getPendingApprovals, approveRequest, rejectRequest
-Other: checkTeamStatus (managers), setReminder, getReminders, getWeeklySummary
+Reminders: setReminder, getReminders, getWeeklySummary
+
+EXECUTIVE TOOLS (managers/admins):
+Presence: getWhosInOffice, getWhosAbsent, checkEmployeeAvailability, getDepartmentStatus
+Analytics: getEmployeeHoursWorked, getEmployeeProductivity, getTaskLeaderboard, getTeamAttendanceRate
+Task Mgmt: assignTask, getEmployeeProgress, getOverdueTasks, reassignTask
+Reports: getDailyStandupReport, getRedFlags, getProjectStatus
+
+EXECUTIVE RESPONSE EXAMPLES:
+- "Who's in?" → "8 in office: John, Sarah, Mike, Lisa, Tom, Ana, Bob, Sue"
+- "Show John's progress" → "John: 5 done, 2 in progress, 1 overdue"
+- "What's overdue?" → "3 overdue: Task A (John, 2d), Task B (Sarah, 1d), Task C (Mike, 5d)"
 
 RULES:
 1. ALWAYS use tools for actions - never fake responses
 2. Be brief - confirm actions in 1 line
-3. For task counts, use the TASK STATUS DEFINITIONS above`;
+3. For task counts, use the TASK STATUS DEFINITIONS above
+4. List names comma-separated, not bullet points for short lists`;
 };
 
 /**

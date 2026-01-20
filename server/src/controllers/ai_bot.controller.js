@@ -1531,6 +1531,795 @@ const handleGetWeeklySummary = async (employeeId, context) => {
     }
 };
 
+// ============================================
+// EXECUTIVE HANDLERS: PEOPLE & PRESENCE
+// ============================================
+
+/**
+ * Get employees currently in the office (checked in, not checked out)
+ */
+const handleGetWhosInOffice = async () => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+        const inOffice = await prisma.attendance.findMany({
+            where: {
+                date: { gte: today, lt: tomorrow },
+                check_in: { not: null },
+                check_out: null
+            },
+            include: {
+                employee: {
+                    select: { name: true, department: { select: { name: true } } }
+                }
+            }
+        });
+
+        const names = inOffice.map(a => a.employee.name);
+        return {
+            success: true,
+            count: inOffice.length,
+            employees: names,
+            message: inOffice.length > 0
+                ? `${inOffice.length} in office: ${names.join(', ')}`
+                : 'No one currently in office'
+        };
+    } catch (error) {
+        console.error('handleGetWhosInOffice error:', error);
+        return { success: false, error: 'Failed to get office status' };
+    }
+};
+
+/**
+ * Get employees who are absent today (no attendance record)
+ */
+const handleGetWhosAbsent = async () => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+        // Get all active employees
+        const allEmployees = await prisma.employee.findMany({
+            where: { status: 'active' },
+            select: { id: true, name: true, department: { select: { name: true } } }
+        });
+
+        // Get employees with attendance today
+        const attendanceToday = await prisma.attendance.findMany({
+            where: {
+                date: { gte: today, lt: tomorrow }
+            },
+            select: { employee_id: true }
+        });
+
+        const presentIds = new Set(attendanceToday.map(a => a.employee_id));
+        const absent = allEmployees.filter(e => !presentIds.has(e.id));
+        const names = absent.map(e => e.name);
+
+        return {
+            success: true,
+            count: absent.length,
+            employees: names,
+            message: absent.length > 0
+                ? `${absent.length} absent: ${names.join(', ')}`
+                : 'Everyone is present today'
+        };
+    } catch (error) {
+        console.error('handleGetWhosAbsent error:', error);
+        return { success: false, error: 'Failed to get absence status' };
+    }
+};
+
+/**
+ * Check if a specific employee is available/in office
+ */
+const handleCheckEmployeeAvailability = async ({ employee_name }) => {
+    try {
+        const employee = await prisma.employee.findFirst({
+            where: { name: { contains: employee_name, mode: 'insensitive' } },
+            select: { id: true, name: true, status: true }
+        });
+
+        if (!employee) {
+            return { success: false, error: `Employee "${employee_name}" not found` };
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+        const attendance = await prisma.attendance.findFirst({
+            where: {
+                employee_id: employee.id,
+                date: { gte: today, lt: tomorrow }
+            }
+        });
+
+        let status = 'absent';
+        let checkInTime = null;
+        if (attendance) {
+            if (attendance.check_in && !attendance.check_out) {
+                status = 'in office';
+                checkInTime = attendance.check_in;
+            } else if (attendance.check_out) {
+                status = 'left for the day';
+            } else if (attendance.status === 'on_leave') {
+                status = 'on leave';
+            }
+        }
+
+        return {
+            success: true,
+            name: employee.name,
+            status: status,
+            checkInTime: checkInTime ? new Date(checkInTime).toLocaleTimeString() : null,
+            message: `${employee.name} is ${status}${checkInTime ? ` (since ${new Date(checkInTime).toLocaleTimeString()})` : ''}`
+        };
+    } catch (error) {
+        console.error('handleCheckEmployeeAvailability error:', error);
+        return { success: false, error: 'Failed to check availability' };
+    }
+};
+
+/**
+ * Get attendance status of all employees in a department
+ */
+const handleGetDepartmentStatus = async ({ department_name }) => {
+    try {
+        const department = await prisma.department.findFirst({
+            where: { name: { contains: department_name, mode: 'insensitive' } }
+        });
+
+        if (!department) {
+            return { success: false, error: `Department "${department_name}" not found` };
+        }
+
+        const employees = await prisma.employee.findMany({
+            where: { department_id: department.id, status: 'active' },
+            select: { id: true, name: true }
+        });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+        const attendanceRecords = await prisma.attendance.findMany({
+            where: {
+                employee_id: { in: employees.map(e => e.id) },
+                date: { gte: today, lt: tomorrow }
+            }
+        });
+
+        const attendanceMap = new Map(attendanceRecords.map(a => [a.employee_id, a]));
+
+        const statusList = employees.map(e => {
+            const att = attendanceMap.get(e.id);
+            let status = 'absent';
+            if (att?.check_in && !att?.check_out) status = 'in';
+            else if (att?.check_out) status = 'left';
+            else if (att?.status === 'on_leave') status = 'leave';
+            return { name: e.name, status };
+        });
+
+        const inOffice = statusList.filter(s => s.status === 'in');
+        const absent = statusList.filter(s => s.status === 'absent');
+
+        return {
+            success: true,
+            department: department.name,
+            total: employees.length,
+            inOffice: inOffice.length,
+            absent: absent.length,
+            details: statusList,
+            message: `${department.name}: ${inOffice.length}/${employees.length} in office`
+        };
+    } catch (error) {
+        console.error('handleGetDepartmentStatus error:', error);
+        return { success: false, error: 'Failed to get department status' };
+    }
+};
+
+// ============================================
+// EXECUTIVE HANDLERS: PERFORMANCE & ANALYTICS
+// ============================================
+
+/**
+ * Get total hours worked by an employee
+ */
+const handleGetEmployeeHoursWorked = async ({ employee_name, period = 'week' }) => {
+    try {
+        const employee = await prisma.employee.findFirst({
+            where: { name: { contains: employee_name, mode: 'insensitive' } },
+            select: { id: true, name: true }
+        });
+
+        if (!employee) {
+            return { success: false, error: `Employee "${employee_name}" not found` };
+        }
+
+        const today = new Date();
+        let startDate = new Date(today);
+
+        if (period === 'today') {
+            startDate.setHours(0, 0, 0, 0);
+        } else if (period === 'week') {
+            startDate.setDate(today.getDate() - today.getDay());
+            startDate.setHours(0, 0, 0, 0);
+        } else if (period === 'month') {
+            startDate.setDate(1);
+            startDate.setHours(0, 0, 0, 0);
+        }
+
+        const attendance = await prisma.attendance.findMany({
+            where: {
+                employee_id: employee.id,
+                date: { gte: startDate },
+                check_in: { not: null },
+                check_out: { not: null }
+            }
+        });
+
+        let totalMinutes = 0;
+        for (const record of attendance) {
+            const diff = record.check_out - record.check_in;
+            totalMinutes += Math.floor(diff / (1000 * 60));
+        }
+
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+
+        return {
+            success: true,
+            name: employee.name,
+            period: period,
+            hoursWorked: `${hours}h ${minutes}m`,
+            daysWorked: attendance.length,
+            message: `${employee.name}: ${hours}h ${minutes}m this ${period} (${attendance.length} days)`
+        };
+    } catch (error) {
+        console.error('handleGetEmployeeHoursWorked error:', error);
+        return { success: false, error: 'Failed to get hours worked' };
+    }
+};
+
+/**
+ * Get productivity metrics for an employee
+ */
+const handleGetEmployeeProductivity = async ({ employee_name }) => {
+    try {
+        const employee = await prisma.employee.findFirst({
+            where: { name: { contains: employee_name, mode: 'insensitive' } },
+            include: { user: { select: { id: true } } }
+        });
+
+        if (!employee) {
+            return { success: false, error: `Employee "${employee_name}" not found` };
+        }
+
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // Tasks this week
+        const tasks = employee.user ? await prisma.task.findMany({
+            where: { user_id: employee.user.id }
+        }) : [];
+
+        const tasksCompleted = tasks.filter(t => t.status === 'done').length;
+        const tasksInProgress = tasks.filter(t => t.status === 'in_progress').length;
+        const tasksTodo = tasks.filter(t => t.status === 'todo').length;
+
+        // Attendance this week
+        const attendance = await prisma.attendance.findMany({
+            where: {
+                employee_id: employee.id,
+                date: { gte: startOfWeek },
+                check_in: { not: null }
+            }
+        });
+
+        // Calculate hours
+        let totalMinutes = 0;
+        for (const record of attendance) {
+            if (record.check_out) {
+                totalMinutes += Math.floor((record.check_out - record.check_in) / (1000 * 60));
+            }
+        }
+
+        const workDays = 5; // Assuming 5-day work week
+        const attendanceRate = Math.round((attendance.length / workDays) * 100);
+
+        return {
+            success: true,
+            name: employee.name,
+            tasks: { done: tasksCompleted, inProgress: tasksInProgress, todo: tasksTodo },
+            hoursWorked: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`,
+            attendanceRate: `${attendanceRate}%`,
+            message: `${employee.name}: ${tasksCompleted} done, ${tasksInProgress} in progress | ${Math.floor(totalMinutes / 60)}h worked | ${attendanceRate}% attendance`
+        };
+    } catch (error) {
+        console.error('handleGetEmployeeProductivity error:', error);
+        return { success: false, error: 'Failed to get productivity' };
+    }
+};
+
+/**
+ * Get leaderboard of employees by tasks completed
+ */
+const handleGetTaskLeaderboard = async ({ period = 'week', limit = 5 }) => {
+    try {
+        const today = new Date();
+        let startDate = new Date(today);
+
+        if (period === 'week') {
+            startDate.setDate(today.getDate() - today.getDay());
+        } else {
+            startDate.setDate(1);
+        }
+        startDate.setHours(0, 0, 0, 0);
+
+        // Get all completed tasks this period with user info
+        const completedTasks = await prisma.task.findMany({
+            where: {
+                status: 'done',
+                updated_at: { gte: startDate }
+            },
+            include: {
+                user: {
+                    include: {
+                        employee: { select: { name: true } }
+                    }
+                }
+            }
+        });
+
+        // Count by user
+        const userCounts = {};
+        for (const task of completedTasks) {
+            const name = task.user?.employee?.name || `User ${task.user_id}`;
+            userCounts[name] = (userCounts[name] || 0) + 1;
+        }
+
+        // Sort and get top performers
+        const leaderboard = Object.entries(userCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, limit)
+            .map(([name, count], i) => ({ rank: i + 1, name, tasksCompleted: count }));
+
+        return {
+            success: true,
+            period: period,
+            leaderboard: leaderboard,
+            message: leaderboard.length > 0
+                ? `Top performers: ${leaderboard.map(l => `${l.name} (${l.tasksCompleted})`).join(', ')}`
+                : 'No completed tasks this period'
+        };
+    } catch (error) {
+        console.error('handleGetTaskLeaderboard error:', error);
+        return { success: false, error: 'Failed to get leaderboard' };
+    }
+};
+
+/**
+ * Get team attendance rate
+ */
+const handleGetTeamAttendanceRate = async ({ department_name }) => {
+    try {
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        let whereClause = { status: 'active' };
+        if (department_name) {
+            const dept = await prisma.department.findFirst({
+                where: { name: { contains: department_name, mode: 'insensitive' } }
+            });
+            if (dept) {
+                whereClause.department_id = dept.id;
+            }
+        }
+
+        const employees = await prisma.employee.findMany({
+            where: whereClause,
+            select: { id: true, name: true }
+        });
+
+        const workDays = Math.min(today.getDay() || 7, 5); // Days so far this week (max 5)
+        const expectedAttendance = employees.length * workDays;
+
+        const actualAttendance = await prisma.attendance.count({
+            where: {
+                employee_id: { in: employees.map(e => e.id) },
+                date: { gte: startOfWeek },
+                check_in: { not: null }
+            }
+        });
+
+        const rate = expectedAttendance > 0
+            ? Math.round((actualAttendance / expectedAttendance) * 100)
+            : 0;
+
+        return {
+            success: true,
+            department: department_name || 'All',
+            employeeCount: employees.length,
+            attendanceRate: `${rate}%`,
+            present: actualAttendance,
+            expected: expectedAttendance,
+            message: `${department_name || 'Team'} attendance: ${rate}% (${actualAttendance}/${expectedAttendance} check-ins this week)`
+        };
+    } catch (error) {
+        console.error('handleGetTeamAttendanceRate error:', error);
+        return { success: false, error: 'Failed to get attendance rate' };
+    }
+};
+
+// ============================================
+// EXECUTIVE HANDLERS: TASK MANAGEMENT
+// ============================================
+
+/**
+ * Assign a task to an employee
+ */
+const handleAssignTask = async (employeeId, { employee_name, title, description, priority, due_date }) => {
+    try {
+        const targetEmployee = await prisma.employee.findFirst({
+            where: { name: { contains: employee_name, mode: 'insensitive' } },
+            include: { user: { select: { id: true } } }
+        });
+
+        if (!targetEmployee) {
+            return { success: false, error: `Employee "${employee_name}" not found` };
+        }
+
+        if (!targetEmployee.user) {
+            return { success: false, error: `${targetEmployee.name} has no user account linked` };
+        }
+
+        const parsedDueDate = parseRelativeDate(due_date);
+
+        const task = await prisma.task.create({
+            data: {
+                title: title,
+                description: description || null,
+                priority: priority || 'medium',
+                due_date: parsedDueDate,
+                status: 'todo',
+                user_id: targetEmployee.user.id,
+                project_id: 1
+            }
+        });
+
+        cache.delByPrefix('tasks');
+
+        return {
+            success: true,
+            message: `Task assigned to ${targetEmployee.name}: "${title}"`,
+            task: { id: task.id, title, assignee: targetEmployee.name, priority: priority || 'medium' }
+        };
+    } catch (error) {
+        console.error('handleAssignTask error:', error);
+        return { success: false, error: 'Failed to assign task' };
+    }
+};
+
+/**
+ * Get an employee's task progress
+ */
+const handleGetEmployeeProgress = async ({ employee_name }) => {
+    try {
+        const employee = await prisma.employee.findFirst({
+            where: { name: { contains: employee_name, mode: 'insensitive' } },
+            include: { user: { select: { id: true } } }
+        });
+
+        if (!employee) {
+            return { success: false, error: `Employee "${employee_name}" not found` };
+        }
+
+        if (!employee.user) {
+            return { success: false, error: `${employee.name} has no user account linked` };
+        }
+
+        const tasks = await prisma.task.findMany({
+            where: { user_id: employee.user.id },
+            select: { title: true, status: true, priority: true, due_date: true }
+        });
+
+        const today = new Date();
+        const done = tasks.filter(t => t.status === 'done').length;
+        const inProgress = tasks.filter(t => t.status === 'in_progress').length;
+        const todo = tasks.filter(t => t.status === 'todo').length;
+        const overdue = tasks.filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date) < today).length;
+
+        return {
+            success: true,
+            name: employee.name,
+            total: tasks.length,
+            done, inProgress, todo, overdue,
+            message: `${employee.name}: ${done} done, ${inProgress} in progress, ${todo} todo${overdue > 0 ? `, ${overdue} overdue` : ''}`
+        };
+    } catch (error) {
+        console.error('handleGetEmployeeProgress error:', error);
+        return { success: false, error: 'Failed to get progress' };
+    }
+};
+
+/**
+ * Get all overdue tasks
+ */
+const handleGetOverdueTasks = async ({ employee_name }) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let whereClause = {
+            status: { not: 'done' },
+            due_date: { lt: today }
+        };
+
+        if (employee_name) {
+            const employee = await prisma.employee.findFirst({
+                where: { name: { contains: employee_name, mode: 'insensitive' } },
+                include: { user: { select: { id: true } } }
+            });
+            if (employee?.user) {
+                whereClause.user_id = employee.user.id;
+            }
+        }
+
+        const overdueTasks = await prisma.task.findMany({
+            where: whereClause,
+            include: {
+                user: {
+                    include: { employee: { select: { name: true } } }
+                }
+            },
+            orderBy: { due_date: 'asc' }
+        });
+
+        const taskList = overdueTasks.map(t => {
+            const daysOverdue = Math.floor((today - new Date(t.due_date)) / (1000 * 60 * 60 * 24));
+            return {
+                title: t.title,
+                assignee: t.user?.employee?.name || 'Unassigned',
+                daysOverdue,
+                priority: t.priority
+            };
+        });
+
+        return {
+            success: true,
+            count: taskList.length,
+            tasks: taskList,
+            message: taskList.length > 0
+                ? `${taskList.length} overdue: ${taskList.slice(0, 5).map(t => `${t.title} (${t.assignee}, ${t.daysOverdue}d)`).join(', ')}${taskList.length > 5 ? '...' : ''}`
+                : 'No overdue tasks'
+        };
+    } catch (error) {
+        console.error('handleGetOverdueTasks error:', error);
+        return { success: false, error: 'Failed to get overdue tasks' };
+    }
+};
+
+/**
+ * Reassign a task to a different employee
+ */
+const handleReassignTask = async ({ task_title, new_employee_name }) => {
+    try {
+        const task = await prisma.task.findFirst({
+            where: { title: { contains: task_title, mode: 'insensitive' } },
+            include: { user: { include: { employee: { select: { name: true } } } } }
+        });
+
+        if (!task) {
+            return { success: false, error: `Task "${task_title}" not found` };
+        }
+
+        const newEmployee = await prisma.employee.findFirst({
+            where: { name: { contains: new_employee_name, mode: 'insensitive' } },
+            include: { user: { select: { id: true } } }
+        });
+
+        if (!newEmployee) {
+            return { success: false, error: `Employee "${new_employee_name}" not found` };
+        }
+
+        if (!newEmployee.user) {
+            return { success: false, error: `${newEmployee.name} has no user account linked` };
+        }
+
+        const oldAssignee = task.user?.employee?.name || 'Unassigned';
+
+        await prisma.task.update({
+            where: { id: task.id },
+            data: { user_id: newEmployee.user.id }
+        });
+
+        cache.delByPrefix('tasks');
+
+        return {
+            success: true,
+            message: `Task "${task.title}" reassigned: ${oldAssignee} → ${newEmployee.name}`,
+            task: { title: task.title, from: oldAssignee, to: newEmployee.name }
+        };
+    } catch (error) {
+        console.error('handleReassignTask error:', error);
+        return { success: false, error: 'Failed to reassign task' };
+    }
+};
+
+// ============================================
+// EXECUTIVE HANDLERS: QUICK REPORTS
+// ============================================
+
+/**
+ * Get daily standup report
+ */
+const handleGetDailyStandupReport = async (employeeId, context) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+        // Who's in
+        const inOffice = await prisma.attendance.findMany({
+            where: {
+                date: { gte: today, lt: tomorrow },
+                check_in: { not: null },
+                check_out: null
+            },
+            include: { employee: { select: { name: true } } }
+        });
+
+        // Today's tasks (for current user's team or all)
+        const todayTasks = await prisma.task.findMany({
+            where: {
+                OR: [
+                    { due_date: { gte: today, lt: tomorrow } },
+                    { status: 'in_progress' }
+                ]
+            },
+            include: { user: { include: { employee: { select: { name: true } } } } },
+            take: 10
+        });
+
+        // Today's meetings
+        const meetings = await prisma.meeting.findMany({
+            where: {
+                start_time: { gte: today, lt: tomorrow },
+                status: { not: 'cancelled' }
+            },
+            take: 5
+        });
+
+        const inOfficeNames = inOffice.map(a => a.employee.name);
+
+        return {
+            success: true,
+            date: today.toLocaleDateString(),
+            inOffice: { count: inOffice.length, names: inOfficeNames },
+            todayTasks: todayTasks.length,
+            meetings: meetings.length,
+            message: `Daily standup: ${inOffice.length} in office, ${todayTasks.length} tasks due, ${meetings.length} meetings`
+        };
+    } catch (error) {
+        console.error('handleGetDailyStandupReport error:', error);
+        return { success: false, error: 'Failed to get standup report' };
+    }
+};
+
+/**
+ * Get red flags - issues needing attention
+ */
+const handleGetRedFlags = async () => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+        // Overdue tasks
+        const overdueTasks = await prisma.task.count({
+            where: {
+                status: { not: 'done' },
+                due_date: { lt: today }
+            }
+        });
+
+        // Absent today
+        const allActive = await prisma.employee.count({ where: { status: 'active' } });
+        const presentToday = await prisma.attendance.count({
+            where: {
+                date: { gte: today, lt: tomorrow },
+                check_in: { not: null }
+            }
+        });
+        const absentCount = allActive - presentToday;
+
+        // Pending approvals
+        const pendingApprovals = await prisma.approvalRequest.count({
+            where: { status: 'pending' }
+        });
+
+        // High priority overdue
+        const highPriorityOverdue = await prisma.task.count({
+            where: {
+                status: { not: 'done' },
+                due_date: { lt: today },
+                priority: 'high'
+            }
+        });
+
+        const flags = [];
+        if (overdueTasks > 0) flags.push(`${overdueTasks} overdue tasks`);
+        if (absentCount > 0) flags.push(`${absentCount} absent`);
+        if (pendingApprovals > 0) flags.push(`${pendingApprovals} pending approvals`);
+        if (highPriorityOverdue > 0) flags.push(`${highPriorityOverdue} high-priority overdue`);
+
+        return {
+            success: true,
+            flags: {
+                overdueTasks,
+                absentEmployees: absentCount,
+                pendingApprovals,
+                highPriorityOverdue
+            },
+            message: flags.length > 0
+                ? `⚠️ Red flags: ${flags.join(', ')}`
+                : '✓ No red flags - all clear!'
+        };
+    } catch (error) {
+        console.error('handleGetRedFlags error:', error);
+        return { success: false, error: 'Failed to get red flags' };
+    }
+};
+
+/**
+ * Get project status
+ */
+const handleGetProjectStatus = async ({ project_name }) => {
+    try {
+        const project = await prisma.project.findFirst({
+            where: { name: { contains: project_name, mode: 'insensitive' } },
+            include: {
+                tasks: {
+                    select: { title: true, status: true, priority: true, due_date: true }
+                }
+            }
+        });
+
+        if (!project) {
+            return { success: false, error: `Project "${project_name}" not found` };
+        }
+
+        const tasks = project.tasks;
+        const today = new Date();
+        const done = tasks.filter(t => t.status === 'done').length;
+        const inProgress = tasks.filter(t => t.status === 'in_progress').length;
+        const todo = tasks.filter(t => t.status === 'todo').length;
+        const overdue = tasks.filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date) < today).length;
+
+        const completionRate = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
+
+        return {
+            success: true,
+            project: project.name,
+            total: tasks.length,
+            done, inProgress, todo, overdue,
+            completionRate: `${completionRate}%`,
+            message: `${project.name}: ${completionRate}% complete (${done}/${tasks.length} done, ${inProgress} in progress${overdue > 0 ? `, ${overdue} overdue` : ''})`
+        };
+    } catch (error) {
+        console.error('handleGetProjectStatus error:', error);
+        return { success: false, error: 'Failed to get project status' };
+    }
+};
+
 /**
  * Master action handler - routes to appropriate handler
  */
@@ -1604,6 +2393,44 @@ const createActionHandler = (employeeId, context) => {
                 return await handleGetReminders(employeeId);
             case 'getWeeklySummary':
                 return await handleGetWeeklySummary(employeeId, context);
+
+            // Executive: People & Presence
+            case 'getWhosInOffice':
+                return await handleGetWhosInOffice();
+            case 'getWhosAbsent':
+                return await handleGetWhosAbsent();
+            case 'checkEmployeeAvailability':
+                return await handleCheckEmployeeAvailability(toolInput);
+            case 'getDepartmentStatus':
+                return await handleGetDepartmentStatus(toolInput);
+
+            // Executive: Performance & Analytics
+            case 'getEmployeeHoursWorked':
+                return await handleGetEmployeeHoursWorked(toolInput);
+            case 'getEmployeeProductivity':
+                return await handleGetEmployeeProductivity(toolInput);
+            case 'getTaskLeaderboard':
+                return await handleGetTaskLeaderboard(toolInput);
+            case 'getTeamAttendanceRate':
+                return await handleGetTeamAttendanceRate(toolInput);
+
+            // Executive: Task Management
+            case 'assignTask':
+                return await handleAssignTask(employeeId, toolInput);
+            case 'getEmployeeProgress':
+                return await handleGetEmployeeProgress(toolInput);
+            case 'getOverdueTasks':
+                return await handleGetOverdueTasks(toolInput);
+            case 'reassignTask':
+                return await handleReassignTask(toolInput);
+
+            // Executive: Quick Reports
+            case 'getDailyStandupReport':
+                return await handleGetDailyStandupReport(employeeId, context);
+            case 'getRedFlags':
+                return await handleGetRedFlags();
+            case 'getProjectStatus':
+                return await handleGetProjectStatus(toolInput);
 
             default:
                 return { success: false, error: `Unknown action: ${toolName}` };
