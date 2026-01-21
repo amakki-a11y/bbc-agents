@@ -58,12 +58,14 @@ const register = async (req, res) => {
 
         const tokens = generateTokens(user);
 
-        // Log registration
-        await logRegister(user.id, email, req);
+        // Log registration (non-blocking - don't fail registration if logging fails)
+        logRegister(user.id, email, req).catch(err => {
+            console.error('[Auth] Activity logging failed (non-blocking):', err.message);
+        });
 
         res.status(201).json({ ...tokens, user: { id: user.id, email: user.email } });
     } catch (error) {
-        console.error('Registration Error:', error);
+        console.error('[Auth] Registration Error:', error);
         if (error.code === 'P2002') {
             return res.status(409).json({ error: 'Email already exists' });
         }
@@ -92,11 +94,14 @@ const login = async (req, res) => {
 
         const tokens = generateTokens(user);
 
-        // Log successful login
-        await logLogin(user.id, req, { email: user.email });
+        // Log successful login (non-blocking - don't fail login if logging fails)
+        logLogin(user.id, req, { email: user.email }).catch(err => {
+            console.error('[Auth] Activity logging failed (non-blocking):', err.message);
+        });
 
         res.json({ ...tokens, user: { id: user.id, email: user.email } });
     } catch (error) {
+        console.error('[Auth] Login error:', error.message, error.code);
         res.status(500).json({ error: 'Login failed' });
     }
 };
