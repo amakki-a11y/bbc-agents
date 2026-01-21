@@ -23,8 +23,11 @@ const ActivityLogsPage = () => {
     });
     const [showFilters, setShowFilters] = useState(false);
 
+    const [error, setError] = useState(null);
+
     const fetchLogs = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const params = new URLSearchParams({
                 page: pagination.page,
@@ -36,15 +39,19 @@ const ActivityLogsPage = () => {
                 ...(filters.search && { search: filters.search })
             });
 
+            console.log('[ActivityLogs] Fetching logs with params:', params.toString());
             const res = await http.get(`/activity-logs?${params}`);
+            console.log('[ActivityLogs] Response:', res.data);
+
             setLogs(res.data.data || []);
             setPagination(prev => ({
                 ...prev,
-                total: res.data.pagination.total,
-                totalPages: res.data.pagination.totalPages
+                total: res.data.pagination?.total || 0,
+                totalPages: res.data.pagination?.totalPages || 0
             }));
-        } catch (error) {
-            console.error('Failed to fetch activity logs:', error);
+        } catch (err) {
+            console.error('Failed to fetch activity logs:', err);
+            setError(err.response?.data?.error || err.message || 'Failed to fetch logs');
         } finally {
             setLoading(false);
         }
@@ -176,16 +183,39 @@ const ActivityLogsPage = () => {
 
     return (
         <Dashboard>
-            <div className="scrollbar-modern" style={{ padding: '2rem', height: '100%', overflow: 'auto', background: '#f8fafc' }}>
+            <div className="scrollbar-modern" style={{ padding: '2rem', height: '100%', overflow: 'auto', background: 'var(--bg-secondary)' }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    {/* Error Display */}
+                    {error && (
+                        <div className="animate-fadeInUp" style={{
+                            padding: '1rem 1.5rem',
+                            marginBottom: '1.5rem',
+                            background: 'var(--danger-bg)',
+                            border: '1px solid var(--danger)',
+                            borderRadius: '12px',
+                            color: 'var(--danger-text)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <span>Error: {error}</span>
+                            <button
+                                onClick={() => setError(null)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-text)' }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
+
                     {/* Header */}
                     <div className="animate-fadeInUp" style={{ marginBottom: '1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
-                                <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+                                <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                                     Activity Logs
                                 </h1>
-                                <p style={{ margin: '0.25rem 0 0', color: '#64748b' }}>
+                                <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)' }}>
                                     Track all system activities and user actions
                                 </p>
                             </div>
