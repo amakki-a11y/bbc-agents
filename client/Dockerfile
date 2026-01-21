@@ -20,9 +20,9 @@ RUN npm install -g serve
 # Copy built files
 COPY --from=build /app/dist ./dist
 
-# Railway provides PORT env variable
-ENV PORT=3000
-EXPOSE $PORT
+# Railway provides PORT env variable (default 3000)
+EXPOSE 3000
 
 # Serve the static files (-s for SPA mode)
-CMD serve dist -s -l $PORT
+# Use shell form to expand $PORT variable
+CMD ["sh", "-c", "serve dist -s -l ${PORT:-3000}"]
