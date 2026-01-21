@@ -4,7 +4,7 @@ import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
-    CalendarOff, Target, Sparkles, X, Activity
+    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
@@ -12,29 +12,30 @@ import BotButton from '../components/bot/BotButton';
 import DashboardHome from './DashboardHome';
 
 // Modern NavItem component with dark theme
-const NavItem = ({ icon: Icon, label, href, badge }) => {
+const NavItem = ({ icon: Icon, label, href, badge, collapsed }) => {
     const isActive = window.location.pathname === href;
 
     return (
         <div
             onClick={() => window.location.href = href}
             className={`sidebar-modern-item ${isActive ? 'active' : ''}`}
+            title={collapsed ? label : undefined}
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.75rem',
-                padding: '0.7rem 0.875rem',
+                justifyContent: collapsed ? 'center' : 'space-between',
+                gap: collapsed ? 0 : '0.75rem',
+                padding: collapsed ? '0.7rem' : '0.7rem 0.875rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: isActive ? 600 : 500,
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Icon size={18} style={{ opacity: isActive ? 1 : 0.7 }} />
-                {label}
+                <Icon size={18} style={{ opacity: isActive ? 1 : 0.7, flexShrink: 0 }} />
+                {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>}
             </div>
-            {badge > 0 && (
+            {badge > 0 && !collapsed && (
                 <span style={{
                     background: 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)',
                     color: 'white',
@@ -48,6 +49,17 @@ const NavItem = ({ icon: Icon, label, href, badge }) => {
                 }}>
                     {badge > 99 ? '99+' : badge}
                 </span>
+            )}
+            {badge > 0 && collapsed && (
+                <span style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    background: '#ef4444',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%'
+                }} />
             )}
         </div>
     );
@@ -64,6 +76,16 @@ const Dashboard = ({ children }) => {
     const [projectHoverId, setProjectHoverId] = useState(null);
     const [unreadInbox, setUnreadInbox] = useState(0);
     const [searchFocused, setSearchFocused] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        // Persist sidebar state in localStorage
+        const saved = localStorage.getItem('sidebarCollapsed');
+        return saved === 'true';
+    });
+
+    // Save sidebar state to localStorage
+    useEffect(() => {
+        localStorage.setItem('sidebarCollapsed', sidebarCollapsed);
+    }, [sidebarCollapsed]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -382,173 +404,225 @@ const Dashboard = ({ children }) => {
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {/* Modern Dark Sidebar */}
                 <aside className="sidebar-modern scrollbar-dark" style={{
-                    width: '260px',
+                    width: sidebarCollapsed ? '72px' : '260px',
                     display: 'flex',
                     flexDirection: 'column',
                     fontSize: '0.875rem',
-                    overflowY: 'auto'
+                    overflowY: 'auto',
+                    transition: 'width 0.2s ease',
+                    position: 'relative'
                 }}>
-                    <div style={{ flex: 1, padding: '1rem 0.75rem' }}>
+                    {/* Collapse Toggle Button */}
+                    <button
+                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                        style={{
+                            position: 'absolute',
+                            top: '12px',
+                            right: sidebarCollapsed ? '50%' : '12px',
+                            transform: sidebarCollapsed ? 'translateX(50%)' : 'none',
+                            background: 'rgba(99, 102, 241, 0.2)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#94a3b8',
+                            transition: 'all 0.2s ease',
+                            zIndex: 10
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.3)';
+                            e.currentTarget.style.color = '#e2e8f0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                            e.currentTarget.style.color = '#94a3b8';
+                        }}
+                    >
+                        {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+                    </button>
+
+                    <div style={{ flex: 1, padding: sidebarCollapsed ? '3.5rem 0.5rem 1rem' : '3.5rem 0.75rem 1rem' }}>
                         {/* Main Navigation */}
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
-                            <NavItem icon={TrendingUp} label="Analytics" href="/analytics" />
-                            <NavItem icon={Copy} label="Templates" href="/templates" />
+                            <NavItem icon={LayoutDashboard} label="Dashboard" href="/" collapsed={sidebarCollapsed} />
+                            <NavItem icon={TrendingUp} label="Analytics" href="/analytics" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Copy} label="Templates" href="/templates" collapsed={sidebarCollapsed} />
                         </div>
 
                         {/* Projects Section */}
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <div
-                                onClick={() => setIsProjectsOpen(!isProjectsOpen)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '0.5rem 0.875rem',
-                                    cursor: 'pointer',
-                                    color: '#64748b',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 700,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Folder size={14} />
-                                    Projects
-                                </div>
-                                <ChevronDown
-                                    size={14}
+                        {!sidebarCollapsed && (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <div
+                                    onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                                     style={{
-                                        transition: 'transform 0.2s ease',
-                                        transform: isProjectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '0.5rem 0.875rem',
+                                        cursor: 'pointer',
+                                        color: '#64748b',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
                                     }}
-                                />
-                            </div>
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <Folder size={14} />
+                                        Projects
+                                    </div>
+                                    <ChevronDown
+                                        size={14}
+                                        style={{
+                                            transition: 'transform 0.2s ease',
+                                            transform: isProjectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+                                        }}
+                                    />
+                                </div>
 
-                            {isProjectsOpen && (
-                                <div style={{ marginTop: '0.25rem' }}>
-                                    {projects.filter(p => !p.archived).map(project => (
+                                {isProjectsOpen && (
+                                    <div style={{ marginTop: '0.25rem' }}>
+                                        {projects.filter(p => !p.archived).map(project => (
+                                            <div
+                                                key={project.id}
+                                                onMouseEnter={() => setProjectHoverId(project.id)}
+                                                onMouseLeave={() => setProjectHoverId(null)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                                    cursor: 'pointer',
+                                                    color: '#94a3b8',
+                                                    fontSize: '0.85rem',
+                                                    borderRadius: '8px',
+                                                    transition: 'all 0.15s ease',
+                                                    background: projectHoverId === project.id ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+                                                }}
+                                            >
+                                                <div
+                                                    onClick={() => window.location.href = `/projects/${project.id}`}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}
+                                                >
+                                                    <div style={{
+                                                        width: 8,
+                                                        height: 8,
+                                                        borderRadius: '50%',
+                                                        background: project.color || '#6366f1',
+                                                        boxShadow: `0 0 8px ${project.color || '#6366f1'}40`
+                                                    }} />
+                                                    <span style={{
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        color: projectHoverId === project.id ? '#e2e8f0' : '#94a3b8'
+                                                    }}>
+                                                        {project.name}
+                                                    </span>
+                                                </div>
+                                                {projectHoverId === project.id && (
+                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleArchiveProject(project.id); }}
+                                                            style={{
+                                                                background: 'rgba(255,255,255,0.1)',
+                                                                border: 'none',
+                                                                padding: '4px',
+                                                                cursor: 'pointer',
+                                                                color: '#94a3b8',
+                                                                borderRadius: '4px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}
+                                                        >
+                                                            <Archive size={12} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
                                         <div
-                                            key={project.id}
-                                            onMouseEnter={() => setProjectHoverId(project.id)}
-                                            onMouseLeave={() => setProjectHoverId(null)}
+                                            onClick={() => setShowCreateProject(true)}
                                             style={{
+                                                padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                                color: '#64748b',
+                                                fontSize: '0.8rem',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                                gap: '0.5rem',
                                                 cursor: 'pointer',
-                                                color: '#94a3b8',
-                                                fontSize: '0.85rem',
                                                 borderRadius: '8px',
-                                                transition: 'all 0.15s ease',
-                                                background: projectHoverId === project.id ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+                                                transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#94a3b8';
+                                                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = '#64748b';
+                                                e.currentTarget.style.background = 'transparent';
                                             }}
                                         >
-                                            <div
-                                                onClick={() => window.location.href = `/projects/${project.id}`}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}
-                                            >
-                                                <div style={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    background: project.color || '#6366f1',
-                                                    boxShadow: `0 0 8px ${project.color || '#6366f1'}40`
-                                                }} />
-                                                <span style={{
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    color: projectHoverId === project.id ? '#e2e8f0' : '#94a3b8'
-                                                }}>
-                                                    {project.name}
-                                                </span>
-                                            </div>
-                                            {projectHoverId === project.id && (
-                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleArchiveProject(project.id); }}
-                                                        style={{
-                                                            background: 'rgba(255,255,255,0.1)',
-                                                            border: 'none',
-                                                            padding: '4px',
-                                                            cursor: 'pointer',
-                                                            color: '#94a3b8',
-                                                            borderRadius: '4px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}
-                                                    >
-                                                        <Archive size={12} />
-                                                    </button>
-                                                </div>
-                                            )}
+                                            <Plus size={14} /> Add Project
                                         </div>
-                                    ))}
-                                    <div
-                                        onClick={() => setShowCreateProject(true)}
-                                        style={{
-                                            padding: '0.5rem 0.875rem 0.5rem 1.75rem',
-                                            color: '#64748b',
-                                            fontSize: '0.8rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            cursor: 'pointer',
-                                            borderRadius: '8px',
-                                            transition: 'all 0.15s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.color = '#94a3b8';
-                                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.color = '#64748b';
-                                            e.currentTarget.style.background = 'transparent';
-                                        }}
-                                    >
-                                        <Plus size={14} /> Add Project
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        )}
+                        {sidebarCollapsed && (
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <NavItem icon={Folder} label="Projects" href="/projects" collapsed={sidebarCollapsed} />
+                            </div>
+                        )}
 
                         {/* Tools Section */}
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <NavItem icon={Calendar} label="Calendar" href="/calendar" />
-                            <NavItem icon={Bot} label="AI Assistant" href="/bot" />
-                            <NavItem icon={Target} label="Goals" href="/goals" />
-                            <NavItem icon={Inbox} label="Inbox" href="/inbox" badge={unreadInbox} />
+                            <NavItem icon={Calendar} label="Calendar" href="/calendar" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Bot} label="AI Assistant" href="/bot" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Target} label="Goals" href="/goals" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Inbox} label="Inbox" href="/inbox" badge={unreadInbox} collapsed={sidebarCollapsed} />
                         </div>
 
                         {/* Company Section */}
                         <div>
-                            <div style={{
-                                padding: '0.5rem 0.875rem',
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                color: '#64748b',
-                                letterSpacing: '0.5px'
-                            }}>
-                                Company
-                            </div>
-                            <NavItem icon={Users} label="Employees" href="/employees" />
-                            <NavItem icon={Building2} label="Departments" href="/departments" />
-                            <NavItem icon={Shield} label="Roles" href="/roles" />
-                            <NavItem icon={Clock} label="Attendance" href="/attendance" />
-                            <NavItem icon={CalendarOff} label="Leave" href="/leave" />
-                            <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" />
-                            <NavItem icon={Activity} label="Activity Logs" href="/activity-logs" />
+                            {!sidebarCollapsed && (
+                                <div style={{
+                                    padding: '0.5rem 0.875rem',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    color: '#64748b',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    Company
+                                </div>
+                            )}
+                            {sidebarCollapsed && (
+                                <div style={{
+                                    borderTop: '1px solid #334155',
+                                    margin: '0.5rem 0',
+                                    paddingTop: '0.5rem'
+                                }} />
+                            )}
+                            <NavItem icon={Users} label="Employees" href="/employees" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Building2} label="Departments" href="/departments" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Shield} label="Roles" href="/roles" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Clock} label="Attendance" href="/attendance" collapsed={sidebarCollapsed} />
+                            <NavItem icon={CalendarOff} label="Leave" href="/leave" collapsed={sidebarCollapsed} />
+                            <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Activity} label="Activity Logs" href="/activity-logs" collapsed={sidebarCollapsed} />
                         </div>
                     </div>
 
                     {/* Bottom Sidebar */}
                     <div style={{
-                        padding: '1rem 0.75rem',
+                        padding: sidebarCollapsed ? '1rem 0.5rem' : '1rem 0.75rem',
                         borderTop: '1px solid #334155'
                     }}>
                         {[
@@ -557,11 +631,13 @@ const Dashboard = ({ children }) => {
                         ].map(item => (
                             <div
                                 key={item.label}
+                                title={sidebarCollapsed ? item.label : undefined}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: '0.6rem 0.875rem',
+                                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                    gap: sidebarCollapsed ? 0 : '0.75rem',
+                                    padding: sidebarCollapsed ? '0.6rem' : '0.6rem 0.875rem',
                                     cursor: 'pointer',
                                     color: '#64748b',
                                     borderRadius: '8px',
@@ -578,7 +654,7 @@ const Dashboard = ({ children }) => {
                                 }}
                             >
                                 <item.icon size={16} />
-                                {item.label}
+                                {!sidebarCollapsed && item.label}
                             </div>
                         ))}
                     </div>
