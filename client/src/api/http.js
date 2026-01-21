@@ -2,7 +2,21 @@ import axios from "axios";
 import axiosRetry from "axios-retry";
 
 // Single source of truth for API URLs
-export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// In production, use Railway backend. Fallback to localhost for dev.
+const getApiBase = () => {
+    // Check environment variable first
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
+    }
+    // In production (not localhost), use Railway backend
+    if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+        return 'https://back-end-production-bad8.up.railway.app';
+    }
+    // Local development
+    return 'http://localhost:3000';
+};
+
+export const API_BASE = getApiBase();
 export const API_URL = `${API_BASE}/api/v1`;
 
 export function getAuthToken() {
