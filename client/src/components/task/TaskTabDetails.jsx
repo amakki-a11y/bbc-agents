@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Plus, Upload, FileText, Image, File, X, Layers, Download, Loader2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Using centralized API_URL from http.js
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const TaskTabDetails = ({ task, onUpdate, onTaskRefresh }) => {

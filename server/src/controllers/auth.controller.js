@@ -1,9 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 
-const prisma = new PrismaClient();
 
 // Zod Schemas
 const passwordSchema = z.string()

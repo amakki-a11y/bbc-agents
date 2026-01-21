@@ -5,9 +5,8 @@
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 
-const prisma = new PrismaClient();
 const anthropic = new Anthropic();
 
 /**

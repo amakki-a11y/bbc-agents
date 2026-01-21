@@ -1,6 +1,5 @@
 const { parseCommand } = require('../services/ai.service');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const handleCommand = async (req, res) => {
     try {

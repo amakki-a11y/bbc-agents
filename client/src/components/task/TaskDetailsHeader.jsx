@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Bot, ChevronDown, Share2, MoreHorizontal, Copy, Trash2, ArrowRight, CheckSquare, FolderKanban, Loader2 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Using centralized API_URL from http.js
 
 const STATUS_CONFIG = {
     'TO DO': { color: '#6b7280', bgColor: '#f3f4f6', label: 'To Do' },

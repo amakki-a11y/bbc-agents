@@ -6,7 +6,7 @@ import {
     ChevronDown, ChevronUp, AlignLeft
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Using centralized API_URL from http.js
 
 const getAvatarColor = (name) => {
     const colors = [

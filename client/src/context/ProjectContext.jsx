@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import axios from 'axios';
+import { http, API_URL } from '../api/http';
 
 const ProjectContext = createContext();
 
@@ -21,8 +21,7 @@ export const ProjectProvider = ({ children }) => {
     // Track temp ID to real ID mappings
     const tempIdMapRef = useRef(new Map());
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
+    
     useEffect(() => {
         const savedSettings = localStorage.getItem('project_view_settings');
         if (savedSettings) {

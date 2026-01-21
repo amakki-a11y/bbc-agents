@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link2, Plus, ArrowRight, ArrowLeft, X, Search, Lock } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Using centralized API_URL from http.js
 
 const RelationshipsField = ({ taskId, blockedBy = [], blocking = [], onTaskRefresh }) => {
     const [showModal, setShowModal] = useState(false);

@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { createNotification } = require('../services/notificationService');
-const prisma = new PrismaClient();
 
 // Helper to log activity with optional metadata
 const logActivity = async (taskId, userId, type, content, metadata = null) => {

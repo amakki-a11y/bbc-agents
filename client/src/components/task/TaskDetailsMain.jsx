@@ -24,7 +24,7 @@ const DescriptionSection = ({ description, onUpdate, taskTitle }) => {
     const [isLoadingAI, setIsLoadingAI] = useState(false);
     const [aiError, setAiError] = useState(null);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    // Using centralized API_URL from http.js
 
     const handleSave = () => {
         setIsEditing(false);

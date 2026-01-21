@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { emitToUser } = require('../websocket');
 
-const prisma = new PrismaClient();
 
 const createNotification = async ({ userId, type, message, taskId = null, projectId = null }) => {
     try {

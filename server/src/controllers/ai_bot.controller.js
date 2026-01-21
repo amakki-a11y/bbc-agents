@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const { generateAIResponse } = require('../services/aiService');
 const cache = require('../utils/cache');
 

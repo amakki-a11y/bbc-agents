@@ -1,8 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { setTokens, clearTokens } from '../api/http';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { authHttp, setTokens, clearTokens, getAuthToken } from '../api/http';
 
 const AuthContext = createContext(null);
 
@@ -12,7 +9,6 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             localStorage.setItem('token', token);
             // Decode JWT to get user info
             try {
@@ -22,7 +18,6 @@ export const AuthProvider = ({ children }) => {
                 setUser({ email: 'Logged In User' });
             }
         } else {
-            delete axios.defaults.headers.common['Authorization'];
             localStorage.removeItem('token');
             localStorage.removeItem('refreshToken');
             setUser(null);
@@ -31,28 +26,28 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const res = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
+            const res = await authHttp.post('/auth/login', { email, password });
             const { accessToken, refreshToken, user: userData } = res.data;
             setTokens(accessToken, refreshToken);
             setToken(accessToken);
             setUser(userData);
             return true;
         } catch (e) {
-            console.error(e);
+            console.error('Login error:', e.response?.data || e.message);
             return false;
         }
     };
 
     const register = async (email, password, firstName, lastName) => {
         try {
-            const res = await axios.post(`${API_BASE_URL}/auth/register`, { email, password, firstName, lastName });
+            const res = await authHttp.post('/auth/register', { email, password, firstName, lastName });
             const { accessToken, refreshToken, user: userData } = res.data;
             setTokens(accessToken, refreshToken);
             setToken(accessToken);
             setUser(userData);
             return true;
         } catch (e) {
-            console.error(e);
+            console.error('Register error:', e.response?.data || e.message);
             return false;
         }
     };
@@ -64,7 +59,7 @@ export const AuthProvider = ({ children }) => {
 
     const value = useMemo(() => ({
         user,
-        token, // Add token here
+        token,
         login,
         register,
         logout,

@@ -3,8 +3,7 @@
  * Handles bot tool calls for CV parsing, onboarding, probation, performance analysis
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // Import services
 const { parseCV, generateEmployeeProfileSummary } = require('../services/cvParserService');

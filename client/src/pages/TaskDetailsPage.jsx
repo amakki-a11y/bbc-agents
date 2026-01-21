@@ -21,7 +21,7 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
     const activityPanelRef = useRef(null);
     const initialFetchDone = useRef(false);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    // Using centralized API_URL from http.js
 
     // Fetch task details - only depends on taskId and API_URL, NOT on tasks
     const fetchTaskDetails = useCallback(async (showLoading = true) => {

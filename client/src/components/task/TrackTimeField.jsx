@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Timer, Play, Square, Plus, Clock, Trash2, X } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Using centralized API_URL from http.js
 
 const formatDuration = (seconds) => {
     const hrs = Math.floor(seconds / 3600);

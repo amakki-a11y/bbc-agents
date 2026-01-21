@@ -6,14 +6,12 @@ dotenv.config();
 
 const app = express();
 
-// Trust proxy - required for Render/Heroku/etc behind load balancer
-// This fixes X-Forwarded-For header warnings
+// Trust proxy - required for Railway/Render/etc behind load balancer
 app.set('trust proxy', 1);
 
 const authRoutes = require('./routes/auth.routes');
-const dataRoutes = require('./routes/data.routes');
 const aiRoutes = require('./routes/ai.routes');
-const detailedTaskRoutes = require('./routes/detailed_task.routes');
+const v1Routes = require('./routes/v1');
 
 const helmetConfig = require('./middleware/helmet');
 const { securityMiddleware } = require('./middleware/security');
@@ -23,12 +21,12 @@ const { limiter, authLimiter } = require('./middleware/rateLimit');
 const performanceMiddleware = require('./middleware/performance');
 const healthRoutes = require('./routes/health');
 
-app.use(performanceMiddleware); // Measure time first
-app.use(compression); // Compress responses
+app.use(performanceMiddleware);
+app.use(compression);
 app.use(requestLogger);
 app.use(helmetConfig);
 
-// CORS configuration - must be before routes (Railway only)
+// CORS configuration
 const allowedOrigins = [
   'https://front-end-production-ad4c.up.railway.app',
   'http://localhost:5173',
@@ -40,14 +38,12 @@ console.log('Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc)
     if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('CORS blocked:', origin);
-      callback(null, true); // Allow anyway for debugging
+      console.warn('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -55,40 +51,43 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Handle preflight requests
 app.options('*', cors());
-
 app.use(express.json());
 
-// Apply security middleware (Rate limiting, XSS, HPP)
-// securityMiddleware applies some rate limiting, but we want our custom one too. 
-// If securityMiddleware already does rate limiting, we should check. 
-// Assuming we add ours as global or specific. 
-// Let's add global limiter here.
+// Security middleware
 app.use(limiter);
 securityMiddleware(app);
 
 const AppError = require('./utils/AppError');
 const globalErrorHandler = require('./middleware/errorHandler');
 
+// Auth routes (no version prefix)
 app.use('/auth', authLimiter, authRoutes);
-app.use('/api', dataRoutes);
-app.use('/api/tasks/details', detailedTaskRoutes); // Specialized routes
-app.use('/api/projects', require('./routes/projects.routes'));
-app.use('/api/templates', require('./routes/templates.routes'));
-app.use('/api/departments', require('./routes/departments.routes'));
-app.use('/api/employees', require('./routes/employees.routes'));
-app.use('/api/attendance', require('./routes/attendance.routes'));
-app.use('/api/roles', require('./routes/roles.routes'));
-app.use('/api/leave', require('./routes/leave.routes'));
-app.use('/api/bot', require('./routes/ai_bot.routes'));
-app.use('/api/goals', require('./routes/goals.routes'));
-app.use('/api/messages', require('./routes/messaging.routes'));
+
+// API v1 routes (recommended)
+app.use('/api/v1', v1Routes);
+
+// Legacy /api routes (backwards compatibility - will be deprecated)
+app.use('/api', v1Routes);
+
+// AI routes
 app.use('/ai', aiRoutes);
+
+// Health check
 app.use('/health', healthRoutes);
 
+// Root endpoint
 app.get('/', (req, res) => {
-    res.json({ message: 'AI Planner API is running' });
+    res.json({
+        message: 'BBC Agents API',
+        version: '1.0.0',
+        endpoints: {
+            v1: '/api/v1',
+            legacy: '/api (deprecated, use /api/v1)',
+            auth: '/auth',
+            health: '/health'
+        }
+    });
 });
 
 // Handle 404
