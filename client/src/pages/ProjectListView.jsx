@@ -2,11 +2,13 @@ import { useState, useEffect, Suspense, lazy, useCallback, useMemo, useRef } fro
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useProject } from '../context/ProjectContext';
 import {
-    Plus, Filter, Search, Layers, Columns, SlidersHorizontal, LayoutDashboard, List as ListIcon, Trash2, CheckSquare, X, ChevronDown, ChevronRight, ArrowUpDown, Flag
+    Plus, Filter, Search, Layers, Columns, SlidersHorizontal, LayoutDashboard, List as ListIcon, Trash2, CheckSquare, X, ChevronDown, ChevronRight, ArrowUpDown, Flag, Users
 } from 'lucide-react';
 import TaskList from '../components/TaskList';
 import BoardView from '../components/BoardView';
 import LoadingSpinner from '../components/LoadingSpinner';
+import AiAssistButton from '../components/AiAssistButton';
+import ProjectShareModal from '../components/ProjectShareModal';
 
 const TaskDetailsPage = lazy(() => import('./TaskDetailsPage'));
 
@@ -383,8 +385,12 @@ const ProjectListView = () => {
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const filterRef = useRef(null);
     const sortRef = useRef(null);
+
+    // Get current project for AI assist and sharing
+    const currentProject = projects.find(p => p.id === parseInt(id));
 
     // Sync ID from URL to Context
     useEffect(() => {
@@ -990,6 +996,42 @@ const ProjectListView = () => {
                         )}
                     </div>
 
+                    {/* AI Assist Button */}
+                    <AiAssistButton
+                        context="project"
+                        projectId={parseInt(id)}
+                        size="small"
+                    />
+
+                    {/* Share Button */}
+                    <button
+                        onClick={() => setShowShareModal(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#f3f4f6',
+                            color: '#374151',
+                            padding: '6px 14px',
+                            fontSize: '0.8rem',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#e5e7eb';
+                            e.currentTarget.style.borderColor = '#d1d5db';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f3f4f6';
+                            e.currentTarget.style.borderColor = '#e5e7eb';
+                        }}
+                    >
+                        <Users size={14} /> Share
+                    </button>
+
                     <button
                         onClick={async () => {
                             const t = await addTask({ title: "New Task" });
@@ -1213,6 +1255,17 @@ const ProjectListView = () => {
                     }
                 }
             `}</style>
+
+            {/* Project Share Modal */}
+            <ProjectShareModal
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+                project={currentProject}
+                onMembersUpdate={() => {
+                    // Optionally refresh project data
+                    console.log('Members updated');
+                }}
+            />
         </div>
     );
 };
