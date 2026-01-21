@@ -308,7 +308,7 @@ model Project {
   description   String?
   color         String         @default("#6366f1")
   created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
+  updated_at    DateTime       @default(now()) @updatedAt
   archived      Boolean        @default(false)
   user_id       Int
   user          User           @relation(fields: [user_id], references: [id])
