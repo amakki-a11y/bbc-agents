@@ -4,7 +4,7 @@
 
 const https = require('https');
 
-const BASE_URL = 'bbc-agents.onrender.com';
+const BASE_URL = 'back-end-production-bad8.up.railway.app';
 
 // Helper to make HTTPS requests
 const request = (method, path, data = null, token = null) => {
