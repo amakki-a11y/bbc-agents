@@ -1,23 +1,28 @@
 import axios from "axios";
 import axiosRetry from "axios-retry";
 
+// Build timestamp: 2026-01-22T15:00:00Z - forces Railway rebuild
 // Single source of truth for API URLs
 // In production, use Railway backend. Fallback to localhost for dev.
 const getApiBase = () => {
     // Check environment variable first
     if (import.meta.env.VITE_API_URL) {
+        console.log('[API] Using VITE_API_URL:', import.meta.env.VITE_API_URL);
         return import.meta.env.VITE_API_URL;
     }
     // In production (not localhost), use Railway backend
     if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+        console.log('[API] Production detected, using Railway backend');
         return 'https://back-end-production-bad8.up.railway.app';
     }
     // Local development
+    console.log('[API] Development mode, using localhost');
     return 'http://localhost:3000';
 };
 
 export const API_BASE = getApiBase();
 export const API_URL = `${API_BASE}/api/v1`;
+console.log('[API] Final API_BASE:', API_BASE);
 
 export function getAuthToken() {
     return localStorage.getItem("token") || localStorage.getItem("authToken");
