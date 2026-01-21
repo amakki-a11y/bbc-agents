@@ -1,10 +1,11 @@
 import { http } from './http';
 
+// ==========================================
+// PROJECT PLANNING
+// ==========================================
+
 /**
  * Generate a project plan from a goal description
- * @param {string} goal - The project goal/description
- * @param {Object} context - Optional context (teamSize, deadline, constraints)
- * @returns {Promise<Object>} The generated plan
  */
 export const generatePlan = async (goal, context = {}) => {
     const response = await http.post('/ai/plan', { goal, context });
@@ -13,8 +14,6 @@ export const generatePlan = async (goal, context = {}) => {
 
 /**
  * Create a project from an AI-generated plan
- * @param {Object} plan - The plan object with name, description, and tasks
- * @returns {Promise<Object>} The created project and tasks
  */
 export const createProjectFromPlan = async (plan) => {
     const response = await http.post('/ai/plan/create', { plan });
@@ -23,16 +22,80 @@ export const createProjectFromPlan = async (plan) => {
 
 /**
  * Send a natural language command to the AI
- * @param {string} command - The command text
- * @returns {Promise<Object>} The command result
  */
 export const sendCommand = async (command) => {
     const response = await http.post('/ai/command', { command });
     return response.data;
 };
 
+// ==========================================
+// AI ASSIST
+// ==========================================
+
+/**
+ * Get AI assistance for a project
+ * @param {number} projectId - The project ID
+ * @param {string} question - Optional question (defaults to status/priorities)
+ */
+export const assistProject = async (projectId, question = null) => {
+    const response = await http.post(`/ai/project/${projectId}/assist`, { question });
+    return response.data;
+};
+
+/**
+ * Generate subtasks for a task
+ * @param {number} taskId - The task ID
+ * @param {number} count - Number of subtasks to generate (default 5)
+ */
+export const generateSubtasks = async (taskId, count = 5) => {
+    const response = await http.post(`/ai/task/${taskId}/subtasks`, { count });
+    return response.data;
+};
+
+/**
+ * Save generated subtasks to database
+ */
+export const saveSubtasks = async (taskId, subtasks) => {
+    const response = await http.post(`/ai/task/${taskId}/subtasks/save`, { subtasks });
+    return response.data;
+};
+
+// ==========================================
+// RISK MONITORING
+// ==========================================
+
+/**
+ * Get risk summary for all user projects
+ */
+export const getRiskSummary = async () => {
+    const response = await http.get('/ai/risks/summary');
+    return response.data;
+};
+
+/**
+ * Scan a project for risks
+ */
+export const scanProjectRisks = async (projectId) => {
+    const response = await http.post(`/ai/project/${projectId}/scan`);
+    return response.data;
+};
+
+/**
+ * Toggle AI monitoring for a project
+ */
+export const toggleProjectMonitoring = async (projectId, enabled) => {
+    const response = await http.post(`/ai/project/${projectId}/monitoring`, { enabled });
+    return response.data;
+};
+
 export default {
     generatePlan,
     createProjectFromPlan,
-    sendCommand
+    sendCommand,
+    assistProject,
+    generateSubtasks,
+    saveSubtasks,
+    getRiskSummary,
+    scanProjectRisks,
+    toggleProjectMonitoring
 };

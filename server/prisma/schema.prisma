@@ -9,16 +9,18 @@ generator client {
 }
 
 model User {
-  id                  Int            @id @default(autoincrement())
-  email               String         @unique
+  id                  Int             @id @default(autoincrement())
+  email               String          @unique
   password_hash       String
-  created_at          DateTime       @default(now())
+  username            String?
+  created_at          DateTime        @default(now())
   avatar_url          String?
   tasks               Task[]
   events              Event[]
   activities          Activity[]
   assignedActionItems ActionItem[]
   projects            Project[]
+  projectMemberships  ProjectMember[]
   taskTemplates       TaskTemplate[]
   notifications       Notification[]
   employee            Employee?
@@ -306,10 +308,39 @@ model Project {
   description   String?
   color         String         @default("#6366f1")
   created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  archived      Boolean        @default(false)
   user_id       Int
   user          User           @relation(fields: [user_id], references: [id])
   tasks         Task[]
   notifications Notification[]
+  members       ProjectMember[]
+
+  // AI Monitoring
+  ai_monitoring_enabled Boolean   @default(false)
+  last_ai_check         DateTime?
+  ai_risk_level         String?   // low, medium, high, critical
+  ai_health_score       Float?    // 0-100 project health score
+
+  @@index([user_id])
+  @@index([archived])
+  @@index([ai_monitoring_enabled])
+}
+
+// Project Collaboration - allows sharing projects with other users
+model ProjectMember {
+  id         Int      @id @default(autoincrement())
+  project_id Int
+  project    Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role       String   @default("viewer") // viewer, editor, admin
+  added_at   DateTime @default(now())
+  added_by   Int?     // User who added this member
+
+  @@unique([project_id, user_id])
+  @@index([project_id])
+  @@index([user_id])
 }
 
 model Task {

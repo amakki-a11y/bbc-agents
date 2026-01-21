@@ -260,11 +260,195 @@ const deleteProject = async (req, res) => {
     }
 };
 
+// ==========================================
+// PROJECT MEMBER MANAGEMENT
+// ==========================================
+
+const getProjectMembers = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const projectId = parseInt(id);
+
+        // Verify user has access to this project
+        const project = await prisma.project.findFirst({
+            where: {
+                id: projectId,
+                OR: [
+                    { user_id: req.user.userId },
+                    { members: { some: { user_id: req.user.userId } } }
+                ]
+            }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or access denied' });
+        }
+
+        const members = await prisma.projectMember.findMany({
+            where: { project_id: projectId },
+            include: {
+                user: {
+                    select: { id: true, email: true, username: true, avatar_url: true }
+                }
+            },
+            orderBy: { added_at: 'asc' }
+        });
+
+        res.json(members);
+    } catch (error) {
+        console.error('Get project members error:', error);
+        res.status(500).json({ error: 'Failed to fetch project members' });
+    }
+};
+
+const addProjectMember = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, role = 'editor' } = req.body;
+        const projectId = parseInt(id);
+
+        // Only owner can add members
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, user_id: req.user.userId }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or you are not the owner' });
+        }
+
+        // Check if user exists
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Check if already a member
+        const existing = await prisma.projectMember.findUnique({
+            where: { project_id_user_id: { project_id: projectId, user_id: userId } }
+        });
+
+        if (existing) {
+            return res.status(400).json({ error: 'User is already a member of this project' });
+        }
+
+        const member = await prisma.projectMember.create({
+            data: {
+                project_id: projectId,
+                user_id: userId,
+                role: role,
+                added_by: req.user.userId
+            },
+            include: {
+                user: { select: { id: true, email: true, username: true, avatar_url: true } }
+            }
+        });
+
+        // Create notification for added user
+        await prisma.notification.create({
+            data: {
+                type: 'project_invite',
+                message: `You've been added to project "${project.name}" as ${role}`,
+                user_id: userId,
+                project_id: projectId
+            }
+        });
+
+        // Log activity
+        await logCreate(
+            req.user.userId,
+            'project_member',
+            member.id,
+            `Added ${user.email} to project "${project.name}" as ${role}`,
+            req,
+            { projectId, userId, role }
+        );
+
+        res.status(201).json(member);
+    } catch (error) {
+        console.error('Add project member error:', error);
+        res.status(500).json({ error: 'Failed to add project member' });
+    }
+};
+
+const updateProjectMember = async (req, res) => {
+    try {
+        const { id, memberId } = req.params;
+        const { role } = req.body;
+        const projectId = parseInt(id);
+
+        // Only owner can update members
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, user_id: req.user.userId }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or you are not the owner' });
+        }
+
+        const member = await prisma.projectMember.update({
+            where: { id: parseInt(memberId) },
+            data: { role },
+            include: {
+                user: { select: { id: true, email: true, username: true } }
+            }
+        });
+
+        res.json(member);
+    } catch (error) {
+        console.error('Update project member error:', error);
+        res.status(500).json({ error: 'Failed to update project member' });
+    }
+};
+
+const removeProjectMember = async (req, res) => {
+    try {
+        const { id, memberId } = req.params;
+        const projectId = parseInt(id);
+
+        // Only owner can remove members
+        const project = await prisma.project.findFirst({
+            where: { id: projectId, user_id: req.user.userId }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or you are not the owner' });
+        }
+
+        const member = await prisma.projectMember.findUnique({
+            where: { id: parseInt(memberId) },
+            include: { user: { select: { email: true } } }
+        });
+
+        await prisma.projectMember.delete({
+            where: { id: parseInt(memberId) }
+        });
+
+        // Log activity
+        await logDelete(
+            req.user.userId,
+            'project_member',
+            memberId,
+            `Removed ${member?.user?.email || 'user'} from project "${project.name}"`,
+            req,
+            { projectId, memberId }
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Remove project member error:', error);
+        res.status(500).json({ error: 'Failed to remove project member' });
+    }
+};
+
 module.exports = {
     createProject,
     getProjects,
     getProjectDetails,
     updateProject,
     archiveProject,
-    deleteProject
+    deleteProject,
+    getProjectMembers,
+    addProjectMember,
+    updateProjectMember,
+    removeProjectMember
 };

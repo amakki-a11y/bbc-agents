@@ -1,5 +1,8 @@
 const { parseCommand, generateProjectPlan } = require('../services/ai.service');
 const prisma = require('../lib/prisma');
+const agentLogger = require('../services/agentLogger');
+const riskMonitor = require('../services/riskMonitor');
+const Anthropic = require('@anthropic-ai/sdk');
 
 /**
  * Generate a project plan from a goal description
@@ -133,4 +136,380 @@ const handleCommand = async (req, res) => {
     }
 };
 
-module.exports = { handleCommand, createProjectPlan, createProjectFromPlan };
+/**
+ * AI Project Assistant - Context-aware help for a project
+ * POST /api/v1/ai/project/:id/assist
+ */
+const assistProject = async (req, res) => {
+    const startTime = Date.now();
+    const { id } = req.params;
+    const { question } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+        // Fetch project with tasks
+        const project = await prisma.project.findFirst({
+            where: {
+                id: parseInt(id),
+                OR: [
+                    { user_id: userId },
+                    { members: { some: { user_id: userId } } }
+                ]
+            },
+            include: {
+                tasks: {
+                    orderBy: { created_at: 'desc' },
+                    take: 50
+                }
+            }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or access denied' });
+        }
+
+        // Build context for AI
+        const tasksSummary = project.tasks.map(t => ({
+            title: t.title,
+            status: t.status,
+            priority: t.priority,
+            dueDate: t.due_date,
+            timeEstimate: t.time_estimate
+        }));
+
+        const todoCount = project.tasks.filter(t => t.status === 'todo').length;
+        const inProgressCount = project.tasks.filter(t => t.status === 'in_progress').length;
+        const doneCount = project.tasks.filter(t => t.status === 'done').length;
+        const overdueCount = project.tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length;
+
+        const systemPrompt = `You are an AI Project Assistant for "${project.name}".
+
+Project Description: ${project.description || 'No description provided'}
+
+Current Status:
+- Total Tasks: ${project.tasks.length}
+- To Do: ${todoCount}
+- In Progress: ${inProgressCount}
+- Done: ${doneCount}
+- Overdue: ${overdueCount}
+
+Tasks:
+${JSON.stringify(tasksSummary, null, 2)}
+
+You help project managers by:
+1. Analyzing project health and progress
+2. Suggesting next actions and priorities
+3. Identifying risks and bottlenecks
+4. Recommending task assignments
+5. Providing timeline insights
+
+Be concise, actionable, and specific. Reference actual task names when relevant.`;
+
+        const client = new Anthropic();
+        const response = await client.messages.create({
+            model: "claude-3-haiku-20240307",
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [
+                { role: "user", content: question || "What should we focus on next? Give me a brief status and top 3 priorities." }
+            ]
+        });
+
+        const advice = response.content[0].text;
+
+        // Log the assist action
+        await agentLogger.logSuccess(
+            'ProjectAssistant',
+            'assist_project',
+            'project',
+            project.id,
+            `Provided assistance for "${project.name}": ${question?.substring(0, 50) || 'Status request'}...`,
+            0.85,
+            {
+                inputContext: { projectId: project.id, question },
+                outputData: { advice: advice.substring(0, 200) },
+                executionTime: Date.now() - startTime
+            }
+        );
+
+        res.json({
+            success: true,
+            projectId: project.id,
+            projectName: project.name,
+            question: question || "What should we focus on next?",
+            advice,
+            context: {
+                totalTasks: project.tasks.length,
+                todo: todoCount,
+                inProgress: inProgressCount,
+                done: doneCount,
+                overdue: overdueCount
+            }
+        });
+
+    } catch (error) {
+        await agentLogger.logFailure(
+            'ProjectAssistant',
+            'assist_project',
+            'project',
+            `Failed to assist project ${id}`,
+            error.message
+        );
+        console.error('Project assist error:', error);
+        res.status(500).json({ error: error.message || 'Failed to get AI assistance' });
+    }
+};
+
+/**
+ * AI Task Breakdown - Generate subtasks for a task
+ * POST /api/v1/ai/task/:id/subtasks
+ */
+const generateSubtasks = async (req, res) => {
+    const startTime = Date.now();
+    const { id } = req.params;
+    const { count = 5 } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+        // Fetch the task
+        const task = await prisma.task.findFirst({
+            where: {
+                id: parseInt(id),
+                user_id: userId
+            },
+            include: {
+                project: { select: { name: true, description: true } },
+                subtasks: true
+            }
+        });
+
+        if (!task) {
+            return res.status(404).json({ error: 'Task not found or access denied' });
+        }
+
+        const systemPrompt = `You are a task breakdown specialist. Break down the given task into ${count} specific, actionable subtasks.
+
+Project Context: ${task.project?.name || 'Personal Task'} - ${task.project?.description || ''}
+
+Return ONLY a JSON array of subtasks:
+[
+  { "title": "Subtask title", "description": "Brief description" },
+  ...
+]
+
+Rules:
+- Create exactly ${count} subtasks
+- Each subtask should be specific and actionable
+- Subtasks should be logical steps to complete the main task
+- Return ONLY valid JSON, no markdown`;
+
+        const client = new Anthropic();
+        const response = await client.messages.create({
+            model: "claude-3-haiku-20240307",
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [
+                { role: "user", content: `Break down this task: "${task.title}"\n\nDescription: ${task.description || 'No description'}` }
+            ]
+        });
+
+        let subtasks;
+        try {
+            const content = response.content[0].text.trim();
+            const jsonStr = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').replace(/^```\s*/, '');
+            subtasks = JSON.parse(jsonStr);
+        } catch (parseError) {
+            throw new Error('Failed to parse AI response as JSON');
+        }
+
+        // Log the action
+        await agentLogger.logSuccess(
+            'TaskBreakdown',
+            'generate_subtasks',
+            'task',
+            task.id,
+            `Generated ${subtasks.length} subtasks for "${task.title}"`,
+            0.85,
+            {
+                inputContext: { taskId: task.id, taskTitle: task.title },
+                outputData: { subtasks },
+                executionTime: Date.now() - startTime
+            }
+        );
+
+        res.json({
+            success: true,
+            taskId: task.id,
+            taskTitle: task.title,
+            subtasks,
+            message: `Generated ${subtasks.length} subtasks`
+        });
+
+    } catch (error) {
+        await agentLogger.logFailure(
+            'TaskBreakdown',
+            'generate_subtasks',
+            'task',
+            `Failed to generate subtasks for task ${id}`,
+            error.message
+        );
+        console.error('Generate subtasks error:', error);
+        res.status(500).json({ error: error.message || 'Failed to generate subtasks' });
+    }
+};
+
+/**
+ * Save AI-generated subtasks to database
+ * POST /api/v1/ai/task/:id/subtasks/save
+ */
+const saveSubtasks = async (req, res) => {
+    const { id } = req.params;
+    const { subtasks } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+        // Verify task ownership
+        const task = await prisma.task.findFirst({
+            where: { id: parseInt(id), user_id: userId }
+        });
+
+        if (!task) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        // Create subtasks
+        const created = await Promise.all(
+            subtasks.map(st =>
+                prisma.subtask.create({
+                    data: {
+                        title: st.title,
+                        task_id: task.id,
+                        is_complete: false
+                    }
+                })
+            )
+        );
+
+        res.json({
+            success: true,
+            subtasks: created,
+            message: `Saved ${created.length} subtasks`
+        });
+
+    } catch (error) {
+        console.error('Save subtasks error:', error);
+        res.status(500).json({ error: error.message || 'Failed to save subtasks' });
+    }
+};
+
+/**
+ * Scan project for risks on-demand
+ * POST /api/v1/ai/project/:id/scan
+ */
+const scanProjectRisks = async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+
+    try {
+        // Verify access
+        const project = await prisma.project.findFirst({
+            where: {
+                id: parseInt(id),
+                OR: [
+                    { user_id: userId },
+                    { members: { some: { user_id: userId } } }
+                ]
+            }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const scan = await riskMonitor.scanProject(parseInt(id));
+
+        res.json({
+            success: true,
+            projectId: scan.project.id,
+            projectName: scan.project.name,
+            riskLevel: scan.riskLevel,
+            healthScore: scan.healthScore,
+            overdueTasks: scan.overdueTasks.length,
+            totalActiveTasks: scan.totalActiveTasks,
+            avgDaysOverdue: scan.avgDaysOverdue,
+            tasks: scan.overdueTasks.map(t => ({
+                id: t.id,
+                title: t.title,
+                dueDate: t.due_date,
+                status: t.status
+            }))
+        });
+
+    } catch (error) {
+        console.error('Scan project risks error:', error);
+        res.status(500).json({ error: error.message || 'Failed to scan project' });
+    }
+};
+
+/**
+ * Get risk summary for user's projects
+ * GET /api/v1/ai/risks/summary
+ */
+const getRiskSummary = async (req, res) => {
+    const userId = req.user?.userId;
+
+    try {
+        const summary = await riskMonitor.getRiskSummary(userId);
+        res.json({ success: true, ...summary });
+    } catch (error) {
+        console.error('Get risk summary error:', error);
+        res.status(500).json({ error: error.message || 'Failed to get risk summary' });
+    }
+};
+
+/**
+ * Toggle AI monitoring for a project
+ * POST /api/v1/ai/project/:id/monitoring
+ */
+const toggleMonitoring = async (req, res) => {
+    const { id } = req.params;
+    const { enabled } = req.body;
+    const userId = req.user?.userId;
+
+    try {
+        const project = await prisma.project.findFirst({
+            where: { id: parseInt(id), user_id: userId }
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const updated = await prisma.project.update({
+            where: { id: parseInt(id) },
+            data: { ai_monitoring_enabled: enabled }
+        });
+
+        res.json({
+            success: true,
+            projectId: updated.id,
+            aiMonitoringEnabled: updated.ai_monitoring_enabled
+        });
+
+    } catch (error) {
+        console.error('Toggle monitoring error:', error);
+        res.status(500).json({ error: error.message || 'Failed to toggle monitoring' });
+    }
+};
+
+module.exports = {
+    handleCommand,
+    createProjectPlan,
+    createProjectFromPlan,
+    assistProject,
+    generateSubtasks,
+    saveSubtasks,
+    scanProjectRisks,
+    getRiskSummary,
+    toggleMonitoring
+};
