@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 
 // Get all activity logs with pagination and filters
 const getLogs = async (req, res) => {
+    console.log('[ActivityLogs] getLogs called');
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
