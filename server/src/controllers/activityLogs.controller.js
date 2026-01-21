@@ -1,0 +1,272 @@
+const prisma = require('../lib/prisma');
+
+// Get all activity logs with pagination and filters
+const getLogs = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+
+        const {
+            action,
+            entityType,
+            userId,
+            employeeId,
+            startDate,
+            endDate,
+            search
+        } = req.query;
+
+        const where = {
+            ...(action && { action }),
+            ...(entityType && { entity_type: entityType }),
+            ...(userId && { user_id: parseInt(userId) }),
+            ...(employeeId && { employee_id: employeeId }),
+            ...(startDate && {
+                created_at: {
+                    gte: new Date(startDate)
+                }
+            }),
+            ...(endDate && {
+                created_at: {
+                    ...(where?.created_at || {}),
+                    lte: new Date(endDate)
+                }
+            }),
+            ...(search && {
+                description: { contains: search, mode: 'insensitive' }
+            })
+        };
+
+        // Handle date range
+        if (startDate || endDate) {
+            where.created_at = {
+                ...(startDate && { gte: new Date(startDate) }),
+                ...(endDate && { lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) })
+            };
+        }
+
+        const [logs, total] = await Promise.all([
+            prisma.activityLog.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    user: {
+                        select: { id: true, email: true }
+                    },
+                    employee: {
+                        select: { id: true, name: true, email: true }
+                    }
+                }
+            }),
+            prisma.activityLog.count({ where })
+        ]);
+
+        res.json({
+            data: logs,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching activity logs:', error);
+        res.status(500).json({ error: 'Failed to fetch activity logs' });
+    }
+};
+
+// Get logs for a specific entity
+const getEntityLogs = async (req, res) => {
+    try {
+        const { type, id } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const where = {
+            entity_type: type,
+            entity_id: String(id)
+        };
+
+        const [logs, total] = await Promise.all([
+            prisma.activityLog.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    user: {
+                        select: { id: true, email: true }
+                    }
+                }
+            }),
+            prisma.activityLog.count({ where })
+        ]);
+
+        res.json({
+            data: logs,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching entity logs:', error);
+        res.status(500).json({ error: 'Failed to fetch entity logs' });
+    }
+};
+
+// Get logs for a specific user
+const getUserLogs = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const where = { user_id: parseInt(userId) };
+
+        const [logs, total] = await Promise.all([
+            prisma.activityLog.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { created_at: 'desc' }
+            }),
+            prisma.activityLog.count({ where })
+        ]);
+
+        res.json({
+            data: logs,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user logs:', error);
+        res.status(500).json({ error: 'Failed to fetch user logs' });
+    }
+};
+
+// Get activity statistics
+const getStats = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        const dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.created_at = {
+                ...(startDate && { gte: new Date(startDate) }),
+                ...(endDate && { lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) })
+            };
+        }
+
+        // Get counts by action type
+        const actionCounts = await prisma.activityLog.groupBy({
+            by: ['action'],
+            where: dateFilter,
+            _count: { action: true }
+        });
+
+        // Get counts by entity type
+        const entityCounts = await prisma.activityLog.groupBy({
+            by: ['entity_type'],
+            where: dateFilter,
+            _count: { entity_type: true }
+        });
+
+        // Get recent activity count (last 24 hours)
+        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const recentCount = await prisma.activityLog.count({
+            where: { created_at: { gte: last24Hours } }
+        });
+
+        // Get total count
+        const totalCount = await prisma.activityLog.count({ where: dateFilter });
+
+        res.json({
+            total: totalCount,
+            recentCount,
+            byAction: actionCounts.reduce((acc, item) => {
+                acc[item.action] = item._count.action;
+                return acc;
+            }, {}),
+            byEntityType: entityCounts.reduce((acc, item) => {
+                acc[item.entity_type] = item._count.entity_type;
+                return acc;
+            }, {})
+        });
+    } catch (error) {
+        console.error('Error fetching activity stats:', error);
+        res.status(500).json({ error: 'Failed to fetch activity statistics' });
+    }
+};
+
+// Export logs to CSV format
+const exportLogs = async (req, res) => {
+    try {
+        const { startDate, endDate, action, entityType } = req.query;
+
+        const where = {
+            ...(action && { action }),
+            ...(entityType && { entity_type: entityType })
+        };
+
+        if (startDate || endDate) {
+            where.created_at = {
+                ...(startDate && { gte: new Date(startDate) }),
+                ...(endDate && { lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) })
+            };
+        }
+
+        const logs = await prisma.activityLog.findMany({
+            where,
+            orderBy: { created_at: 'desc' },
+            take: 10000, // Limit export to 10k records
+            include: {
+                user: { select: { email: true } },
+                employee: { select: { name: true } }
+            }
+        });
+
+        // Build CSV
+        const headers = ['ID', 'Timestamp', 'Action', 'Entity Type', 'Entity ID', 'Description', 'User Email', 'Employee Name', 'IP Address'];
+        const rows = logs.map(log => [
+            log.id,
+            log.created_at.toISOString(),
+            log.action,
+            log.entity_type,
+            log.entity_id || '',
+            `"${(log.description || '').replace(/"/g, '""')}"`,
+            log.user?.email || '',
+            log.employee?.name || '',
+            log.ip_address || ''
+        ]);
+
+        const csv = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=activity-logs-${new Date().toISOString().split('T')[0]}.csv`);
+        res.send(csv);
+    } catch (error) {
+        console.error('Error exporting logs:', error);
+        res.status(500).json({ error: 'Failed to export logs' });
+    }
+};
+
+module.exports = {
+    getLogs,
+    getEntityLogs,
+    getUserLogs,
+    getStats,
+    exportLogs
+};

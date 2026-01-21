@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
+const { logLogin, logRegister } = require('../services/activityLogger');
 
 
 // Zod Schemas
@@ -56,6 +57,10 @@ const register = async (req, res) => {
         });
 
         const tokens = generateTokens(user);
+
+        // Log registration
+        await logRegister(user.id, email, req);
+
         res.status(201).json({ ...tokens, user: { id: user.id, email: user.email } });
     } catch (error) {
         console.error('Registration Error:', error);
@@ -86,6 +91,10 @@ const login = async (req, res) => {
         }
 
         const tokens = generateTokens(user);
+
+        // Log successful login
+        await logLogin(user.id, req, { email: user.email });
+
         res.json({ ...tokens, user: { id: user.id, email: user.email } });
     } catch (error) {
         res.status(500).json({ error: 'Login failed' });

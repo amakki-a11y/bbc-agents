@@ -14,6 +14,8 @@ const leaveRoutes = require('../leave.routes');
 const botRoutes = require('../ai_bot.routes');
 const goalRoutes = require('../goals.routes');
 const messageRoutes = require('../messaging.routes');
+const documentRoutes = require('../documents.routes');
+const activityLogRoutes = require('../activityLogs.routes');
 
 // Mount all routes under /api/v1
 router.use('/', dataRoutes);
@@ -28,5 +30,7 @@ router.use('/leave', leaveRoutes);
 router.use('/bot', botRoutes);
 router.use('/goals', goalRoutes);
 router.use('/messages', messageRoutes);
+router.use('/documents', documentRoutes);
+router.use('/activity-logs', activityLogRoutes);
 
 module.exports = router;

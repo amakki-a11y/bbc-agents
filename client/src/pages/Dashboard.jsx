@@ -4,7 +4,7 @@ import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
-    CalendarOff, Target, Sparkles, X
+    CalendarOff, Target, Sparkles, X, Activity
 } from 'lucide-react';
 import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
@@ -542,6 +542,7 @@ const Dashboard = ({ children }) => {
                             <NavItem icon={Clock} label="Attendance" href="/attendance" />
                             <NavItem icon={CalendarOff} label="Leave" href="/leave" />
                             <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" />
+                            <NavItem icon={Activity} label="Activity Logs" href="/activity-logs" />
                         </div>
                     </div>
 

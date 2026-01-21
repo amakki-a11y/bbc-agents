@@ -22,6 +22,7 @@ model User {
   taskTemplates       TaskTemplate[]
   notifications       Notification[]
   employee            Employee?
+  activityLogs        ActivityLog[]
 }
 
 // Company System Models
@@ -172,6 +173,7 @@ model Employee {
   statusHistory      EmployeeStatusHistory[]
   roleHistory        EmployeeRoleHistory[]
   conductedReviews   PerformanceReview[]     @relation("ReviewConductor")
+  activityLogs       ActivityLog[]
 
   @@index([status])
   @@index([department_id])
@@ -844,4 +846,30 @@ model EmployeeRoleHistory {
   @@index([employee_id])
   @@index([effectiveDate])
   @@index([changeType])
+}
+
+// ===========================================
+// SYSTEM ACTIVITY LOGS
+// ===========================================
+
+model ActivityLog {
+  id          Int       @id @default(autoincrement())
+  user_id     Int?
+  user        User?     @relation(fields: [user_id], references: [id])
+  employee_id String?
+  employee    Employee? @relation(fields: [employee_id], references: [id])
+  action      String    // login, logout, create, update, delete, upload, download, view, etc.
+  entity_type String    // task, employee, document, attendance, leave, goal, department, role, etc.
+  entity_id   String?   // ID of the affected entity
+  description String
+  metadata    Json?     // Additional context data
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime  @default(now())
+
+  @@index([user_id])
+  @@index([employee_id])
+  @@index([entity_type])
+  @@index([action])
+  @@index([created_at])
 }

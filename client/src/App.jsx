@@ -24,6 +24,7 @@ const OrgChartPage = React.lazy(() => import('./pages/OrgChartPage'));
 const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const GoalsPage = React.lazy(() => import('./pages/GoalsPage'));
 const EmployeeProfilePage = React.lazy(() => import('./pages/EmployeeProfilePage'));
+const ActivityLogsPage = React.lazy(() => import('./pages/ActivityLogsPage'));
 
 function App() {
     return (
@@ -49,6 +50,7 @@ function App() {
                                 <Route path="/org-chart" element={<ProtectedRoute><OrgChartPage /></ProtectedRoute>} />
                                 <Route path="/inbox" element={<ProtectedRoute><Dashboard><InboxPage /></Dashboard></ProtectedRoute>} />
                                 <Route path="/goals" element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />
+                                <Route path="/activity-logs" element={<ProtectedRoute><ActivityLogsPage /></ProtectedRoute>} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </Suspense>

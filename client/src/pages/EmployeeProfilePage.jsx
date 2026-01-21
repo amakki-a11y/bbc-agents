@@ -1732,7 +1732,7 @@ const UploadDocumentModal = ({ employeeId, onClose, onSave }) => {
             data.append('documentType', formData.documentType);
             data.append('title', formData.title || formData.file.name);
 
-            await http.post(`/employees/${employeeId}/documents`, data, {
+            await http.post(`/documents/employee/${employeeId}`, data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             onSave();
