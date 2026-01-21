@@ -27,7 +27,38 @@ app.use(performanceMiddleware); // Measure time first
 app.use(compression); // Compress responses
 app.use(requestLogger);
 app.use(helmetConfig);
-app.use(cors());
+
+// CORS configuration - must be before routes
+const allowedOrigins = [
+  'https://front-end-production-ad4c.up.railway.app',
+  'https://bbc-agents-app.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+console.log('Allowed CORS origins:', allowedOrigins);
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked:', origin);
+      callback(null, true); // Allow anyway for debugging
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Handle preflight requests
+app.options('*', cors());
+
 app.use(express.json());
 
 // Apply security middleware (Rate limiting, XSS, HPP)
