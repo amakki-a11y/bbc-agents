@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const cache = require('../utils/cache');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Get attendance records with filters
 const getAttendance = async (req, res) => {
@@ -141,6 +142,16 @@ const checkIn = async (req, res) => {
                 }
             });
 
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'attendance',
+            attendance.id,
+            `Checked in${isLate ? ' (late)' : ''}`,
+            req,
+            { isLate, time: checkInTime }
+        );
+
         cache.delByPrefix('attendance');
         res.status(201).json({
             message: 'Checked in successfully',
@@ -201,6 +212,16 @@ const checkOut = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'attendance',
+            updated.id,
+            `Checked out after ${hoursWorked.toFixed(2)} hours`,
+            req,
+            { hoursWorked: hoursWorked.toFixed(2), status }
+        );
+
         cache.delByPrefix('attendance');
         res.json({
             message: 'Checked out successfully',
@@ -236,6 +257,16 @@ const createAttendance = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'attendance',
+            attendance.id,
+            `Created attendance record for ${attendance.employee.name}`,
+            req,
+            { employee: attendance.employee.name, date, status }
+        );
+
         cache.delByPrefix('attendance');
         res.status(201).json(attendance);
     } catch (error) {
@@ -265,6 +296,16 @@ const updateAttendance = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'attendance',
+            attendance.id,
+            `Updated attendance record for ${attendance.employee.name}`,
+            req,
+            { employee: attendance.employee.name, status }
+        );
+
         cache.delByPrefix('attendance');
         res.json(attendance);
     } catch (error) {
@@ -280,7 +321,23 @@ const updateAttendance = async (req, res) => {
 const deleteAttendance = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Get record before deleting for logging
+        const record = await prisma.attendance.findUnique({
+            where: { id },
+            include: { employee: { select: { name: true } } }
+        });
+
         await prisma.attendance.delete({ where: { id } });
+
+        // Log activity
+        await logDelete(
+            req.user?.userId,
+            'attendance',
+            id,
+            `Deleted attendance record${record?.employee?.name ? ` for ${record.employee.name}` : ''}`,
+            req
+        );
 
         cache.delByPrefix('attendance');
         res.status(204).send();

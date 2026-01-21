@@ -124,9 +124,9 @@ const EmployeesPage = () => {
 
     const getStatusBadge = (status) => {
         const styles = {
-            active: { bg: '#dcfce7', color: '#166534' },
-            inactive: { bg: '#fee2e2', color: '#991b1b' },
-            on_leave: { bg: '#fef3c7', color: '#92400e' }
+            active: { bg: 'var(--success-bg)', color: 'var(--success)' },
+            inactive: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+            on_leave: { bg: 'var(--warning-bg)', color: 'var(--warning)' }
         };
         const style = styles[status] || styles.active;
         return (
@@ -149,17 +149,17 @@ const EmployeesPage = () => {
 
     return (
         <Dashboard>
-            <div style={{ padding: '24px', height: '100%', overflow: 'auto', background: '#f9fafb' }}>
+            <div style={{ padding: '24px', height: '100%', overflow: 'auto', background: 'var(--bg-secondary)' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <div>
-                            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1f2937', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{
                                     width: '40px',
                                     height: '40px',
                                     borderRadius: '10px',
-                                    background: 'linear-gradient(135deg, #7b68ee, #6366f1)',
+                                    background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
@@ -168,7 +168,7 @@ const EmployeesPage = () => {
                                 </div>
                                 Employees
                             </h1>
-                            <p style={{ color: '#6b7280', marginTop: '8px', marginLeft: '52px', fontSize: '14px' }}>
+                            <p style={{ color: 'var(--text-secondary)', marginTop: '8px', marginLeft: '52px', fontSize: '14px' }}>
                                 Manage your team members and their information
                             </p>
                         </div>
@@ -179,7 +179,7 @@ const EmployeesPage = () => {
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '10px 20px',
-                                background: '#7b68ee',
+                                background: 'var(--primary)',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
@@ -187,14 +187,14 @@ const EmployeesPage = () => {
                                 fontWeight: 600,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                boxShadow: '0 2px 8px rgba(123, 104, 238, 0.3)'
+                                boxShadow: 'var(--shadow-sm)'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#6366f1';
+                                e.currentTarget.style.background = 'var(--primary-dark)';
                                 e.currentTarget.style.transform = 'translateY(-1px)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#7b68ee';
+                                e.currentTarget.style.background = 'var(--primary)';
                                 e.currentTarget.style.transform = 'translateY(0)';
                             }}
                         >
@@ -209,7 +209,7 @@ const EmployeesPage = () => {
                             minWidth: '250px',
                             position: 'relative'
                         }}>
-                            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             <input
                                 type="text"
                                 placeholder="Search employees..."
@@ -218,19 +218,20 @@ const EmployeesPage = () => {
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px 10px 40px',
-                                    border: '1px solid #e5e7eb',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
                                     fontSize: '14px',
                                     outline: 'none',
-                                    background: 'white',
+                                    background: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
                                     transition: 'all 0.2s ease'
                                 }}
                                 onFocus={(e) => {
-                                    e.currentTarget.style.borderColor = '#7b68ee';
-                                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(123, 104, 238, 0.1)';
+                                    e.currentTarget.style.borderColor = 'var(--primary)';
+                                    e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-bg)';
                                 }}
                                 onBlur={(e) => {
-                                    e.currentTarget.style.borderColor = '#e5e7eb';
+                                    e.currentTarget.style.borderColor = 'var(--border-color)';
                                     e.currentTarget.style.boxShadow = 'none';
                                 }}
                             />
@@ -242,12 +243,12 @@ const EmployeesPage = () => {
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '10px 16px',
-                                border: '1px solid #e5e7eb',
+                                border: '1px solid var(--border-color)',
                                 borderRadius: '8px',
-                                background: showFilters ? '#f0edff' : 'white',
+                                background: showFilters ? 'var(--primary-bg)' : 'var(--bg-primary)',
                                 cursor: 'pointer',
                                 fontSize: '14px',
-                                color: showFilters ? '#7b68ee' : '#4b5563',
+                                color: showFilters ? 'var(--primary)' : 'var(--text-secondary)',
                                 fontWeight: 500,
                                 transition: 'all 0.2s ease'
                             }}
@@ -264,10 +265,12 @@ const EmployeesPage = () => {
                                 onChange={(e) => setFilterDepartment(e.target.value)}
                                 style={{
                                     padding: '8px 12px',
-                                    border: '1px solid #e5e7eb',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
                                     fontSize: '14px',
-                                    minWidth: '150px'
+                                    minWidth: '150px',
+                                    background: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)'
                                 }}
                             >
                                 <option value="">All Departments</option>
@@ -280,10 +283,12 @@ const EmployeesPage = () => {
                                 onChange={(e) => setFilterRole(e.target.value)}
                                 style={{
                                     padding: '8px 12px',
-                                    border: '1px solid #e5e7eb',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
                                     fontSize: '14px',
-                                    minWidth: '150px'
+                                    minWidth: '150px',
+                                    background: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)'
                                 }}
                             >
                                 <option value="">All Roles</option>
@@ -296,10 +301,12 @@ const EmployeesPage = () => {
                                 onChange={(e) => setFilterStatus(e.target.value)}
                                 style={{
                                     padding: '8px 12px',
-                                    border: '1px solid #e5e7eb',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
                                     fontSize: '14px',
-                                    minWidth: '150px'
+                                    minWidth: '150px',
+                                    background: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)'
                                 }}
                             >
                                 <option value="">All Status</option>
@@ -313,44 +320,44 @@ const EmployeesPage = () => {
 
                 {/* Employee Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                    <div style={{ background: '#f0edff', padding: '20px', borderRadius: '12px', border: '1px solid #d4ccff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#7b68ee', fontSize: '14px', fontWeight: 500 }}>Total Employees</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#5b4dc7' }}>{stats.total}</div>
+                    <div style={{ background: 'var(--primary-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--primary)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: 500 }}>Total Employees</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--primary-dark)' }}>{stats.total}</div>
                     </div>
-                    <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#15803d', fontSize: '14px', fontWeight: 500 }}>Active</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#14532d' }}>{stats.active}</div>
+                    <div style={{ background: 'var(--success-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--success)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ color: 'var(--success)', fontSize: '14px', fontWeight: 500 }}>Active</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--success)' }}>{stats.active}</div>
                     </div>
-                    <div style={{ background: '#fffbeb', padding: '20px', borderRadius: '12px', border: '1px solid #fde68a', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#b45309', fontSize: '14px', fontWeight: 500 }}>On Leave</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#78350f' }}>{stats.onLeave}</div>
+                    <div style={{ background: 'var(--warning-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--warning)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ color: 'var(--warning)', fontSize: '14px', fontWeight: 500 }}>On Leave</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--warning)' }}>{stats.onLeave}</div>
                     </div>
-                    <div style={{ background: '#fef2f2', padding: '20px', borderRadius: '12px', border: '1px solid #fecaca', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#b91c1c', fontSize: '14px', fontWeight: 500 }}>Departments</div>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: '#7f1d1d' }}>{departments.length}</div>
+                    <div style={{ background: 'var(--danger-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--danger)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ color: 'var(--danger)', fontSize: '14px', fontWeight: 500 }}>Departments</div>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--danger)' }}>{departments.length}</div>
                     </div>
                 </div>
 
                 {/* Employees Table */}
-                <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
                     {loading ? (
-                        <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                             Loading employees...
                         </div>
                     ) : employees.length === 0 ? (
-                        <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                             No employees found
                         </div>
                     ) : (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Employee</th>
-                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Department</th>
-                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Role</th>
-                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Manager</th>
-                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Status</th>
-                                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Actions</th>
+                                <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Employee</th>
+                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Department</th>
+                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Role</th>
+                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Manager</th>
+                                    <th style={{ padding: '14px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Status</th>
+                                    <th style={{ padding: '14px 16px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -358,7 +365,7 @@ const EmployeesPage = () => {
                                     <tr
                                         key={employee.id}
                                         onClick={() => setSelectedEmployee(employee)}
-                                        style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                                        style={{ borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
                                         className="task-row"
                                     >
                                         <td style={{ padding: '16px' }}>
@@ -367,7 +374,7 @@ const EmployeesPage = () => {
                                                     width: '40px',
                                                     height: '40px',
                                                     borderRadius: '50%',
-                                                    background: 'linear-gradient(135deg, #7b68ee, #6366f1)',
+                                                    background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -378,24 +385,24 @@ const EmployeesPage = () => {
                                                     {employee.name?.charAt(0).toUpperCase() || 'E'}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontWeight: 600, color: '#1f2937' }}>{employee.name}</div>
-                                                    <div style={{ fontSize: '13px', color: '#6b7280' }}>{employee.email}</div>
+                                                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{employee.name}</div>
+                                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{employee.email}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '16px' }}>
+                                        <td style={{ padding: '16px', color: 'var(--text-primary)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Building2 size={16} style={{ color: '#9ca3af' }} />
+                                                <Building2 size={16} style={{ color: 'var(--text-muted)' }} />
                                                 <span>{employee.department?.name || 'Unassigned'}</span>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '16px' }}>
+                                        <td style={{ padding: '16px', color: 'var(--text-primary)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Shield size={16} style={{ color: '#9ca3af' }} />
+                                                <Shield size={16} style={{ color: 'var(--text-muted)' }} />
                                                 <span>{employee.role?.name || 'Employee'}</span>
                                             </div>
                                         </td>
-                                        <td style={{ padding: '16px', color: '#6b7280' }}>
+                                        <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>
                                             {employee.manager?.name || '-'}
                                         </td>
                                         <td style={{ padding: '16px' }}>
@@ -409,7 +416,7 @@ const EmployeesPage = () => {
                                                 }}
                                                 style={{
                                                     padding: '6px 12px',
-                                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                    background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
                                                     color: 'white',
                                                     border: 'none',
                                                     borderRadius: '8px',
@@ -438,7 +445,7 @@ const EmployeesPage = () => {
                     {!loading && totalEmployees > 0 && (
                         <div style={{
                             padding: '16px 20px',
-                            borderTop: '1px solid #e5e7eb',
+                            borderTop: '1px solid var(--border-color)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
@@ -446,7 +453,7 @@ const EmployeesPage = () => {
                             gap: '12px'
                         }}>
                             {/* Showing info */}
-                            <div style={{ color: '#6b7280', fontSize: '14px' }}>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                                 Showing {startIndex}-{endIndex} of {totalEmployees} employees
                             </div>
 
@@ -458,10 +465,12 @@ const EmployeesPage = () => {
                                     onChange={(e) => setItemsPerPage(Number(e.target.value))}
                                     style={{
                                         padding: '6px 10px',
-                                        border: '1px solid #e5e7eb',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '6px',
                                         fontSize: '14px',
-                                        marginRight: '16px'
+                                        marginRight: '16px',
+                                        background: 'var(--bg-primary)',
+                                        color: 'var(--text-primary)'
                                     }}
                                 >
                                     <option value={10}>10 / page</option>
@@ -475,11 +484,11 @@ const EmployeesPage = () => {
                                     disabled={currentPage === 1}
                                     style={{
                                         padding: '6px 10px',
-                                        border: '1px solid #e5e7eb',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '6px',
-                                        background: currentPage === 1 ? '#f9fafb' : 'white',
+                                        background: currentPage === 1 ? 'var(--bg-secondary)' : 'var(--bg-primary)',
                                         cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                                        color: currentPage === 1 ? '#9ca3af' : '#374151',
+                                        color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
                                         display: 'flex',
                                         alignItems: 'center'
                                     }}
@@ -495,10 +504,10 @@ const EmployeesPage = () => {
                                         style={{
                                             padding: '6px 12px',
                                             border: '1px solid',
-                                            borderColor: currentPage === page ? '#7b68ee' : '#e5e7eb',
+                                            borderColor: currentPage === page ? 'var(--primary)' : 'var(--border-color)',
                                             borderRadius: '6px',
-                                            background: currentPage === page ? '#7b68ee' : 'white',
-                                            color: currentPage === page ? 'white' : '#374151',
+                                            background: currentPage === page ? 'var(--primary)' : 'var(--bg-primary)',
+                                            color: currentPage === page ? 'white' : 'var(--text-primary)',
                                             cursor: 'pointer',
                                             fontWeight: currentPage === page ? 600 : 400,
                                             fontSize: '14px',
@@ -515,11 +524,11 @@ const EmployeesPage = () => {
                                     disabled={currentPage === totalPages || totalPages === 0}
                                     style={{
                                         padding: '6px 10px',
-                                        border: '1px solid #e5e7eb',
+                                        border: '1px solid var(--border-color)',
                                         borderRadius: '6px',
-                                        background: currentPage === totalPages ? '#f9fafb' : 'white',
+                                        background: currentPage === totalPages ? 'var(--bg-secondary)' : 'var(--bg-primary)',
                                         cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                                        color: currentPage === totalPages ? '#9ca3af' : '#374151',
+                                        color: currentPage === totalPages ? 'var(--text-muted)' : 'var(--text-primary)',
                                         display: 'flex',
                                         alignItems: 'center'
                                     }}

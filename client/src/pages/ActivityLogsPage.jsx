@@ -102,29 +102,29 @@ const ActivityLogsPage = () => {
 
     const getActionIcon = (action) => {
         const icons = {
-            login: <LogIn size={16} style={{ color: '#10b981' }} />,
-            logout: <LogOut size={16} style={{ color: '#64748b' }} />,
-            create: <Plus size={16} style={{ color: '#6366f1' }} />,
-            update: <Edit3 size={16} style={{ color: '#f59e0b' }} />,
-            delete: <Trash2 size={16} style={{ color: '#ef4444' }} />,
-            upload: <Upload size={16} style={{ color: '#8b5cf6' }} />,
-            download: <Download size={16} style={{ color: '#0ea5e9' }} />,
-            view: <Eye size={16} style={{ color: '#64748b' }} />
+            login: <LogIn size={16} style={{ color: 'var(--success)' }} />,
+            logout: <LogOut size={16} style={{ color: 'var(--text-muted)' }} />,
+            create: <Plus size={16} style={{ color: 'var(--primary)' }} />,
+            update: <Edit3 size={16} style={{ color: 'var(--warning)' }} />,
+            delete: <Trash2 size={16} style={{ color: 'var(--danger)' }} />,
+            upload: <Upload size={16} style={{ color: 'var(--primary-light)' }} />,
+            download: <Download size={16} style={{ color: 'var(--info)' }} />,
+            view: <Eye size={16} style={{ color: 'var(--text-muted)' }} />
         };
-        return icons[action] || <Activity size={16} style={{ color: '#64748b' }} />;
+        return icons[action] || <Activity size={16} style={{ color: 'var(--text-muted)' }} />;
     };
 
     const getActionBadge = (action) => {
         const styles = {
-            login: { bg: '#ecfdf5', color: '#059669' },
-            logout: { bg: '#f1f5f9', color: '#64748b' },
-            create: { bg: '#eef2ff', color: '#4f46e5' },
-            update: { bg: '#fef3c7', color: '#d97706' },
-            delete: { bg: '#fee2e2', color: '#dc2626' },
-            upload: { bg: '#f3e8ff', color: '#7c3aed' },
-            download: { bg: '#e0f2fe', color: '#0284c7' },
-            view: { bg: '#f1f5f9', color: '#64748b' },
-            register: { bg: '#ecfdf5', color: '#059669' }
+            login: { bg: 'var(--success-bg)', color: 'var(--success)' },
+            logout: { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' },
+            create: { bg: 'var(--primary-bg)', color: 'var(--primary)' },
+            update: { bg: 'var(--warning-bg)', color: 'var(--warning)' },
+            delete: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+            upload: { bg: 'var(--primary-bg)', color: 'var(--primary-light)' },
+            download: { bg: 'var(--info-bg)', color: 'var(--info)' },
+            view: { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' },
+            register: { bg: 'var(--success-bg)', color: 'var(--success)' }
         };
         const style = styles[action] || styles.view;
         return (
@@ -302,14 +302,14 @@ const ActivityLogsPage = () => {
                     {showFilters && (
                         <div className="card-modern animate-fadeInUp" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Filters</h3>
+                                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>Filters</h3>
                                 {hasActiveFilters && (
                                     <button
                                         onClick={clearFilters}
                                         style={{
                                             background: 'none',
                                             border: 'none',
-                                            color: '#6366f1',
+                                            color: 'var(--primary)',
                                             cursor: 'pointer',
                                             fontSize: '0.85rem',
                                             fontWeight: 500,
@@ -325,7 +325,7 @@ const ActivityLogsPage = () => {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                         Action
                                     </label>
                                     <select
@@ -345,7 +345,7 @@ const ActivityLogsPage = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                         Entity Type
                                     </label>
                                     <select
@@ -366,7 +366,7 @@ const ActivityLogsPage = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                         Start Date
                                     </label>
                                     <input
@@ -377,7 +377,7 @@ const ActivityLogsPage = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                         End Date
                                     </label>
                                     <input
@@ -388,11 +388,11 @@ const ActivityLogsPage = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                         Search
                                     </label>
                                     <div style={{ position: 'relative' }}>
-                                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                                         <input
                                             type="text"
                                             value={filters.search}
@@ -414,18 +414,18 @@ const ActivityLogsPage = () => {
                                 <div className="animate-spin" style={{
                                     width: 40,
                                     height: 40,
-                                    border: '4px solid #e2e8f0',
-                                    borderTopColor: '#6366f1',
+                                    border: '4px solid var(--border-color)',
+                                    borderTopColor: 'var(--primary)',
                                     borderRadius: '50%',
                                     margin: '0 auto 1rem'
                                 }} />
-                                <p style={{ color: '#64748b', margin: 0 }}>Loading activity logs...</p>
+                                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Loading activity logs...</p>
                             </div>
                         ) : logs.length === 0 ? (
                             <div style={{ padding: '3rem', textAlign: 'center' }}>
-                                <Activity size={48} style={{ color: '#cbd5e1', marginBottom: '1rem' }} />
-                                <h3 style={{ color: '#64748b', margin: '0 0 0.5rem' }}>No activity logs found</h3>
-                                <p style={{ color: '#94a3b8', margin: 0 }}>
+                                <Activity size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
+                                <h3 style={{ color: 'var(--text-secondary)', margin: '0 0 0.5rem' }}>No activity logs found</h3>
+                                <p style={{ color: 'var(--text-muted)', margin: 0 }}>
                                     {hasActiveFilters ? 'Try adjusting your filters' : 'Activity will appear here as users interact with the system'}
                                 </p>
                             </div>
@@ -433,35 +433,35 @@ const ActivityLogsPage = () => {
                             <>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ background: '#f8fafc' }}>
-                                            <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Action</th>
-                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Entity</th>
-                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Description</th>
-                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>User</th>
-                                            <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Time</th>
+                                        <tr style={{ background: 'var(--bg-secondary)' }}>
+                                            <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Action</th>
+                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Entity</th>
+                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Description</th>
+                                            <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>User</th>
+                                            <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Time</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {logs.map((log) => (
-                                            <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <tr key={log.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                                 <td style={{ padding: '1rem 1.5rem' }}>
                                                     {getActionBadge(log.action)}
                                                 </td>
                                                 <td style={{ padding: '1rem' }}>
                                                     <span style={{
-                                                        background: '#f1f5f9',
+                                                        background: 'var(--bg-tertiary)',
                                                         padding: '4px 10px',
                                                         borderRadius: '6px',
                                                         fontSize: '0.8rem',
                                                         fontWeight: 500,
-                                                        color: '#475569',
+                                                        color: 'var(--text-primary)',
                                                         textTransform: 'capitalize'
                                                     }}>
                                                         {log.entity_type}
-                                                        {log.entity_id && <span style={{ color: '#94a3b8' }}> #{log.entity_id.slice(0, 8)}</span>}
+                                                        {log.entity_id && <span style={{ color: 'var(--text-muted)' }}> #{log.entity_id.slice(0, 8)}</span>}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '1rem', color: '#334155', fontSize: '0.9rem', maxWidth: '400px' }}>
+                                                <td style={{ padding: '1rem', color: 'var(--text-primary)', fontSize: '0.9rem', maxWidth: '400px' }}>
                                                     <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {log.description}
                                                     </span>
@@ -472,7 +472,7 @@ const ActivityLogsPage = () => {
                                                             width: 28,
                                                             height: 28,
                                                             borderRadius: '8px',
-                                                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                            background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
@@ -482,12 +482,12 @@ const ActivityLogsPage = () => {
                                                         }}>
                                                             {log.user?.email?.charAt(0).toUpperCase() || log.employee?.name?.charAt(0).toUpperCase() || '?'}
                                                         </span>
-                                                        <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                                                             {log.user?.email || log.employee?.name || 'System'}
                                                         </span>
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                                                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: 'var(--text-secondary)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                                                     {formatDate(log.created_at)}
                                                 </td>
                                             </tr>
@@ -498,13 +498,13 @@ const ActivityLogsPage = () => {
                                 {/* Pagination */}
                                 <div style={{
                                     padding: '1rem 1.5rem',
-                                    borderTop: '1px solid #e2e8f0',
+                                    borderTop: '1px solid var(--border-color)',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    background: '#f8fafc'
+                                    background: 'var(--bg-secondary)'
                                 }}>
-                                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                         Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries
                                     </span>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -521,7 +521,7 @@ const ActivityLogsPage = () => {
                                             alignItems: 'center',
                                             padding: '0 1rem',
                                             fontSize: '0.85rem',
-                                            color: '#475569',
+                                            color: 'var(--text-primary)',
                                             fontWeight: 500
                                         }}>
                                             Page {pagination.page} of {pagination.totalPages}
@@ -559,8 +559,8 @@ const StatCard = ({ icon: Icon, label, value, gradient }) => (
             <Icon size={20} color="white" />
         </div>
         <div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{value}</div>
-            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500 }}>{label}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</div>
         </div>
     </div>
 );

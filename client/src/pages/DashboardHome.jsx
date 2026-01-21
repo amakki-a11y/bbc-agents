@@ -121,20 +121,20 @@ const DashboardHome = () => {
 
     const getPriorityColor = (priority) => {
         switch (priority) {
-            case 'urgent': return '#ef4444';
-            case 'high': return '#f97316';
-            case 'medium': return '#6366f1';
-            case 'low': return '#22c55e';
-            default: return '#94a3b8';
+            case 'urgent': return 'var(--danger)';
+            case 'high': return 'var(--warning)';
+            case 'medium': return 'var(--primary)';
+            case 'low': return 'var(--success)';
+            default: return 'var(--text-muted)';
         }
     };
 
     const getActivityIcon = (type) => {
         switch (type) {
-            case 'task_completed': return <CheckCircle2 size={16} style={{ color: '#10b981' }} />;
-            case 'check_in': return <LogIn size={16} style={{ color: '#6366f1' }} />;
-            case 'task_assigned': return <FileText size={16} style={{ color: '#8b5cf6' }} />;
-            default: return <Bell size={16} style={{ color: '#94a3b8' }} />;
+            case 'task_completed': return <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />;
+            case 'check_in': return <LogIn size={16} style={{ color: 'var(--primary)' }} />;
+            case 'task_assigned': return <FileText size={16} style={{ color: 'var(--primary-light)' }} />;
+            default: return <Bell size={16} style={{ color: 'var(--text-muted)' }} />;
         }
     };
 
@@ -174,7 +174,7 @@ const DashboardHome = () => {
                     <div style={{
                         fontSize: '2rem',
                         fontWeight: 800,
-                        color: '#0f172a',
+                        color: 'var(--text-primary)',
                         lineHeight: 1,
                         marginBottom: '0.25rem'
                     }}>
@@ -182,7 +182,7 @@ const DashboardHome = () => {
                     </div>
                     <div style={{
                         fontSize: '0.875rem',
-                        color: '#64748b',
+                        color: 'var(--text-secondary)',
                         fontWeight: 500
                     }}>
                         {label}
@@ -232,18 +232,18 @@ const DashboardHome = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#f8fafc'
+                background: 'var(--bg-secondary)'
             }}>
                 <div style={{ textAlign: 'center' }}>
                     <div className="animate-spin" style={{
                         width: 48,
                         height: 48,
-                        border: '4px solid #e2e8f0',
-                        borderTopColor: '#6366f1',
+                        border: '4px solid var(--border-color)',
+                        borderTopColor: 'var(--primary)',
                         borderRadius: '50%',
                         margin: '0 auto 1rem'
                     }} />
-                    <div style={{ color: '#64748b', fontWeight: 500 }}>Loading dashboard...</div>
+                    <div style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Loading dashboard...</div>
                 </div>
             </div>
         );
@@ -252,7 +252,7 @@ const DashboardHome = () => {
     return (
         <div className="scrollbar-modern" style={{
             flex: 1,
-            background: '#f8fafc',
+            background: 'var(--bg-secondary)',
             padding: '2rem',
             overflowY: 'auto'
         }}>
@@ -387,7 +387,7 @@ const DashboardHome = () => {
                         <div className="card-modern animate-fadeInUp" style={{ animationDelay: '200ms' }}>
                             <div style={{
                                 padding: '1.25rem 1.5rem',
-                                borderBottom: '1px solid #f1f5f9',
+                                borderBottom: '1px solid var(--border-color)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between'
@@ -397,7 +397,7 @@ const DashboardHome = () => {
                                         width: 36,
                                         height: 36,
                                         borderRadius: 10,
-                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                        background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center'
@@ -405,10 +405,10 @@ const DashboardHome = () => {
                                         <CheckSquare size={18} color="white" />
                                     </div>
                                     <div>
-                                        <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                                        <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                                             My Tasks
                                         </h2>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                             {upcomingTasks.length} tasks pending
                                         </p>
                                     </div>
@@ -419,22 +419,22 @@ const DashboardHome = () => {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '6px',
-                                        background: '#f1f5f9',
+                                        background: 'var(--bg-tertiary)',
                                         border: 'none',
                                         padding: '0.5rem 1rem',
                                         borderRadius: '10px',
-                                        color: '#6366f1',
+                                        color: 'var(--primary)',
                                         fontSize: '0.85rem',
                                         fontWeight: 600,
                                         cursor: 'pointer',
                                         transition: 'all 0.2s ease'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = '#e0e7ff';
+                                        e.currentTarget.style.background = 'var(--primary-bg)';
                                         e.currentTarget.style.gap = '10px';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = '#f1f5f9';
+                                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                                         e.currentTarget.style.gap = '6px';
                                     }}
                                 >
@@ -456,7 +456,7 @@ const DashboardHome = () => {
                                             transition: 'all 0.2s ease',
                                             animationDelay: `${idx * 50}ms`
                                         }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <div style={{
@@ -474,7 +474,7 @@ const DashboardHome = () => {
                                             <div style={{
                                                 fontSize: '0.9rem',
                                                 fontWeight: 600,
-                                                color: '#1e293b',
+                                                color: 'var(--text-primary)',
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
                                                 textOverflow: 'ellipsis'
@@ -496,8 +496,8 @@ const DashboardHome = () => {
                                             <span style={{
                                                 fontSize: '0.8rem',
                                                 fontWeight: 500,
-                                                color: formatDueDate(task.due_date) === 'Overdue' ? '#ef4444' :
-                                                       formatDueDate(task.due_date) === 'Today' ? '#f59e0b' : '#64748b'
+                                                color: formatDueDate(task.due_date) === 'Overdue' ? 'var(--danger)' :
+                                                       formatDueDate(task.due_date) === 'Today' ? 'var(--warning)' : 'var(--text-secondary)'
                                             }}>
                                                 {formatDueDate(task.due_date)}
                                             </span>
@@ -507,7 +507,7 @@ const DashboardHome = () => {
                                     <div style={{
                                         padding: '3rem',
                                         textAlign: 'center',
-                                        color: '#94a3b8'
+                                        color: 'var(--text-muted)'
                                     }}>
                                         <CheckCircle2 size={40} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
                                         <p style={{ margin: 0, fontWeight: 500 }}>All caught up!</p>
@@ -521,7 +521,7 @@ const DashboardHome = () => {
                         <div className="card-modern animate-fadeInUp" style={{ animationDelay: '300ms' }}>
                             <div style={{
                                 padding: '1.25rem 1.5rem',
-                                borderBottom: '1px solid #f1f5f9',
+                                borderBottom: '1px solid var(--border-color)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.75rem'
@@ -530,14 +530,14 @@ const DashboardHome = () => {
                                     width: 36,
                                     height: 36,
                                     borderRadius: 10,
-                                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                                    background: 'linear-gradient(135deg, var(--primary-light) 0%, #a855f7 100%)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
                                 }}>
                                     <Activity size={18} color="white" />
                                 </div>
-                                <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                                <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                                     Recent Activity
                                 </h2>
                             </div>
@@ -558,7 +558,7 @@ const DashboardHome = () => {
                                             width: '36px',
                                             height: '36px',
                                             borderRadius: '10px',
-                                            background: '#f8fafc',
+                                            background: 'var(--bg-secondary)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center'
@@ -566,10 +566,10 @@ const DashboardHome = () => {
                                             {getActivityIcon(activity.type)}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>
                                                 {activity.message}
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                                                 {activity.time}
                                             </div>
                                         </div>
@@ -590,12 +590,12 @@ const DashboardHome = () => {
                                 margin: '0 0 1.25rem',
                                 fontSize: '1rem',
                                 fontWeight: 700,
-                                color: '#0f172a',
+                                color: 'var(--text-primary)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem'
                             }}>
-                                <Zap size={18} style={{ color: '#f59e0b' }} />
+                                <Zap size={18} style={{ color: 'var(--warning)' }} />
                                 Quick Actions
                             </h2>
                             <div style={{
@@ -645,7 +645,7 @@ const DashboardHome = () => {
                                 margin: '0 0 1rem',
                                 fontSize: '1rem',
                                 fontWeight: 700,
-                                color: '#0f172a'
+                                color: 'var(--text-primary)'
                             }}>
                                 Today's Attendance
                             </h2>
@@ -656,20 +656,20 @@ const DashboardHome = () => {
                                     gap: '1rem',
                                     padding: '1.25rem',
                                     background: attendanceStatus.check_in
-                                        ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)'
-                                        : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                                        ? 'var(--success-bg)'
+                                        : 'var(--danger-bg)',
                                     borderRadius: '14px',
                                     border: attendanceStatus.check_in
-                                        ? '1px solid #a7f3d0'
-                                        : '1px solid #fecaca'
+                                        ? '1px solid var(--success)'
+                                        : '1px solid var(--danger)'
                                 }}>
                                     <div style={{
                                         width: '52px',
                                         height: '52px',
                                         borderRadius: '14px',
                                         background: attendanceStatus.check_in
-                                            ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
-                                            : 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)',
+                                            ? 'linear-gradient(135deg, var(--success) 0%, #34d399 100%)'
+                                            : 'linear-gradient(135deg, var(--danger) 0%, #f87171 100%)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -687,12 +687,12 @@ const DashboardHome = () => {
                                         <div style={{
                                             fontSize: '1rem',
                                             fontWeight: 700,
-                                            color: attendanceStatus.check_in ? '#047857' : '#dc2626'
+                                            color: attendanceStatus.check_in ? 'var(--success)' : 'var(--danger)'
                                         }}>
                                             {attendanceStatus.check_in ? 'Checked In' : 'Not Checked In'}
                                         </div>
                                         {attendanceStatus.check_in && (
-                                            <div style={{ fontSize: '0.85rem', color: '#059669', marginTop: '2px' }}>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--success)', marginTop: '2px' }}>
                                                 at {new Date(attendanceStatus.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         )}
@@ -701,10 +701,10 @@ const DashboardHome = () => {
                             ) : (
                                 <div style={{
                                     padding: '1.5rem',
-                                    background: '#f8fafc',
+                                    background: 'var(--bg-secondary)',
                                     borderRadius: '14px',
                                     textAlign: 'center',
-                                    color: '#64748b'
+                                    color: 'var(--text-secondary)'
                                 }}>
                                     <Clock size={32} style={{ marginBottom: '0.5rem', opacity: 0.4 }} />
                                     <p style={{ margin: 0, fontWeight: 500 }}>No attendance data</p>
@@ -721,15 +721,15 @@ const DashboardHome = () => {
                                 margin: '0 0 1rem',
                                 fontSize: '1rem',
                                 fontWeight: 700,
-                                color: '#0f172a'
+                                color: 'var(--text-primary)'
                             }}>
                                 Team Updates
                             </h2>
                             <div style={{
                                 padding: '2rem 1rem',
                                 textAlign: 'center',
-                                color: '#94a3b8',
-                                background: '#f8fafc',
+                                color: 'var(--text-muted)',
+                                background: 'var(--bg-secondary)',
                                 borderRadius: '14px'
                             }}>
                                 <Bell size={32} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />

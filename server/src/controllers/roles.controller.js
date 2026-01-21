@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const cache = require('../utils/cache');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Get all roles
 const getRoles = async (req, res) => {
@@ -84,6 +85,16 @@ const createRole = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'role',
+            role.id,
+            `Created role: ${name}`,
+            req,
+            { name }
+        );
+
         cache.delByPrefix('roles');
         res.status(201).json({
             ...role,
@@ -116,6 +127,16 @@ const updateRole = async (req, res) => {
             where: { id },
             data: updateData
         });
+
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'role',
+            role.id,
+            `Updated role: ${role.name}`,
+            req,
+            { name, permissions: !!permissions }
+        );
 
         cache.delByPrefix('roles');
         res.json({
@@ -150,7 +171,19 @@ const deleteRole = async (req, res) => {
             });
         }
 
+        // Get role name before deleting
+        const role = await prisma.role.findUnique({ where: { id } });
+
         await prisma.role.delete({ where: { id } });
+
+        // Log activity
+        await logDelete(
+            req.user?.userId,
+            'role',
+            id,
+            `Deleted role: ${role?.name || id}`,
+            req
+        );
 
         cache.delByPrefix('roles');
         res.status(204).send();
@@ -181,6 +214,16 @@ const updatePermissions = async (req, res) => {
                     : permissions
             }
         });
+
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'role',
+            role.id,
+            `Updated permissions for role: ${role.name}`,
+            req,
+            { permissionsUpdated: true }
+        );
 
         cache.delByPrefix('roles');
         res.json({

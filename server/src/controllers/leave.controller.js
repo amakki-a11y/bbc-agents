@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Get all leave types
 const getLeaveTypes = async (req, res) => {
@@ -26,6 +27,16 @@ const createLeaveType = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'leave_type',
+            type.id,
+            `Created leave type: ${name}`,
+            req,
+            { name, days_allowed }
+        );
+
         res.status(201).json(type);
     } catch (error) {
         console.error('Error creating leave type:', error);
@@ -51,6 +62,16 @@ const updateLeaveType = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'leave_type',
+            type.id,
+            `Updated leave type: ${type.name}`,
+            req,
+            { name, days_allowed }
+        );
+
         res.json(type);
     } catch (error) {
         console.error('Error updating leave type:', error);
@@ -63,9 +84,21 @@ const deleteLeaveType = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Get leave type name before deleting
+        const type = await prisma.leaveType.findUnique({ where: { id } });
+
         await prisma.leaveType.delete({
             where: { id }
         });
+
+        // Log activity
+        await logDelete(
+            req.user?.userId,
+            'leave_type',
+            id,
+            `Deleted leave type: ${type?.name || id}`,
+            req
+        );
 
         res.json({ message: 'Leave type deleted successfully' });
     } catch (error) {
@@ -196,6 +229,16 @@ const requestLeave = async (req, res) => {
                 data: { pending_days: { increment: days } }
             });
         }
+
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'leave',
+            leave.id,
+            `Requested ${leaveType.name} leave: ${days} days`,
+            req,
+            { leave_type: leaveType.name, days, start_date, end_date }
+        );
 
         res.status(201).json(leave);
     } catch (error) {
@@ -344,6 +387,16 @@ const approveLeave = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'leave',
+            leave.id,
+            `Approved leave request for ${leave.employee.name}`,
+            req,
+            { employee: leave.employee.name, days: leave.days }
+        );
+
         res.json(leave);
     } catch (error) {
         console.error('Error approving leave:', error);
@@ -403,6 +456,16 @@ const rejectLeave = async (req, res) => {
                 pending_days: { decrement: leave.days }
             }
         });
+
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'leave',
+            leave.id,
+            `Rejected leave request for ${leave.employee.name}`,
+            req,
+            { employee: leave.employee.name, days: leave.days, reason }
+        );
 
         res.json(leave);
     } catch (error) {
@@ -478,6 +541,16 @@ const cancelLeave = async (req, res) => {
                 }
             });
         }
+
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'leave',
+            leave.id,
+            `Cancelled leave request: ${leave.days} days`,
+            req,
+            { days: leave.days, previousStatus }
+        );
 
         res.json(leave);
     } catch (error) {

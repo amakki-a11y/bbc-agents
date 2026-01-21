@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
-
 const cache = require('../utils/cache');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 const createProject = async (req, res) => {
     try {
@@ -13,6 +13,17 @@ const createProject = async (req, res) => {
                 user_id: req.user.userId
             }
         });
+
+        // Log activity
+        await logCreate(
+            req.user.userId,
+            'project',
+            project.id,
+            `Created project: ${name}`,
+            req,
+            { name, color }
+        );
+
         cache.delByPrefix(`projects:${req.user.userId}`);
         res.status(201).json(project);
     } catch (error) {
@@ -119,6 +130,16 @@ const updateProject = async (req, res) => {
             data: updateData
         });
 
+        // Log activity
+        await logUpdate(
+            req.user.userId,
+            'project',
+            project.id,
+            `Updated project: ${project.name}`,
+            req,
+            { name, description, color }
+        );
+
         cache.delByPrefix(`projects:${req.user.userId}`);
         res.json(project);
     } catch (error) {
@@ -152,6 +173,17 @@ const archiveProject = async (req, res) => {
                 where: { id: parseInt(id) },
                 data: { archived: archived }
             });
+
+            // Log activity
+            await logUpdate(
+                req.user.userId,
+                'project',
+                project.id,
+                `${archived ? 'Archived' : 'Unarchived'} project: ${project.name}`,
+                req,
+                { archived }
+            );
+
             cache.delByPrefix(`projects:${req.user.userId}`);
             res.json(project);
         } catch (prismaError) {
@@ -209,6 +241,16 @@ const deleteProject = async (req, res) => {
         await prisma.project.delete({
             where: { id: parseInt(id) }
         });
+
+        // Log activity
+        await logDelete(
+            req.user.userId,
+            'project',
+            id,
+            `Deleted project: ${existingProject.name}`,
+            req,
+            { tasksCount: existingProject.tasks.length, movedTo: moveTasks || null }
+        );
 
         cache.delByPrefix(`projects:${req.user.userId}`);
         res.json({ success: true, message: "Project deleted successfully" });

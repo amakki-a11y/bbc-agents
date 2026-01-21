@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Get goal statistics
 const getGoalStats = async (req, res) => {
@@ -185,6 +186,16 @@ const createGoal = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'goal',
+            goal.id,
+            `Created goal: ${title}`,
+            req,
+            { goalType, ownerType, targetValue }
+        );
+
         res.status(201).json(goal);
     } catch (error) {
         console.error('createGoal error:', error);
@@ -226,6 +237,16 @@ const updateGoal = async (req, res) => {
             }
         });
 
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'goal',
+            goal.id,
+            `Updated goal: ${goal.title}`,
+            req,
+            { status, currentValue, targetValue }
+        );
+
         res.json(goal);
     } catch (error) {
         console.error('updateGoal error:', error);
@@ -241,9 +262,21 @@ const deleteGoal = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Get goal title before deleting
+        const goal = await prisma.goal.findUnique({ where: { id: parseInt(id) } });
+
         await prisma.goal.delete({
             where: { id: parseInt(id) }
         });
+
+        // Log activity
+        await logDelete(
+            req.user?.userId,
+            'goal',
+            id,
+            `Deleted goal: ${goal?.title || id}`,
+            req
+        );
 
         res.json({ success: true, message: 'Goal deleted' });
     } catch (error) {

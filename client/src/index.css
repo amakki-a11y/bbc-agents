@@ -33,7 +33,9 @@
   /* Primary Brand Colors */
   --primary: #6366f1;
   --primary-hover: #4f46e5;
-  --primary-light: rgba(99, 102, 241, 0.1);
+  --primary-dark: #4f46e5;
+  --primary-light: #8b5cf6;
+  --primary-bg: rgba(99, 102, 241, 0.1);
   --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 
   /* Status Colors */
@@ -125,7 +127,9 @@
   /* Primary Brand Colors */
   --primary: #818cf8;
   --primary-hover: #6366f1;
-  --primary-light: rgba(129, 140, 248, 0.15);
+  --primary-dark: #6366f1;
+  --primary-light: #a78bfa;
+  --primary-bg: rgba(129, 140, 248, 0.15);
   --primary-gradient: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
 
   /* Status Colors */

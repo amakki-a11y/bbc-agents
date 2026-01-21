@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const cache = require('../utils/cache');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Get all departments
 const getDepartments = async (req, res) => {
@@ -71,6 +72,16 @@ const createDepartment = async (req, res) => {
             data: { name, description }
         });
 
+        // Log activity
+        await logCreate(
+            req.user?.userId,
+            'department',
+            department.id,
+            `Created department: ${name}`,
+            req,
+            { name, description }
+        );
+
         cache.delByPrefix('departments');
         res.status(201).json(department);
     } catch (error) {
@@ -95,6 +106,16 @@ const updateDepartment = async (req, res) => {
                 ...(description !== undefined && { description })
             }
         });
+
+        // Log activity
+        await logUpdate(
+            req.user?.userId,
+            'department',
+            department.id,
+            `Updated department: ${department.name}`,
+            req,
+            { name, description }
+        );
 
         cache.delByPrefix('departments');
         res.json(department);
@@ -126,7 +147,19 @@ const deleteDepartment = async (req, res) => {
             });
         }
 
+        // Get department name before deleting
+        const department = await prisma.department.findUnique({ where: { id } });
+
         await prisma.department.delete({ where: { id } });
+
+        // Log activity
+        await logDelete(
+            req.user?.userId,
+            'department',
+            id,
+            `Deleted department: ${department?.name || id}`,
+            req
+        );
 
         cache.delByPrefix('departments');
         res.status(204).send();
