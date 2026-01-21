@@ -9,7 +9,8 @@ const {
     getEntityLogs,
     getUserLogs,
     getStats,
-    exportLogs
+    exportLogs,
+    testLog
 } = require('../controllers/activityLogs.controller');
 
 // All routes require authentication
@@ -36,5 +37,8 @@ router.get('/user/:userId', [
     check('userId').isInt().withMessage('Valid user ID is required'),
     validate
 ], getUserLogs);
+
+// Test endpoint to verify logging works
+router.post('/test', testLog);
 
 module.exports = router;

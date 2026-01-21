@@ -263,10 +263,39 @@ const exportLogs = async (req, res) => {
     }
 };
 
+// Test endpoint to manually create an activity log (for debugging)
+const testLog = async (req, res) => {
+    try {
+        console.log('[ActivityLogs] Test log endpoint called by user:', req.user?.userId);
+
+        const log = await prisma.activityLog.create({
+            data: {
+                user_id: req.user?.userId || null,
+                action: 'test',
+                entity_type: 'system',
+                description: 'Test activity log entry',
+                ip_address: req.ip || null,
+                user_agent: req.headers?.['user-agent'] || null
+            }
+        });
+
+        console.log('[ActivityLogs] Test log created:', log.id);
+        res.json({ success: true, log });
+    } catch (error) {
+        console.error('[ActivityLogs] Test log failed:', error);
+        res.status(500).json({
+            error: 'Failed to create test log',
+            details: error.message,
+            code: error.code
+        });
+    }
+};
+
 module.exports = {
     getLogs,
     getEntityLogs,
     getUserLogs,
     getStats,
-    exportLogs
+    exportLogs,
+    testLog
 };

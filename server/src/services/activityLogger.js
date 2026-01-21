@@ -23,7 +23,9 @@ const logActivity = async ({
     req
 }) => {
     try {
-        await prisma.activityLog.create({
+        console.log('[ActivityLogger] Attempting to log:', { action, entityType, entityId, userId });
+
+        const result = await prisma.activityLog.create({
             data: {
                 user_id: userId || null,
                 employee_id: employeeId || null,
@@ -36,9 +38,16 @@ const logActivity = async ({
                 user_agent: req?.headers?.['user-agent'] || null
             }
         });
+
+        console.log('[ActivityLogger] Successfully logged activity:', result.id);
+        return result;
     } catch (error) {
-        // Don't let logging failures affect the main operation
-        console.error('Failed to log activity:', error.message);
+        // Log full error details for debugging
+        console.error('[ActivityLogger] Failed to log activity:', {
+            message: error.message,
+            code: error.code,
+            meta: error.meta
+        });
     }
 };
 
