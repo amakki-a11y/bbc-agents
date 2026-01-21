@@ -51,7 +51,11 @@ const ActivityLogsPage = () => {
             }));
         } catch (err) {
             console.error('Failed to fetch activity logs:', err);
-            setError(err.response?.data?.error || err.message || 'Failed to fetch logs');
+            const errorMsg = err.response?.data?.error || err.message || 'Failed to fetch logs';
+            const statusCode = err.response?.status;
+            const fullError = statusCode ? `[${statusCode}] ${errorMsg}` : errorMsg;
+            console.error('[ActivityLogs] Error details:', { status: statusCode, data: err.response?.data, message: err.message });
+            setError(fullError);
         } finally {
             setLoading(false);
         }
@@ -196,15 +200,33 @@ const ActivityLogsPage = () => {
                             color: 'var(--danger-text)',
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            gap: '1rem'
                         }}>
                             <span>Error: {error}</span>
-                            <button
-                                onClick={() => setError(null)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-text)' }}
-                            >
-                                <X size={16} />
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await http.get('/activity-logs/diagnose');
+                                            console.log('Diagnose result:', res.data);
+                                            alert('Diagnose: ' + JSON.stringify(res.data, null, 2));
+                                        } catch (e) {
+                                            console.error('Diagnose failed:', e);
+                                            alert('Diagnose failed: ' + (e.response?.data?.error || e.message));
+                                        }
+                                    }}
+                                    style={{ background: 'var(--warning)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                    Diagnose
+                                </button>
+                                <button
+                                    onClick={() => setError(null)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-text)' }}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
                         </div>
                     )}
 
