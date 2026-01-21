@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-
-// Using centralized API from http.js
+import { API_BASE } from '../api/http';
 
 const NotificationContext = createContext();
 
@@ -19,7 +18,7 @@ export const NotificationProvider = ({ children }) => {
     // Initialize Socket
     useEffect(() => {
         if (user && token) {
-            const newSocket = io(API_BASE_URL, {
+            const newSocket = io(API_BASE, {
                 auth: { token }
             });
 
