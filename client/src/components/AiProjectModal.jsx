@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Sparkles, Loader2, Check, Clock, Flag, ChevronRight, Wand2, AlertCircle } from 'lucide-react';
+import { X, Sparkles, Loader2, Check, Clock, Flag, ChevronRight, Wand2, AlertCircle, RefreshCw } from 'lucide-react';
 import { generatePlan, createProjectFromPlan } from '../api/ai';
 
 const LOADING_MESSAGES = [
@@ -190,12 +190,38 @@ const AiProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                             marginBottom: '1rem',
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'space-between',
                             gap: '10px',
                             color: '#dc2626',
                             fontSize: '0.9rem'
                         }}>
-                            <AlertCircle size={18} />
-                            {error}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <AlertCircle size={18} />
+                                {error}
+                            </div>
+                            <button
+                                onClick={() => { setError(null); handleGenerate(); }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    background: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                    transition: 'background 0.15s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#b91c1c'}
+                                onMouseLeave={e => e.currentTarget.style.background = '#dc2626'}
+                            >
+                                <RefreshCw size={14} />
+                                Retry
+                            </button>
                         </div>
                     )}
 
@@ -313,13 +339,14 @@ const AiProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
                     {/* Step: Preview */}
                     {step === 'preview' && plan && (
-                        <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-                            {/* Plan Header */}
+                        <div style={{ animation: 'fadeIn 0.3s ease-out', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            {/* Plan Header - Sticky */}
                             <div style={{
                                 padding: '16px',
                                 background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
                                 borderRadius: '12px',
-                                marginBottom: '1.25rem'
+                                marginBottom: '1rem',
+                                flexShrink: 0
                             }}>
                                 <h3 style={{ margin: '0 0 4px', fontSize: '1.15rem', fontWeight: 700, color: '#1f2937' }}>
                                     {plan.name}
@@ -350,45 +377,67 @@ const AiProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                                 </div>
                             </div>
 
-                            {/* Tasks List */}
-                            <div style={{ marginBottom: '1.25rem' }}>
+                            {/* Tasks List - Scrollable */}
+                            <div style={{ flex: 1, minHeight: 0, marginBottom: '1rem' }}>
                                 <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
                                     Generated Tasks
                                 </h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '10px',
+                                    maxHeight: '280px',
+                                    overflowY: 'auto',
+                                    paddingRight: '4px'
+                                }}>
                                     {plan.tasks?.map((task, index) => {
                                         const priorityStyle = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium;
                                         return (
                                             <div
                                                 key={index}
+                                                className="task-card"
                                                 style={{
-                                                    padding: '12px 14px',
-                                                    background: '#fafafa',
-                                                    borderRadius: '10px',
+                                                    padding: '14px 16px',
+                                                    background: 'white',
+                                                    borderRadius: '12px',
                                                     border: '1px solid #e5e7eb',
                                                     display: 'flex',
                                                     alignItems: 'flex-start',
-                                                    gap: '12px'
+                                                    gap: '12px',
+                                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                                                    transition: 'all 0.2s ease',
+                                                    cursor: 'default'
+                                                }}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                                                    e.currentTarget.style.borderColor = '#d1d5db';
+                                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                                                    e.currentTarget.style.borderColor = '#e5e7eb';
+                                                    e.currentTarget.style.transform = 'translateY(0)';
                                                 }}
                                             >
                                                 <div style={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: '6px',
-                                                    background: '#e5e7eb',
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: '8px',
+                                                    background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    fontSize: '0.75rem',
+                                                    fontSize: '0.8rem',
                                                     fontWeight: 700,
-                                                    color: '#6b7280',
-                                                    flexShrink: 0
+                                                    color: 'white',
+                                                    flexShrink: 0,
+                                                    boxShadow: '0 2px 4px rgba(124, 58, 237, 0.3)'
                                                 }}>
                                                     {index + 1}
                                                 </div>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div style={{
-                                                        fontSize: '0.9rem',
+                                                        fontSize: '0.95rem',
                                                         fontWeight: 600,
                                                         color: '#1f2937',
                                                         marginBottom: '4px'
@@ -399,7 +448,8 @@ const AiProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                                                         <div style={{
                                                             fontSize: '0.8rem',
                                                             color: '#6b7280',
-                                                            marginBottom: '8px'
+                                                            marginBottom: '10px',
+                                                            lineHeight: '1.4'
                                                         }}>
                                                             {task.description}
                                                         </div>
@@ -409,31 +459,31 @@ const AiProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
                                                             gap: '4px',
-                                                            padding: '2px 8px',
+                                                            padding: '3px 10px',
                                                             background: priorityStyle.bg,
                                                             border: `1px solid ${priorityStyle.border}`,
-                                                            borderRadius: '4px',
-                                                            fontSize: '0.7rem',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
                                                             fontWeight: 600,
                                                             color: priorityStyle.color,
                                                             textTransform: 'capitalize'
                                                         }}>
-                                                            <Flag size={10} />
+                                                            <Flag size={11} />
                                                             {task.priority}
                                                         </span>
                                                         <span style={{
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
                                                             gap: '4px',
-                                                            padding: '2px 8px',
+                                                            padding: '3px 10px',
                                                             background: '#f0f9ff',
                                                             border: '1px solid #bae6fd',
-                                                            borderRadius: '4px',
-                                                            fontSize: '0.7rem',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.75rem',
                                                             fontWeight: 600,
                                                             color: '#0284c7'
                                                         }}>
-                                                            <Clock size={10} />
+                                                            <Clock size={11} />
                                                             {formatTime(task.time_estimate)}
                                                         </span>
                                                     </div>
@@ -444,50 +494,92 @@ const AiProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                                 </div>
                             </div>
 
-                            {/* Actions */}
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button
-                                    onClick={() => setStep('input')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '12px 20px',
-                                        background: 'white',
-                                        color: '#6b7280',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '10px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#d1d5db'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
-                                >
-                                    Try Again
-                                </button>
+                            {/* Actions - Sticky Footer */}
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px',
+                                paddingTop: '1rem',
+                                borderTop: '1px solid #e5e7eb',
+                                flexShrink: 0
+                            }}>
                                 <button
                                     onClick={handleCreateProject}
                                     style={{
-                                        flex: 2,
-                                        padding: '12px 20px',
+                                        width: '100%',
+                                        padding: '16px 24px',
                                         background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
                                         color: 'white',
                                         border: 'none',
-                                        borderRadius: '10px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 600,
+                                        borderRadius: '12px',
+                                        fontSize: '1rem',
+                                        fontWeight: 700,
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '8px',
-                                        boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
-                                        transition: 'all 0.15s'
+                                        gap: '10px',
+                                        boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.5)';
+                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
                                     }}
                                 >
-                                    Create Project
-                                    <ChevronRight size={18} />
+                                    <Sparkles size={20} />
+                                    Create Project with {plan.tasks?.length || 0} Tasks
+                                    <ChevronRight size={20} />
                                 </button>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button
+                                        onClick={onClose}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px 20px',
+                                            background: 'white',
+                                            color: '#6b7280',
+                                            border: '1px solid #e5e7eb',
+                                            borderRadius: '10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s'
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#d1d5db'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => setStep('input')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px 20px',
+                                            background: '#f5f3ff',
+                                            color: '#7c3aed',
+                                            border: '1px solid #ddd6fe',
+                                            borderRadius: '10px',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            transition: 'all 0.15s'
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.borderColor = '#c4b5fd'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.borderColor = '#ddd6fe'; }}
+                                    >
+                                        <RefreshCw size={16} />
+                                        Regenerate
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
