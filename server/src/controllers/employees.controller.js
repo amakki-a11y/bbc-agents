@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const cache = require('../utils/cache');
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Get all employees with pagination and filters
 const getEmployees = async (req, res) => {
@@ -122,6 +123,16 @@ const createEmployee = async (req, res) => {
             }
         });
 
+        // Log to system-wide activity log
+        await logCreate(
+            req.user?.userId,
+            'employee',
+            employee.id,
+            `Created employee: ${employee.name}`,
+            req,
+            { name: employee.name, email: employee.email, department: employee.department?.name }
+        );
+
         cache.delByPrefix('employees');
         res.status(201).json(employee);
     } catch (error) {
@@ -171,6 +182,16 @@ const updateEmployee = async (req, res) => {
             }
         });
 
+        // Log to system-wide activity log
+        await logUpdate(
+            req.user?.userId,
+            'employee',
+            employee.id,
+            `Updated employee: ${employee.name}`,
+            req,
+            { name: employee.name, email: employee.email }
+        );
+
         cache.delByPrefix('employees');
         res.json(employee);
     } catch (error) {
@@ -201,7 +222,22 @@ const deleteEmployee = async (req, res) => {
             });
         }
 
+        // Get employee info before deleting for logging
+        const employee = await prisma.employee.findUnique({ where: { id } });
+
         await prisma.employee.delete({ where: { id } });
+
+        // Log to system-wide activity log
+        if (employee) {
+            await logDelete(
+                req.user?.userId,
+                'employee',
+                id,
+                `Deleted employee: ${employee.name}`,
+                req,
+                { name: employee.name, email: employee.email }
+            );
+        }
 
         cache.delByPrefix('employees');
         res.status(204).send();

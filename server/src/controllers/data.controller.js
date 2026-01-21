@@ -3,8 +3,11 @@ const prisma = require('../lib/prisma');
 // Tasks
 const cache = require('../utils/cache');
 
-// Import activity logger from detailed_task.controller
+// Import activity logger from detailed_task.controller (for task-specific activity)
 const { logActivity } = require('./detailed_task.controller');
+
+// Import system-wide activity logger
+const { logCreate, logUpdate, logDelete } = require('../services/activityLogger');
 
 // Helper function to parse tags from DB (string) to array
 const parseTags = (tagsString) => {
@@ -126,8 +129,18 @@ const createTask = async (req, res) => {
             }
         });
 
-        // Log task creation activity
+        // Log task creation activity (task-specific)
         await logActivity(task.id, req.user.userId, 'created', 'created this task');
+
+        // Log to system-wide activity log
+        await logCreate(
+            req.user.userId,
+            'task',
+            task.id,
+            `Created task: ${task.title}`,
+            req,
+            { title: task.title, priority: task.priority, status: task.status }
+        );
 
         cache.delByPrefix(`tasks:${req.user.userId}`);
 
@@ -273,6 +286,16 @@ const updateTask = async (req, res) => {
             // Logic to spawn next task could go here
         }
 
+        // Log to system-wide activity log
+        await logUpdate(
+            req.user.userId,
+            'task',
+            task.id,
+            `Updated task: ${task.title}`,
+            req,
+            { title: task.title, status: task.status, priority: task.priority }
+        );
+
         cache.delByPrefix(`tasks:${req.user.userId}`);
 
         // Return task with tags parsed back to array
@@ -289,7 +312,23 @@ const updateTask = async (req, res) => {
 const deleteTask = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Get task info before deleting for logging
+        const task = await prisma.task.findUnique({ where: { id: parseInt(id) } });
+
         await prisma.task.delete({ where: { id: parseInt(id), user_id: req.user.userId } });
+
+        // Log to system-wide activity log
+        if (task) {
+            await logDelete(
+                req.user.userId,
+                'task',
+                id,
+                `Deleted task: ${task.title}`,
+                req,
+                { title: task.title }
+            );
+        }
 
         cache.delByPrefix(`tasks:${req.user.userId}`);
 
