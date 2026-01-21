@@ -22,23 +22,12 @@ const getLogs = async (req, res) => {
             ...(entityType && { entity_type: entityType }),
             ...(userId && { user_id: parseInt(userId) }),
             ...(employeeId && { employee_id: employeeId }),
-            ...(startDate && {
-                created_at: {
-                    gte: new Date(startDate)
-                }
-            }),
-            ...(endDate && {
-                created_at: {
-                    ...(where?.created_at || {}),
-                    lte: new Date(endDate)
-                }
-            }),
             ...(search && {
                 description: { contains: search, mode: 'insensitive' }
             })
         };
 
-        // Handle date range
+        // Handle date range properly
         if (startDate || endDate) {
             where.created_at = {
                 ...(startDate && { gte: new Date(startDate) }),
@@ -75,7 +64,11 @@ const getLogs = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching activity logs:', error);
-        res.status(500).json({ error: 'Failed to fetch activity logs' });
+        res.status(500).json({
+            error: 'Failed to fetch activity logs',
+            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+            code: error.code
+        });
     }
 };
 
