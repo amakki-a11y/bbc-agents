@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link2, Plus, ArrowRight, ArrowLeft, X, Search, Lock } from 'lucide-react';
-
-// Using centralized API_URL from http.js
+import { API_URL } from '../../api/http';
 
 const RelationshipsField = ({ taskId, blockedBy = [], blocking = [], onTaskRefresh }) => {
     const [showModal, setShowModal] = useState(false);

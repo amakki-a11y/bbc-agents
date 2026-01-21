@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { Plus, Upload, FileText, Image, File, X, Layers, Download, Loader2 } from 'lucide-react';
-
-// Using centralized API_URL from http.js
+import { API_URL } from '../../api/http';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const TaskTabDetails = ({ task, onUpdate, onTaskRefresh }) => {

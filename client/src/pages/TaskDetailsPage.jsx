@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useProject } from '../context/ProjectContext';
+import { API_URL } from '../api/http';
 import TaskDetailsMain from '../components/task/TaskDetailsMain';
 import ActivityPanel from '../components/task/ActivityPanel';
 import TaskTabActionItems from '../components/task/TaskTabActionItems';

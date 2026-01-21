@@ -5,8 +5,7 @@ import {
     CheckSquare, Tag, Link2, FolderInput, Plus, RefreshCw, Upload, Timer, Loader2,
     ChevronDown, ChevronUp, AlignLeft
 } from 'lucide-react';
-
-// Using centralized API_URL from http.js
+import { API_URL } from '../../api/http';
 
 const getAvatarColor = (name) => {
     const colors = [

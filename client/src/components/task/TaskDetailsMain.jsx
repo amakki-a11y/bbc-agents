@@ -5,6 +5,7 @@ import TaskTabs from "./TaskTabs";
 import TaskTabDetails from "./TaskTabDetails";
 import TaskTabSubtasks from "./TaskTabSubtasks";
 import { AlignLeft, Plus, Sparkles, ChevronDown, X, Check, Loader2, List, Briefcase, Minimize2, Maximize2, Wand2, CheckSquare } from 'lucide-react';
+import { API_URL } from '../../api/http';
 
 const AI_ACTIONS = [
     { value: 'generate', label: 'Generate description', icon: Sparkles, color: '#8b5cf6' },
