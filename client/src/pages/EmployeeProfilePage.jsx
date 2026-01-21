@@ -901,6 +901,59 @@ const DocumentsTab = ({ documents, formatDate, onUpload, onRefresh }) => {
 
     const getDocByType = (type) => documents.filter(d => d.documentType === type);
 
+    // Get the API base URL
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+    const handleViewDocument = (doc) => {
+        // Open document in new tab
+        const url = `${API_BASE}${doc.fileUrl}`;
+        window.open(url, '_blank');
+    };
+
+    const handleDownloadDocument = async (doc) => {
+        try {
+            const url = `${API_BASE}/api/v1/documents/${doc.id}/download`;
+            const token = localStorage.getItem('token');
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = doc.fileName || 'document';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (error) {
+            console.error('Download error:', error);
+            alert('Failed to download document');
+        }
+    };
+
+    const handleDeleteDocument = async (doc) => {
+        if (!confirm(`Are you sure you want to delete "${doc.title || doc.fileName}"?`)) {
+            return;
+        }
+
+        try {
+            await http.delete(`/documents/${doc.id}`);
+            onRefresh();
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Failed to delete document');
+        }
+    };
+
     return (
         <div className="card-modern animate-fadeInUp" style={{ overflow: 'hidden' }}>
             <div style={{
@@ -1004,6 +1057,7 @@ const DocumentsTab = ({ documents, formatDate, onUpload, onRefresh }) => {
                                         {hasDoc && (
                                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                                 <button
+                                                    onClick={() => handleViewDocument(latestDoc)}
                                                     style={{
                                                         padding: '6px',
                                                         background: '#f1f5f9',
@@ -1017,6 +1071,7 @@ const DocumentsTab = ({ documents, formatDate, onUpload, onRefresh }) => {
                                                     <Eye size={16} />
                                                 </button>
                                                 <button
+                                                    onClick={() => handleDownloadDocument(latestDoc)}
                                                     style={{
                                                         padding: '6px',
                                                         background: '#f1f5f9',
@@ -1028,6 +1083,20 @@ const DocumentsTab = ({ documents, formatDate, onUpload, onRefresh }) => {
                                                     title="Download"
                                                 >
                                                     <Download size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteDocument(latestDoc)}
+                                                    style={{
+                                                        padding: '6px',
+                                                        background: '#fee2e2',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        color: '#dc2626'
+                                                    }}
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         )}
@@ -1062,11 +1131,26 @@ const DocumentsTab = ({ documents, formatDate, onUpload, onRefresh }) => {
                                 </td>
                                 <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                        <button style={{ padding: '6px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748b' }}>
+                                        <button
+                                            onClick={() => handleViewDocument(doc)}
+                                            style={{ padding: '6px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748b' }}
+                                            title="View"
+                                        >
                                             <Eye size={16} />
                                         </button>
-                                        <button style={{ padding: '6px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748b' }}>
+                                        <button
+                                            onClick={() => handleDownloadDocument(doc)}
+                                            style={{ padding: '6px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748b' }}
+                                            title="Download"
+                                        >
                                             <Download size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteDocument(doc)}
+                                            style={{ padding: '6px', background: '#fee2e2', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#dc2626' }}
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </td>
