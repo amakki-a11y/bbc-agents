@@ -11,6 +11,7 @@ import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
 import BotButton from '../components/bot/BotButton';
 import DashboardHome from './DashboardHome';
+import AiProjectModal from '../components/AiProjectModal';
 
 // Modern NavItem component with dark theme
 const NavItem = ({ icon: Icon, label, href, badge, collapsed }) => {
@@ -75,6 +76,7 @@ const Dashboard = ({ children }) => {
     const [isProjectsOpen, setIsProjectsOpen] = useState(true);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showCreateProject, setShowCreateProject] = useState(false);
+    const [showAiProject, setShowAiProject] = useState(false);
     const [projectHoverId, setProjectHoverId] = useState(null);
     const [unreadInbox, setUnreadInbox] = useState(0);
     const [searchFocused, setSearchFocused] = useState(false);
@@ -579,6 +581,31 @@ const Dashboard = ({ children }) => {
                                             </div>
                                         ))}
                                         <div
+                                            onClick={() => setShowAiProject(true)}
+                                            style={{
+                                                padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                                color: '#a78bfa',
+                                                fontSize: '0.8rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                cursor: 'pointer',
+                                                borderRadius: '8px',
+                                                transition: 'all 0.15s ease',
+                                                background: 'rgba(167, 139, 250, 0.1)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#c4b5fd';
+                                                e.currentTarget.style.background = 'rgba(167, 139, 250, 0.2)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = '#a78bfa';
+                                                e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)';
+                                            }}
+                                        >
+                                            <Sparkles size={14} /> AI Project
+                                        </div>
+                                        <div
                                             onClick={() => setShowCreateProject(true)}
                                             style={{
                                                 padding: '0.5rem 0.875rem 0.5rem 1.75rem',
@@ -713,6 +740,17 @@ const Dashboard = ({ children }) => {
                     onCreate={handleCreateProject}
                 />
             )}
+
+            {/* AI Project Modal */}
+            <AiProjectModal
+                isOpen={showAiProject}
+                onClose={() => setShowAiProject(false)}
+                onProjectCreated={(project) => {
+                    setProjects(prev => [...prev, project]);
+                    // Navigate to the new project
+                    window.location.href = `/projects/${project.id}`;
+                }}
+            />
         </div>
     );
 };
