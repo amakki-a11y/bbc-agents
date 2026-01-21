@@ -42,93 +42,111 @@ const logActivity = async ({
     }
 };
 
-// Convenience methods for common actions
+// Convenience methods for common actions (must return the promise!)
 
-const logLogin = (userId, req, metadata = {}) => logActivity({
-    userId,
-    action: 'login',
-    entityType: 'auth',
-    description: 'User logged in',
-    metadata,
-    req
-});
+const logLogin = (userId, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'login',
+        entityType: 'auth',
+        description: 'User logged in',
+        metadata,
+        req
+    });
+};
 
-const logLogout = (userId, req) => logActivity({
-    userId,
-    action: 'logout',
-    entityType: 'auth',
-    description: 'User logged out',
-    req
-});
+const logLogout = (userId, req) => {
+    return logActivity({
+        userId,
+        action: 'logout',
+        entityType: 'auth',
+        description: 'User logged out',
+        req
+    });
+};
 
-const logRegister = (userId, email, req) => logActivity({
-    userId,
-    action: 'register',
-    entityType: 'auth',
-    description: `New user registered: ${email}`,
-    metadata: { email },
-    req
-});
+const logRegister = (userId, email, req) => {
+    return logActivity({
+        userId,
+        action: 'register',
+        entityType: 'auth',
+        description: `New user registered: ${email}`,
+        metadata: { email },
+        req
+    });
+};
 
-const logCreate = (userId, entityType, entityId, description, req, metadata = {}) => logActivity({
-    userId,
-    action: 'create',
-    entityType,
-    entityId,
-    description,
-    metadata,
-    req
-});
+const logCreate = (userId, entityType, entityId, description, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'create',
+        entityType,
+        entityId,
+        description,
+        metadata,
+        req
+    });
+};
 
-const logUpdate = (userId, entityType, entityId, description, req, metadata = {}) => logActivity({
-    userId,
-    action: 'update',
-    entityType,
-    entityId,
-    description,
-    metadata,
-    req
-});
+const logUpdate = (userId, entityType, entityId, description, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'update',
+        entityType,
+        entityId,
+        description,
+        metadata,
+        req
+    });
+};
 
-const logDelete = (userId, entityType, entityId, description, req, metadata = {}) => logActivity({
-    userId,
-    action: 'delete',
-    entityType,
-    entityId,
-    description,
-    metadata,
-    req
-});
+const logDelete = (userId, entityType, entityId, description, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'delete',
+        entityType,
+        entityId,
+        description,
+        metadata,
+        req
+    });
+};
 
-const logUpload = (userId, entityType, entityId, description, req, metadata = {}) => logActivity({
-    userId,
-    action: 'upload',
-    entityType,
-    entityId,
-    description,
-    metadata,
-    req
-});
+const logUpload = (userId, entityType, entityId, description, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'upload',
+        entityType,
+        entityId,
+        description,
+        metadata,
+        req
+    });
+};
 
-const logDownload = (userId, entityType, entityId, description, req, metadata = {}) => logActivity({
-    userId,
-    action: 'download',
-    entityType,
-    entityId,
-    description,
-    metadata,
-    req
-});
+const logDownload = (userId, entityType, entityId, description, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'download',
+        entityType,
+        entityId,
+        description,
+        metadata,
+        req
+    });
+};
 
-const logView = (userId, entityType, entityId, description, req, metadata = {}) => logActivity({
-    userId,
-    action: 'view',
-    entityType,
-    entityId,
-    description,
-    metadata,
-    req
-});
+const logView = (userId, entityType, entityId, description, req, metadata = {}) => {
+    return logActivity({
+        userId,
+        action: 'view',
+        entityType,
+        entityId,
+        description,
+        metadata,
+        req
+    });
+};
 
 module.exports = {
     logActivity,
