@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma');
 const { generateAIResponse } = require('../services/aiService');
 const cache = require('../utils/cache');
+const { logAgentDecision, logSuccess } = require('../services/agentLogger');
 
 // Employee Lifecycle handlers
 const {
@@ -4061,7 +4062,11 @@ const handleGetAnomalyAlerts = async () => {
  */
 const createActionHandler = (employeeId, context) => {
     return async (toolName, toolInput) => {
-        switch (toolName) {
+        const startTime = Date.now();
+
+        // Execute the tool action
+        const executeAction = async () => {
+            switch (toolName) {
             // Tasks
             case 'createTask':
                 return await handleCreateTask(employeeId, toolInput);
@@ -4258,8 +4263,60 @@ const createActionHandler = (employeeId, context) => {
 
             default:
                 return { success: false, error: `Unknown action: ${toolName}` };
-        }
+            }
+        };
+
+        // Execute and capture result
+        const result = await executeAction();
+
+        // Log the tool execution for AI decision tracking
+        const executionTime = Date.now() - startTime;
+        const entityType = getEntityTypeFromTool(toolName);
+
+        await logSuccess(
+            'BBCAssistant',
+            toolName,
+            entityType,
+            result?.id || result?.taskId || result?.goalId || null,
+            `Executed ${toolName}: ${result?.success ? (result?.message || 'completed') : (result?.error || 'failed')}`,
+            result?.success !== false ? 0.9 : 0.3,
+            {
+                inputContext: toolInput,
+                outputData: result,
+                executionTime,
+                metadata: { employeeId, toolName }
+            }
+        );
+
+        return result;
     };
+};
+
+// Helper to determine entity type from tool name
+const getEntityTypeFromTool = (toolName) => {
+    const toolEntityMap = {
+        createTask: 'task', updateTask: 'task', deleteTask: 'task', delegateTask: 'task', getMyTasks: 'task',
+        assignTask: 'task', getEmployeeProgress: 'task', getOverdueTasks: 'task', reassignTask: 'task',
+        checkIn: 'attendance', checkOut: 'attendance', getMyAttendance: 'attendance',
+        requestLeave: 'leave', getLeaveBalance: 'leave',
+        messageManager: 'message', messageHR: 'message', messageEmployee: 'message',
+        checkMessages: 'message', readMessage: 'message', replyToMessage: 'message',
+        escalateIssue: 'message', announceToTeam: 'message', getMessageableContacts: 'message',
+        scheduleMeeting: 'meeting', getMyMeetings: 'meeting',
+        requestApproval: 'approval', getPendingApprovals: 'approval', approveRequest: 'approval', rejectRequest: 'approval',
+        createGoal: 'goal', getGoals: 'goal', getGoalProgress: 'goal', updateGoalProgress: 'goal', completeGoal: 'goal',
+        getLeaderboard: 'gamification', getMyStats: 'gamification', getAchievements: 'gamification',
+        getWhosInOffice: 'employee', getWhosAbsent: 'employee', checkEmployeeAvailability: 'employee',
+        getDepartmentStatus: 'department', getEmployeeHoursWorked: 'employee', getEmployeeProductivity: 'employee',
+        getBurnoutRisk: 'analytics', getPerformanceTrends: 'analytics', getProjectRiskAnalysis: 'project',
+        getWorkloadBalance: 'analytics', getPredictedDelays: 'analytics', getRecognitionSuggestions: 'analytics',
+        getDailyBriefing: 'report', getDailyStandupReport: 'report', getRedFlags: 'report',
+        getPulseCheck: 'report', getEndOfDayWrapup: 'report', getWhoNeedsHelp: 'analytics',
+        parseEmployeeCV: 'employee', getOnboardingStatus: 'employee', getEmployeeProfile: 'employee',
+        getProbationStatus: 'employee', analyzeEmployeePerformance: 'employee', getAttritionRisk: 'employee',
+        searchEmployees: 'employee', getEmployeeSkills: 'employee', addEmployeeSkill: 'employee'
+    };
+    return toolEntityMap[toolName] || 'unknown';
 };
 
 /**
@@ -4749,6 +4806,24 @@ const handleBotMessage = async (req, res) => {
             console.log('Using mock response (AI unavailable or failed)');
             botResponse = await generateMockResponse(content, context, employeeId);
         }
+
+        // Log the AI agent decision for tracking and debugging
+        await logAgentDecision({
+            agentName: 'BBCAssistant',
+            agentVersion: '1.0',
+            action: botResponse.metadata?.action || 'chat_response',
+            entityType: botResponse.metadata?.entityType || 'message',
+            entityId: null,
+            reasoning: `User asked: "${content.substring(0, 100)}${content.length > 100 ? '...' : ''}" - AI determined intent and responded with ${botResponse.messageType}`,
+            confidenceScore: botResponse.metadata?.confidence || 0.85,
+            inputContext: { userMessage: content, employeeName: context.employee?.name },
+            outputData: { responseType: botResponse.messageType, action: botResponse.metadata?.action },
+            metadata: {
+                model: botResponse.metadata?.model || 'claude',
+                tokensUsed: botResponse.metadata?.inputTokens ? botResponse.metadata.inputTokens + botResponse.metadata.outputTokens : null,
+                toolsUsed: botResponse.metadata?.toolsUsed?.length || 0
+            }
+        });
 
         // Save bot response
         const botMessage = await prisma.message.create({

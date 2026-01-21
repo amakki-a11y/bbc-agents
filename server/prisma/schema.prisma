@@ -172,8 +172,9 @@ model Employee {
   performanceReviews PerformanceReview[]
   statusHistory      EmployeeStatusHistory[]
   roleHistory        EmployeeRoleHistory[]
-  conductedReviews   PerformanceReview[]     @relation("ReviewConductor")
-  activityLogs       ActivityLog[]
+  conductedReviews       PerformanceReview[]     @relation("ReviewConductor")
+  activityLogs           ActivityLog[]
+  reviewedAgentActions   AgentAction[]
 
   @@index([status])
   @@index([department_id])
@@ -871,5 +872,53 @@ model ActivityLog {
   @@index([employee_id])
   @@index([entity_type])
   @@index([action])
+  @@index([created_at])
+}
+
+// ===========================================
+// AI AGENT ACTION TRACKING
+// Tracks autonomous decisions made by AI agents for debugging and review
+// ===========================================
+
+model AgentAction {
+  id               Int       @id @default(autoincrement())
+
+  // Agent identification
+  agent_name       String    // e.g., "SchedulerBot", "RiskAnalyzer", "TaskPrioritizer"
+  agent_version    String?   // Optional version tracking
+
+  // Action details
+  action           String    // e.g., "auto_schedule", "risk_assessment", "task_assignment"
+  entity_type      String    // e.g., "task", "employee", "meeting", "leave_request"
+  entity_id        Int?      // ID of the affected entity
+
+  // AI Decision tracking (CRITICAL for debugging)
+  reasoning        String    @db.Text // AI's explanation of why it made this decision
+  confidence_score Float     // 0.0 to 1.0
+
+  // Context and metadata
+  input_context    Json?     // The prompt/context given to the AI
+  output_data      Json?     // The structured output/decision made
+  metadata         Json?     // Additional metadata (model used, tokens, etc.)
+
+  // Status tracking
+  status           String    @default("success") // success, failed, flagged_for_review, rolled_back
+  error_message    String?   // If failed, store error details
+
+  // Review tracking
+  reviewed_by      String?   // Employee ID who reviewed this action
+  reviewer         Employee? @relation(fields: [reviewed_by], references: [id], onDelete: SetNull)
+  reviewed_at      DateTime?
+  review_notes     String?
+
+  // Timing
+  execution_time   Int?      // Milliseconds taken
+  created_at       DateTime  @default(now())
+
+  @@index([agent_name])
+  @@index([action])
+  @@index([entity_type])
+  @@index([status])
+  @@index([confidence_score])
   @@index([created_at])
 }

@@ -16,6 +16,7 @@ const goalRoutes = require('../goals.routes');
 const messageRoutes = require('../messaging.routes');
 const documentRoutes = require('../documents.routes');
 const activityLogRoutes = require('../activityLogs.routes');
+const agentActionsRoutes = require('../agentActions.routes');
 
 // Mount all routes under /api/v1
 router.use('/', dataRoutes);
@@ -32,5 +33,6 @@ router.use('/goals', goalRoutes);
 router.use('/messages', messageRoutes);
 router.use('/documents', documentRoutes);
 router.use('/activity-logs', activityLogRoutes);
+router.use('/agent-actions', agentActionsRoutes);
 
 module.exports = router;
