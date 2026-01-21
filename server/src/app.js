@@ -28,10 +28,9 @@ app.use(compression); // Compress responses
 app.use(requestLogger);
 app.use(helmetConfig);
 
-// CORS configuration - must be before routes
+// CORS configuration - must be before routes (Railway only)
 const allowedOrigins = [
   'https://front-end-production-ad4c.up.railway.app',
-  'https://bbc-agents-app.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   process.env.FRONTEND_URL
