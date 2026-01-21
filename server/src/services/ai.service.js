@@ -225,8 +225,29 @@ const generateProjectPlan = async (goal, context = {}) => {
 
         const content = response.content[0].text.trim();
         // Strip code blocks if present
-        const jsonStr = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        const plan = JSON.parse(jsonStr);
+        let jsonStr = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').replace(/^```\s*/, '');
+
+        // Fix common JSON issues from AI responses
+        // Remove trailing commas before } or ]
+        jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+
+        let plan;
+        try {
+            plan = JSON.parse(jsonStr);
+        } catch (parseError) {
+            // Try to fix common issues
+            try {
+                // Replace newlines inside strings with spaces
+                // This regex finds strings and replaces newlines within them
+                const fixedJson = jsonStr.replace(/"([^"\\]|\\.)*"/g, (match) => {
+                    return match.replace(/\n/g, ' ').replace(/\r/g, '');
+                });
+                plan = JSON.parse(fixedJson);
+            } catch (secondError) {
+                console.error('JSON Parse Error. Raw content (first 1000 chars):', content.substring(0, 1000));
+                throw new Error('AI returned invalid JSON: ' + parseError.message);
+            }
+        }
 
         const executionTime = Date.now() - startTime;
 
