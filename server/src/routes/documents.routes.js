@@ -14,10 +14,20 @@ const {
     updateDocument
 } = require('../controllers/documents.controller');
 
+// Use RAILWAY_VOLUME_MOUNT_PATH if available, otherwise use local uploads folder
+const UPLOAD_BASE = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../uploads');
+const uploadsDir = path.join(UPLOAD_BASE, 'documents');
+
+// Ensure directory exists
+const fs = require('fs');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Configure multer storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '../../uploads/documents'));
+        cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;

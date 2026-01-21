@@ -55,8 +55,10 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files statically (use Railway volume path if available)
+const UPLOAD_BASE = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(UPLOAD_BASE));
+console.log('Serving static uploads from:', UPLOAD_BASE);
 
 // Security middleware
 app.use(limiter);

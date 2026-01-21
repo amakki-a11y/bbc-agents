@@ -3,11 +3,16 @@ const path = require('path');
 const fs = require('fs');
 const { logUpload, logDelete, logDownload } = require('../services/activityLogger');
 
+// Use RAILWAY_VOLUME_MOUNT_PATH if available, otherwise use local uploads folder
+const UPLOAD_BASE = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../uploads');
+const uploadsDir = path.join(UPLOAD_BASE, 'documents');
+
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads/documents');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
+
+console.log('Documents upload directory:', uploadsDir);
 
 // Upload document for an employee
 const uploadDocument = async (req, res) => {
@@ -138,7 +143,9 @@ const downloadDocument = async (req, res) => {
             return res.status(404).json({ error: 'Document not found' });
         }
 
-        const filePath = path.join(__dirname, '../..', document.fileUrl);
+        // fileUrl is like /uploads/documents/filename.pdf
+        const relativePath = document.fileUrl.replace('/uploads/', '');
+        const filePath = path.join(UPLOAD_BASE, relativePath);
 
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ error: 'File not found on server' });
@@ -178,7 +185,8 @@ const deleteDocument = async (req, res) => {
         }
 
         // Delete file from filesystem
-        const filePath = path.join(__dirname, '../..', document.fileUrl);
+        const relativePath = document.fileUrl.replace('/uploads/', '');
+        const filePath = path.join(UPLOAD_BASE, relativePath);
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
         }
