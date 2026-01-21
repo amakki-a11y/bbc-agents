@@ -10,7 +10,8 @@ const {
     getUserLogs,
     getStats,
     exportLogs,
-    testLog
+    testLog,
+    diagnose
 } = require('../controllers/activityLogs.controller');
 
 // All routes require authentication
@@ -40,5 +41,8 @@ router.get('/user/:userId', [
 
 // Test endpoint to verify logging works
 router.post('/test', testLog);
+
+// Diagnostic endpoint to check database status
+router.get('/diagnose', diagnose);
 
 module.exports = router;

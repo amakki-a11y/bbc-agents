@@ -291,11 +291,68 @@ const testLog = async (req, res) => {
     }
 };
 
+// Diagnostic endpoint to check database status
+const diagnose = async (req, res) => {
+    const results = {
+        timestamp: new Date().toISOString(),
+        checks: {}
+    };
+
+    // Check 1: Can we count logs?
+    try {
+        const count = await prisma.activityLog.count();
+        results.checks.tableExists = { success: true, count };
+    } catch (error) {
+        results.checks.tableExists = {
+            success: false,
+            error: error.message,
+            code: error.code
+        };
+    }
+
+    // Check 2: Can we write a log?
+    try {
+        const testLog = await prisma.activityLog.create({
+            data: {
+                user_id: req.user?.userId || null,
+                action: 'diagnostic',
+                entity_type: 'system',
+                description: 'Diagnostic test entry'
+            }
+        });
+        results.checks.canWrite = { success: true, logId: testLog.id };
+    } catch (error) {
+        results.checks.canWrite = {
+            success: false,
+            error: error.message,
+            code: error.code
+        };
+    }
+
+    // Check 3: Can we read logs?
+    try {
+        const logs = await prisma.activityLog.findMany({ take: 5, orderBy: { created_at: 'desc' } });
+        results.checks.canRead = { success: true, recentLogs: logs.length };
+    } catch (error) {
+        results.checks.canRead = {
+            success: false,
+            error: error.message,
+            code: error.code
+        };
+    }
+
+    // Overall status
+    results.allPassing = Object.values(results.checks).every(c => c.success);
+
+    res.json(results);
+};
+
 module.exports = {
     getLogs,
     getEntityLogs,
     getUserLogs,
     getStats,
     exportLogs,
-    testLog
+    testLog,
+    diagnose
 };
