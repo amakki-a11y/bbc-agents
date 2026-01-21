@@ -14,7 +14,7 @@ const AICommandPanel = ({ onCommandSuccess }) => {
         setLoading(true);
         setResponseMsg('');
         try {
-            const res = await http.post('/api/bot/message', { content: command });
+            const res = await http.post('/bot/message', { content: command });
 
             if (res.data.intent?.action === 'unknown') {
                 setResponseMsg("I didn't quite catch that. Try starting with 'Create task' or 'Schedule meeting'.");

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { http, API_URL } from '../api/http';
+import http from '../api/http';
 
 const ProjectContext = createContext();
 
@@ -36,10 +36,7 @@ export const ProjectProvider = ({ children }) => {
 
     const fetchTasks = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_URL}/tasks`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await http.get('/tasks');
             const mappedTasks = res.data.map(task => ({
                 ...task,
                 projectId: task.project_id,
@@ -93,13 +90,13 @@ export const ProjectProvider = ({ children }) => {
             user: 'You',
             createdAt: new Date().toISOString()
         };
-        
-        const localTask = { 
-            status: 'TO DO', 
-            tags: [], 
-            activity: [initialActivity], 
-            ...task, 
-            id: tempId, 
+
+        const localTask = {
+            status: 'TO DO',
+            tags: [],
+            activity: [initialActivity],
+            ...task,
+            id: tempId,
             projectId: activeProjectId,
             _isSaving: true // Flag to indicate task is being saved
         };
@@ -110,7 +107,6 @@ export const ProjectProvider = ({ children }) => {
 
         // Save to backend
         try {
-            const token = localStorage.getItem('token');
             const backendTask = {
                 title: task.title || 'New Task',
                 description: task.description || '',
@@ -122,10 +118,8 @@ export const ProjectProvider = ({ children }) => {
             };
             
             console.log('Saving task to backend:', backendTask);
-            
-            const res = await axios.post(`${API_URL}/tasks`, backendTask, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+
+            const res = await http.post('/tasks', backendTask);
             
             const savedTask = {
                 ...res.data,
@@ -156,7 +150,7 @@ export const ProjectProvider = ({ children }) => {
             ));
             return localTask;
         }
-    }, [activeProjectId, API_URL]);
+    }, [activeProjectId]);
 
     // Helper to get real ID from temp ID if available
     const getRealTaskId = useCallback((taskId) => {
@@ -195,9 +189,7 @@ export const ProjectProvider = ({ children }) => {
                 if (updates.status) {
                     backendUpdates.status = normalizeStatusForBackend(updates.status);
                 }
-                await axios.put(`${API_URL}/tasks/${realTaskId}`, backendUpdates, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
+                await http.put(`/tasks/${realTaskId}`, backendUpdates);
                 console.log('Task updated in database:', realTaskId);
             } catch (e) {
                 console.error('Backend sync failed:', e.response?.data || e.message);
@@ -205,7 +197,7 @@ export const ProjectProvider = ({ children }) => {
         } else {
             console.log('Skipping backend update for temp ID:', taskId);
         }
-    }, [API_URL, getRealTaskId]);
+    }, [getRealTaskId]);
 
     const deleteTask = useCallback(async (taskId) => {
         const realTaskId = getRealTaskId(taskId);
@@ -215,14 +207,12 @@ export const ProjectProvider = ({ children }) => {
         // Only delete from backend if we have a real ID
         if (realTaskId < 1000000000000) {
             try {
-                await axios.delete(`${API_URL}/tasks/${realTaskId}`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
-            } catch (e) { 
-                console.log("Backend delete failed:", e.message); 
+                await http.delete(`/tasks/${realTaskId}`);
+            } catch (e) {
+                console.log("Backend delete failed:", e.message);
             }
         }
-    }, [API_URL, getRealTaskId]);
+    }, [getRealTaskId]);
 
     const bulkUpdateTasks = useCallback(async (taskIds, updates) => {
         if (!taskIds.length) return;
@@ -233,14 +223,12 @@ export const ProjectProvider = ({ children }) => {
         
         if (realTaskIds.length > 0) {
             try {
-                await axios.put(`${API_URL}/tasks/bulk`, { taskIds: realTaskIds, updates }, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                });
-            } catch (e) { 
-                console.error("Bulk update failed", e); 
+                await http.put('/tasks/bulk', { taskIds: realTaskIds, updates });
+            } catch (e) {
+                console.error("Bulk update failed", e);
             }
         }
-    }, [API_URL, getRealTaskId]);
+    }, [getRealTaskId]);
 
     const bulkDeleteTasks = useCallback(async (taskIds) => {
         if (!taskIds.length) return;
@@ -251,15 +239,14 @@ export const ProjectProvider = ({ children }) => {
         
         if (realTaskIds.length > 0) {
             try {
-                await axios.delete(`${API_URL}/tasks/bulk`, {
-                    data: { taskIds: realTaskIds },
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                await http.delete('/tasks/bulk', {
+                    data: { taskIds: realTaskIds }
                 });
-            } catch (e) { 
-                console.error("Bulk delete failed", e); 
+            } catch (e) {
+                console.error("Bulk delete failed", e);
             }
         }
-    }, [API_URL, getRealTaskId]);
+    }, [getRealTaskId]);
 
     const updateViewSetting = useCallback((projectId, key, value) => {
         setViewSettings(prev => ({

@@ -64,9 +64,9 @@ const EmployeeForm = ({ employee, onClose, onSave, departments = [], roles = [],
             console.log('formData state:', formData);
 
             if (isEditing) {
-                await http.put(`/api/employees/${employee.id}`, payload);
+                await http.put(`/employees/${employee.id}`, payload);
             } else {
-                await http.post('/api/employees', payload);
+                await http.post('/employees', payload);
             }
             onSave();
         } catch (error) {

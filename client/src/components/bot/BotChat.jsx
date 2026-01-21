@@ -352,9 +352,9 @@ const BotChat = ({ isFullPage = false, onClose, initialCommand = null }) => {
 
     const loadHistory = async () => {
         try {
-            const response = await http.get('/api/bot/history?limit=50');
+            const response = await http.get('/bot/history?limit=50');
             setMessages(response.data);
-            await http.post('/api/bot/read');
+            await http.post('/bot/read');
         } catch (err) {
             console.error('Failed to load history:', err);
             if (err.response?.status === 400) {
@@ -381,7 +381,7 @@ const BotChat = ({ isFullPage = false, onClose, initialCommand = null }) => {
         setError(null);
 
         try {
-            const response = await http.post('/api/bot/message', {
+            const response = await http.post('/bot/message', {
                 content: trimmedContent
             });
 

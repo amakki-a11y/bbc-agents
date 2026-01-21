@@ -19,8 +19,8 @@ const GoalsPage = () => {
             setLoading(true);
             const params = filterStatus ? `?status=${filterStatus}` : '';
             const [goalsRes, statsRes] = await Promise.all([
-                http.get(`/api/goals${params}`),
-                http.get('/api/goals/stats')
+                http.get(`/goals${params}`),
+                http.get('/goals/stats')
             ]);
             setGoals(goalsRes.data || []);
             setStats(statsRes.data || { total: 0, completed: 0, atRisk: 0, onTrack: 0 });
@@ -34,8 +34,8 @@ const GoalsPage = () => {
     const fetchMetadata = useCallback(async () => {
         try {
             const [empRes, deptRes] = await Promise.all([
-                http.get('/api/employees?limit=100'),
-                http.get('/api/departments')
+                http.get('/employees?limit=100'),
+                http.get('/departments')
             ]);
             setEmployees(empRes.data?.data || []);
             setDepartments(deptRes.data || []);
@@ -51,7 +51,7 @@ const GoalsPage = () => {
 
     const handleCreateGoal = async (goalData) => {
         try {
-            await http.post('/api/goals', goalData);
+            await http.post('/goals', goalData);
             setShowCreateModal(false);
             fetchGoals();
         } catch (error) {
@@ -62,7 +62,7 @@ const GoalsPage = () => {
 
     const handleUpdateGoal = async (id, updates) => {
         try {
-            await http.put(`/api/goals/${id}`, updates);
+            await http.put(`/goals/${id}`, updates);
             setEditingGoal(null);
             fetchGoals();
         } catch (error) {
@@ -73,7 +73,7 @@ const GoalsPage = () => {
     const handleDeleteGoal = async (id) => {
         if (!window.confirm('Delete this goal? This action cannot be undone.')) return;
         try {
-            await http.delete(`/api/goals/${id}`);
+            await http.delete(`/goals/${id}`);
             fetchGoals();
         } catch (error) {
             console.error('Failed to delete goal:', error);
@@ -82,7 +82,7 @@ const GoalsPage = () => {
 
     const handleCompleteGoal = async (id) => {
         try {
-            await http.put(`/api/goals/${id}`, { status: 'completed', currentValue: goals.find(g => g.id === id)?.targetValue });
+            await http.put(`/goals/${id}`, { status: 'completed', currentValue: goals.find(g => g.id === id)?.targetValue });
             fetchGoals();
         } catch (error) {
             console.error('Failed to complete goal:', error);

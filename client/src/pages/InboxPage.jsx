@@ -20,7 +20,7 @@ const InboxPage = () => {
     const fetchMessages = async () => {
         setLoading(true);
         try {
-            const res = await http.get('/api/bot/history?limit=100');
+            const res = await http.get('/bot/history?limit=100');
             // Filter to show only bot messages (inbox items)
             const inboxMessages = (res.data || []).filter(m => m.sender === 'bot');
             setMessages(inboxMessages);
@@ -54,7 +54,7 @@ const InboxPage = () => {
 
     const markAsRead = async (messageId) => {
         try {
-            await http.post('/api/bot/read', { messageIds: [messageId] });
+            await http.post('/bot/read', { messageIds: [messageId] });
             setMessages(prev => prev.map(m =>
                 m.id === messageId ? { ...m, status: 'read' } : m
             ));

@@ -45,8 +45,8 @@ const AttendancePage = () => {
             const month = selectedDate.getMonth() + 1;
 
             const [attendanceRes, todayRes] = await Promise.all([
-                http.get(`/api/attendance/me?year=${year}&month=${month}`),
-                http.get('/api/attendance/me/today')
+                http.get(`/attendance/me?year=${year}&month=${month}`),
+                http.get('/attendance/me/today')
             ]);
 
             setMyAttendance(attendanceRes.data || { records: [], summary: {} });
@@ -69,8 +69,8 @@ const AttendancePage = () => {
             if (filterDepartment) params.append('department_id', filterDepartment);
 
             const [teamRes, deptRes] = await Promise.all([
-                http.get(`/api/attendance/team?${params.toString()}`),
-                http.get('/api/departments')
+                http.get(`/attendance/team?${params.toString()}`),
+                http.get('/departments')
             ]);
 
             setTeamAttendance(teamRes.data || { team: [], todaySummary: {} });
@@ -96,7 +96,7 @@ const AttendancePage = () => {
     const handleCheckIn = async () => {
         try {
             setCheckingIn(true);
-            await http.post('/api/attendance/check-in');
+            await http.post('/attendance/check-in');
             await fetchMyAttendance();
         } catch (error) {
             console.error('Check-in failed:', error);
@@ -109,7 +109,7 @@ const AttendancePage = () => {
     const handleCheckOut = async () => {
         try {
             setCheckingOut(true);
-            await http.post('/api/attendance/check-out');
+            await http.post('/attendance/check-out');
             await fetchMyAttendance();
         } catch (error) {
             console.error('Check-out failed:', error);

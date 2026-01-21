@@ -38,7 +38,7 @@ const EmployeeProfilePage = () => {
     const fetchEmployee = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await http.get(`/api/employees/${id}/full-profile`);
+            const res = await http.get(`/employees/${id}/full-profile`);
             setEmployee(res.data.employee);
             setDocuments(res.data.documents || []);
             setSkills(res.data.skills || []);
@@ -49,7 +49,7 @@ const EmployeeProfilePage = () => {
             console.error('Failed to fetch employee:', error);
             // Try basic employee fetch as fallback
             try {
-                const basicRes = await http.get(`/api/employees/${id}`);
+                const basicRes = await http.get(`/employees/${id}`);
                 setEmployee(basicRes.data);
             } catch (e) {
                 console.error('Failed to fetch basic employee:', e);
@@ -1496,7 +1496,7 @@ const EditProfileModal = ({ employee, onClose, onSave }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            await http.put(`/api/employees/${employee.id}`, formData);
+            await http.put(`/employees/${employee.id}`, formData);
             onSave();
             onClose();
         } catch (error) {
@@ -1732,7 +1732,7 @@ const UploadDocumentModal = ({ employeeId, onClose, onSave }) => {
             data.append('documentType', formData.documentType);
             data.append('title', formData.title || formData.file.name);
 
-            await http.post(`/api/employees/${employeeId}/documents`, data, {
+            await http.post(`/employees/${employeeId}/documents`, data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             onSave();
@@ -1892,7 +1892,7 @@ const AddSkillModal = ({ employeeId, onClose, onSave }) => {
         }
         setLoading(true);
         try {
-            await http.post(`/api/employees/${employeeId}/skills`, {
+            await http.post(`/employees/${employeeId}/skills`, {
                 ...formData,
                 yearsOfExp: formData.yearsOfExp ? parseFloat(formData.yearsOfExp) : null
             });

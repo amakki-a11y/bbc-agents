@@ -25,7 +25,7 @@ const RolesPage = () => {
     const fetchRoles = async () => {
         try {
             setLoading(true);
-            const response = await http.get('/api/roles');
+            const response = await http.get('/roles');
             setRoles(response.data || []);
         } catch (error) {
             console.error('Failed to fetch roles:', error);
@@ -324,7 +324,7 @@ const RoleDetailModal = ({ role, onClose, onUpdate }) => {
         try {
             setSaving(true);
             setError('');
-            await http.put(`/api/roles/${role.id}`, formData);
+            await http.put(`/roles/${role.id}`, formData);
             onUpdate();
             setIsEditing(false);
         } catch (error) {
@@ -342,7 +342,7 @@ const RoleDetailModal = ({ role, onClose, onUpdate }) => {
         try {
             setDeleting(true);
             setError('');
-            await http.delete(`/api/roles/${role.id}`);
+            await http.delete(`/roles/${role.id}`);
             onUpdate();
             onClose();
         } catch (error) {
@@ -596,7 +596,7 @@ const RoleFormModal = ({ onClose, onSave }) => {
         try {
             setSaving(true);
             setError('');
-            await http.post('/api/roles', formData);
+            await http.post('/roles', formData);
             onSave();
         } catch (error) {
             console.error('Failed to create role:', error);

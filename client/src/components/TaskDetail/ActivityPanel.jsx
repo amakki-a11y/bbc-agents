@@ -33,7 +33,7 @@ const ActivityPanel = ({ taskId, activities: initialActivities }) => {
         setComment("");
 
         try {
-            await http.post(`/api/tasks/details/${taskId}/comments`, { content: comment });
+            await http.post(`/tasks/details/${taskId}/comments`, { content: comment });
         } catch (e) { console.error(e); }
     };
 

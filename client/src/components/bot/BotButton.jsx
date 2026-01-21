@@ -29,7 +29,7 @@ const BotButton = () => {
 
     const checkEmployeeAndUnread = async () => {
         try {
-            const response = await http.get('/api/bot/context');
+            const response = await http.get('/bot/context');
             setHasEmployee(true);
             setUnreadCount(response.data.unreadMessages || 0);
         } catch (err) {
@@ -42,7 +42,7 @@ const BotButton = () => {
     const checkUnread = async () => {
         if (!hasEmployee) return;
         try {
-            const response = await http.get('/api/bot/context');
+            const response = await http.get('/bot/context');
             setUnreadCount(response.data.unreadMessages || 0);
         } catch (err) {
             console.error('Failed to check unread:', err);

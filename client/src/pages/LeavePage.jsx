@@ -40,7 +40,7 @@ const LeavePage = () => {
     const fetchLeaveTypes = async () => {
         try {
             setLoadingTypes(true);
-            const res = await http.get('/api/leave/types');
+            const res = await http.get('/leave/types');
             setLeaveTypes(res.data || []);
         } catch (error) {
             console.error('Failed to fetch leave types:', error);
@@ -53,7 +53,7 @@ const LeavePage = () => {
     const fetchMyLeaves = useCallback(async () => {
         try {
             setLoadingLeaves(true);
-            const res = await http.get(`/api/leave/my?year=${selectedYear}`);
+            const res = await http.get(`/leave/my?year=${selectedYear}`);
             setMyLeaves(res.data || []);
         } catch (error) {
             console.error('Failed to fetch my leaves:', error);
@@ -66,7 +66,7 @@ const LeavePage = () => {
     const fetchMyBalance = async () => {
         try {
             setLoadingBalance(true);
-            const res = await http.get(`/api/leave/balance?year=${selectedYear}`);
+            const res = await http.get(`/leave/balance?year=${selectedYear}`);
             setMyBalance(res.data || []);
         } catch (error) {
             console.error('Failed to fetch balance:', error);
@@ -80,8 +80,8 @@ const LeavePage = () => {
         try {
             setLoadingLeaves(true);
             const [teamRes, pendingRes] = await Promise.all([
-                http.get(`/api/leave/team?year=${selectedYear}`),
-                http.get('/api/leave/pending')
+                http.get(`/leave/team?year=${selectedYear}`),
+                http.get('/leave/pending')
             ]);
             setTeamLeaves(teamRes.data || []);
             setPendingApprovals(pendingRes.data || []);
@@ -97,7 +97,7 @@ const LeavePage = () => {
         try {
             const month = calendarDate.getMonth() + 1;
             const year = calendarDate.getFullYear();
-            const res = await http.get(`/api/leave/calendar?month=${month}&year=${year}`);
+            const res = await http.get(`/leave/calendar?month=${month}&year=${year}`);
             setCalendarLeaves(res.data || []);
         } catch (error) {
             console.error('Failed to fetch calendar:', error);
@@ -122,7 +122,7 @@ const LeavePage = () => {
     // Request leave handler
     const handleRequestLeave = async (data) => {
         try {
-            await http.post('/api/leave', data);
+            await http.post('/leave', data);
             setShowRequestModal(false);
             fetchMyLeaves();
             fetchMyBalance();
@@ -135,7 +135,7 @@ const LeavePage = () => {
     const handleCancelLeave = async (id) => {
         if (!window.confirm('Are you sure you want to cancel this leave request?')) return;
         try {
-            await http.post(`/api/leave/${id}/cancel`);
+            await http.post(`/leave/${id}/cancel`);
             fetchMyLeaves();
             fetchMyBalance();
         } catch (error) {
@@ -146,7 +146,7 @@ const LeavePage = () => {
     // Approve leave handler
     const handleApproveLeave = async (id) => {
         try {
-            await http.post(`/api/leave/${id}/approve`);
+            await http.post(`/leave/${id}/approve`);
             setShowApprovalModal(null);
             fetchTeamLeaves();
         } catch (error) {
@@ -157,7 +157,7 @@ const LeavePage = () => {
     // Reject leave handler
     const handleRejectLeave = async (id, reason) => {
         try {
-            await http.post(`/api/leave/${id}/reject`, { reason });
+            await http.post(`/leave/${id}/reject`, { reason });
             setShowApprovalModal(null);
             fetchTeamLeaves();
         } catch (error) {

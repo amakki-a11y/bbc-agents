@@ -224,7 +224,7 @@ const BotPage = () => {
 
     const loadContext = async () => {
         try {
-            const response = await http.get('/api/bot/context');
+            const response = await http.get('/bot/context');
             setContext(response.data);
         } catch (err) {
             console.error('Failed to load context:', err);
@@ -235,7 +235,7 @@ const BotPage = () => {
 
     const loadRecentConversations = async () => {
         try {
-            const response = await http.get('/api/bot/history?limit=10');
+            const response = await http.get('/bot/history?limit=10');
             const messages = response.data || [];
             const userMessages = messages
                 .filter(m => m.sender === 'employee')
@@ -278,7 +278,7 @@ const BotPage = () => {
     const handleClearHistory = async () => {
         if (!window.confirm('Are you sure you want to clear your chat history?')) return;
         try {
-            await http.delete('/api/bot/history');
+            await http.delete('/bot/history');
             setRecentConversations([]);
             window.location.reload();
         } catch (err) {

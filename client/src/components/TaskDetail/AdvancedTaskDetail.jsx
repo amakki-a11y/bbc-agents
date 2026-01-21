@@ -13,7 +13,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
 
     const loadDetails = async () => {
         try {
-            const res = await http.get(`/api/tasks/details/${initialTask.id}`);
+            const res = await http.get(`/tasks/details/${initialTask.id}`);
             setTask(res.data);
             setDescription(res.data.description || "");
         } catch (e) { console.error(e); }
@@ -29,7 +29,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
                 await onUpdate(task.id, updates);
                 setTask(prev => ({ ...prev, ...updates }));
             } else {
-                await http.put(`/api/tasks/details/${task.id}`, updates);
+                await http.put(`/tasks/details/${task.id}`, updates);
                 loadDetails();
             }
         } catch (e) { console.error("Update failed", e); }
@@ -42,7 +42,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
     const handleAddSubtask = async (e) => {
         if (e.key === 'Enter' && newSubtask.trim()) {
             try {
-                await http.post(`/api/tasks/details/${task.id}/subtasks`, { title: newSubtask });
+                await http.post(`/tasks/details/${task.id}/subtasks`, { title: newSubtask });
                 setNewSubtask("");
                 loadDetails();
             } catch (e) { console.error(e); }
@@ -51,7 +51,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
 
     const handleToggleSubtask = async (subtaskId, currentStatus) => {
         try {
-            await http.put(`/api/tasks/details/subtasks/${subtaskId}`, { is_complete: !currentStatus });
+            await http.put(`/tasks/details/subtasks/${subtaskId}`, { is_complete: !currentStatus });
             loadDetails();
         } catch (e) { console.error(e); }
     };

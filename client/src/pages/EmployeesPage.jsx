@@ -33,8 +33,8 @@ const EmployeesPage = () => {
     const fetchMetadata = useCallback(async () => {
         try {
             const [deptRes, rolesRes] = await Promise.all([
-                http.get('/api/departments'),
-                http.get('/api/roles')
+                http.get('/departments'),
+                http.get('/roles')
             ]);
             setDepartments(deptRes.data || []);
             setRoles(rolesRes.data || []);
@@ -57,7 +57,7 @@ const EmployeesPage = () => {
             if (filterRole) params.append('role_id', filterRole);
             if (filterStatus) params.append('status', filterStatus);
 
-            const response = await http.get(`/api/employees?${params.toString()}`);
+            const response = await http.get(`/employees?${params.toString()}`);
             const { data, pagination } = response.data;
 
             setEmployees(data || []);
@@ -73,7 +73,7 @@ const EmployeesPage = () => {
     // Fetch stats (total counts regardless of filters)
     const fetchStats = useCallback(async () => {
         try {
-            const response = await http.get('/api/employees?limit=1000');
+            const response = await http.get('/employees?limit=1000');
             const allEmployees = response.data?.data || [];
             setStats({
                 total: response.data?.pagination?.total || allEmployees.length,

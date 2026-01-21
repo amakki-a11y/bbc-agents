@@ -18,8 +18,8 @@ const AnalyticsDashboard = () => {
         try {
             // Fetch tasks and events in parallel
             const [tasksRes, eventsRes] = await Promise.all([
-                http.get('/api/tasks'),
-                http.get('/api/events').catch(() => ({ data: [] })) // Events may not exist
+                http.get('/tasks'),
+                http.get('/events').catch(() => ({ data: [] })) // Events may not exist
             ]);
             setTasks(tasksRes.data || []);
             setEvents(eventsRes.data || []);

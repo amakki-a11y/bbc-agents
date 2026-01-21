@@ -29,7 +29,7 @@ const DashboardHome = () => {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            const tasksRes = await http.get('/api/tasks');
+            const tasksRes = await http.get('/tasks');
             const tasks = tasksRes.data || [];
 
             const today = new Date();
@@ -56,12 +56,12 @@ const DashboardHome = () => {
             setStats(prev => ({ ...prev, tasksDueToday }));
 
             try {
-                const attendanceRes = await http.get('/api/attendance/me/today');
+                const attendanceRes = await http.get('/attendance/me/today');
                 setAttendanceStatus(attendanceRes.data);
             } catch (e) {}
 
             try {
-                const employeesRes = await http.get('/api/employees?limit=1');
+                const employeesRes = await http.get('/employees?limit=1');
                 const total = employeesRes.data?.pagination?.total || 0;
                 setStats(prev => ({ ...prev, teamMembers: total }));
             } catch (e) {}
@@ -81,7 +81,7 @@ const DashboardHome = () => {
 
     const handleCheckIn = async () => {
         try {
-            await http.post('/api/attendance/check-in');
+            await http.post('/attendance/check-in');
             fetchDashboardData();
         } catch (error) {
             console.error('Check-in failed:', error);

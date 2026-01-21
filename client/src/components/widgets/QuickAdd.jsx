@@ -24,7 +24,7 @@ const QuickAdd = ({ onTaskAdded }) => {
                 // For now, sending without projectId hoping it's optional or handled.
             };
 
-            const response = await http.post('/api/tasks', payload);
+            const response = await http.post('/tasks', payload);
 
             if (onTaskAdded) {
                 onTaskAdded(response.data);

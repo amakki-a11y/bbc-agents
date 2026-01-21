@@ -76,9 +76,9 @@ const Dashboard = ({ children }) => {
         if (!token) return;
         try {
             const [tasksRes, eventsRes, projectsRes] = await Promise.all([
-                http.get('/api/tasks'),
-                http.get('/api/events'),
-                http.get('/api/projects')
+                http.get('/tasks'),
+                http.get('/events'),
+                http.get('/projects')
             ]);
             setTasks(tasksRes.data);
             setEvents(eventsRes.data);
@@ -96,7 +96,7 @@ const Dashboard = ({ children }) => {
 
     const handleCreateProject = async (projectData) => {
         try {
-            const res = await http.post('/api/projects', projectData);
+            const res = await http.post('/projects', projectData);
             setProjects(prev => [...prev, res.data]);
             setShowCreateProject(false);
         } catch (error) {
@@ -106,7 +106,7 @@ const Dashboard = ({ children }) => {
 
     const handleArchiveProject = async (projectId) => {
         try {
-            await http.patch(`/api/projects/${projectId}/archive`);
+            await http.patch(`/projects/${projectId}/archive`);
             setProjects(prev => prev.map(p => p.id === projectId ? { ...p, archived: true } : p));
         } catch (error) {
             console.error('Failed to archive project:', error);
@@ -116,7 +116,7 @@ const Dashboard = ({ children }) => {
     const handleDeleteProject = async (projectId) => {
         if (!window.confirm('Delete this project? All tasks will be permanently removed.')) return;
         try {
-            await http.delete(`/api/projects/${projectId}`);
+            await http.delete(`/projects/${projectId}`);
             setProjects(prev => prev.filter(p => p.id !== projectId));
         } catch (error) {
             console.error('Failed to delete project:', error);

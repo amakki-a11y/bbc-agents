@@ -1,43 +1,26 @@
-import axios from 'axios';
-
-// Using centralized API_URL from http.js
+import http from './http';
 
 const getTemplates = async () => {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/templates`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await http.get('/templates');
     return response.data;
 };
 
 const createTemplate = async (templateData) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(`${API_URL}/templates`, templateData, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await http.post('/templates', templateData);
     return response.data;
 };
 
 const updateTemplate = async (id, templateData) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.put(`${API_URL}/templates/${id}`, templateData, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await http.put(`/templates/${id}`, templateData);
     return response.data;
 };
 
 const deleteTemplate = async (id) => {
-    const token = localStorage.getItem('token');
-    await axios.delete(`${API_URL}/templates/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    await http.delete(`/templates/${id}`);
 };
 
 const instantiateTemplate = async (id, data) => {
-    const token = localStorage.getItem('token');
-    const response = await axios.post(`${API_URL}/templates/${id}/instantiate`, data, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await http.post(`/templates/${id}/instantiate`, data);
     return response.data;
 };
 

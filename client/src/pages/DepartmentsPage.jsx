@@ -15,8 +15,8 @@ const DepartmentsPage = () => {
         try {
             setLoading(true);
             const [deptRes, empRes] = await Promise.all([
-                http.get('/api/departments'),
-                http.get('/api/employees?limit=1000')
+                http.get('/departments'),
+                http.get('/employees?limit=1000')
             ]);
             setDepartments(deptRes.data || []);
             // Handle paginated response: { data: [], pagination: {...} } or plain array
@@ -278,7 +278,7 @@ const DepartmentDetailModal = ({ department, employees, onClose, onUpdate }) => 
     const handleSave = async () => {
         try {
             setSaving(true);
-            await http.put(`/api/departments/${department.id}`, formData);
+            await http.put(`/departments/${department.id}`, formData);
             onUpdate();
             setIsEditing(false);
         } catch (error) {
@@ -527,7 +527,7 @@ const DepartmentFormModal = ({ onClose, onSave }) => {
         }
         try {
             setSaving(true);
-            await http.post('/api/departments', formData);
+            await http.post('/departments', formData);
             onSave();
         } catch (error) {
             console.error('Failed to create department:', error);

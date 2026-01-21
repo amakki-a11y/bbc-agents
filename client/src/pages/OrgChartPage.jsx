@@ -15,8 +15,8 @@ const OrgChartPage = () => {
         try {
             setLoading(true);
             const [empRes, deptRes] = await Promise.all([
-                http.get('/api/employees?limit=1000'),
-                http.get('/api/departments')
+                http.get('/employees?limit=1000'),
+                http.get('/departments')
             ]);
             // Handle paginated response: { data: [], pagination: {...} } or plain array
             const employeesData = empRes.data?.data || empRes.data || [];

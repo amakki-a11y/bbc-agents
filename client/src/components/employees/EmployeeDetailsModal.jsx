@@ -16,7 +16,7 @@ const EmployeeDetailsModal = ({ employee, onClose, onUpdate, departments = [], r
     const fetchAttendance = async () => {
         try {
             setLoadingAttendance(true);
-            const res = await http.get(`/api/attendance/employee/${employee.id}`);
+            const res = await http.get(`/attendance/employee/${employee.id}`);
             setAttendance(res.data || []);
         } catch (error) {
             console.error('Failed to fetch attendance:', error);
@@ -29,7 +29,7 @@ const EmployeeDetailsModal = ({ employee, onClose, onUpdate, departments = [], r
     const handleDeactivate = async () => {
         if (!confirm('Are you sure you want to deactivate this employee?')) return;
         try {
-            await http.patch(`/api/employees/${employee.id}`, { status: 'inactive' });
+            await http.patch(`/employees/${employee.id}`, { status: 'inactive' });
             onUpdate();
             onClose();
         } catch (error) {
