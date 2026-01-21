@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../utils/prisma');
+const prisma = require('../lib/prisma');
 
 const monitoringService = require('../services/monitoring');
 const logger = require('../utils/logger');
