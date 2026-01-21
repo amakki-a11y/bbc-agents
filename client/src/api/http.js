@@ -63,6 +63,7 @@ addAuthInterceptor(authHttp);
 // Track if we're currently refreshing to prevent multiple refresh calls
 let isRefreshing = false;
 let failedQueue = [];
+let isRedirecting = false; // Prevent multiple redirects
 
 const processQueue = (error, token = null) => {
     failedQueue.forEach(prom => {
@@ -75,12 +76,30 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+// Safe redirect to login - prevents infinite loops
+const redirectToLogin = () => {
+    // Only redirect once and only if not already on login page
+    if (isRedirecting) return;
+    if (window.location.pathname === '/login') return;
+
+    isRedirecting = true;
+    clearTokens();
+
+    // Use replace to avoid back button issues
+    window.location.replace('/login');
+};
+
 // Response interceptor with automatic token refresh
 const addResponseInterceptor = (client) => {
     client.interceptors.response.use(
         (response) => response,
         async (error) => {
             const originalRequest = error.config;
+
+            // Skip auth handling for auth endpoints to prevent loops
+            if (originalRequest?.url?.includes('/auth/')) {
+                return Promise.reject(error);
+            }
 
             // Handle 403 with TOKEN_EXPIRED - try to refresh
             if (error.response?.status === 403 &&
@@ -101,8 +120,7 @@ const addResponseInterceptor = (client) => {
 
                 const refreshToken = getRefreshToken();
                 if (!refreshToken) {
-                    clearTokens();
-                    window.location.href = '/login';
+                    redirectToLogin();
                     return Promise.reject(error);
                 }
 
@@ -117,18 +135,16 @@ const addResponseInterceptor = (client) => {
                     return client(originalRequest);
                 } catch (refreshError) {
                     processQueue(refreshError, null);
-                    clearTokens();
-                    window.location.href = '/login';
+                    redirectToLogin();
                     return Promise.reject(refreshError);
                 } finally {
                     isRefreshing = false;
                 }
             }
 
-            // Handle 401 - redirect to login
+            // Handle 401 - redirect to login (but only once)
             if (error.response?.status === 401) {
-                clearTokens();
-                window.location.href = '/login';
+                redirectToLogin();
             }
 
             return Promise.reject(error);

@@ -19,7 +19,10 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (user && token) {
             const newSocket = io(API_BASE, {
-                auth: { token }
+                auth: { token },
+                reconnection: true,
+                reconnectionAttempts: 3,
+                reconnectionDelay: 1000
             });
 
             newSocket.on('connect', () => {
@@ -30,16 +33,27 @@ export const NotificationProvider = ({ children }) => {
             newSocket.on('notification', (notification) => {
                 setNotifications(prev => [notification, ...prev]);
                 setUnreadCount(prev => prev + 1);
-                // Optional: Show toast here
+            });
+
+            newSocket.on('connect_error', (err) => {
+                console.log('Socket connection error:', err.message);
             });
 
             setSocket(newSocket);
 
-            return () => newSocket.close();
-        } else {
-            if (socket) socket.close();
-            setSocket(null);
+            return () => {
+                newSocket.close();
+                setSocket(null);
+            };
         }
+
+        // Cleanup when user logs out
+        return () => {
+            setSocket(prevSocket => {
+                if (prevSocket) prevSocket.close();
+                return null;
+            });
+        };
     }, [user, token]);
 
     // Initial Fetch (Mock for now, should call API)
