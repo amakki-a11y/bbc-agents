@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
-    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft
+    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon
 } from 'lucide-react';
 import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
@@ -67,6 +68,7 @@ const NavItem = ({ icon: Icon, label, href, badge, collapsed }) => {
 
 const Dashboard = ({ children }) => {
     const { logout, user, token } = useAuth();
+    const { theme, toggleTheme, isDark } = useTheme();
     const [tasks, setTasks] = useState([]);
     const [events, setEvents] = useState([]);
     const [projects, setProjects] = useState([]);
@@ -146,18 +148,18 @@ const Dashboard = ({ children }) => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-secondary)' }}>
 
             {/* Modern Header Bar */}
             <header style={{
                 height: '64px',
-                background: 'white',
+                background: 'var(--header-bg)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0 1.5rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                borderBottom: '1px solid #e2e8f0',
+                boxShadow: 'var(--shadow-sm)',
+                borderBottom: '1px solid var(--header-border)',
                 flexShrink: 0,
                 zIndex: 50
             }}>
@@ -172,11 +174,11 @@ const Dashboard = ({ children }) => {
                         cursor: 'pointer',
                         transition: 'background 0.2s',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                         <div style={{
-                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            background: 'var(--primary-gradient)',
                             width: 36,
                             height: 36,
                             borderRadius: 10,
@@ -188,26 +190,26 @@ const Dashboard = ({ children }) => {
                             <Sparkles size={20} color="white" />
                         </div>
                         <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a' }}>BBC Agents</div>
-                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>AI Workspace</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>BBC Agents</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>AI Workspace</div>
                         </div>
-                        <ChevronDown size={16} style={{ color: '#94a3b8' }} />
+                        <ChevronDown size={16} style={{ color: 'var(--text-light)' }} />
                     </div>
                 </div>
 
                 {/* Center: Search */}
                 <div style={{ flex: 1, maxWidth: '480px', margin: '0 2rem' }}>
                     <div style={{
-                        background: searchFocused ? 'white' : '#f1f5f9',
+                        background: searchFocused ? 'var(--bg-card)' : 'var(--bg-tertiary)',
                         borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0.625rem 1rem',
-                        border: searchFocused ? '2px solid #6366f1' : '2px solid transparent',
-                        boxShadow: searchFocused ? '0 0 0 4px rgba(99, 102, 241, 0.1)' : 'none',
+                        border: searchFocused ? '2px solid var(--primary)' : '2px solid transparent',
+                        boxShadow: searchFocused ? 'var(--input-focus-shadow)' : 'none',
                         transition: 'all 0.2s ease'
                     }}>
-                        <Search size={18} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                        <Search size={18} style={{ color: 'var(--text-light)', flexShrink: 0 }} />
                         <input
                             placeholder="Search anything..."
                             onFocus={() => setSearchFocused(true)}
@@ -215,7 +217,7 @@ const Dashboard = ({ children }) => {
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#1e293b',
+                                color: 'var(--text-primary)',
                                 padding: '0 0.75rem',
                                 width: '100%',
                                 outline: 'none',
@@ -223,11 +225,11 @@ const Dashboard = ({ children }) => {
                             }}
                         />
                         <kbd style={{
-                            background: '#e2e8f0',
+                            background: 'var(--bg-active)',
                             padding: '2px 8px',
                             borderRadius: '6px',
                             fontSize: '0.7rem',
-                            color: '#64748b',
+                            color: 'var(--text-muted)',
                             fontFamily: 'inherit',
                             fontWeight: 500
                         }}>⌘K</kbd>
@@ -241,7 +243,36 @@ const Dashboard = ({ children }) => {
                         New
                     </button>
 
-                    <div style={{ width: 1, height: 28, background: '#e2e8f0' }} />
+                    <div style={{ width: 1, height: 28, background: 'var(--border-color)' }} />
+
+                    {/* Theme Toggle Button */}
+                    <button
+                        onClick={toggleTheme}
+                        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: 'var(--bg-tertiary)',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--bg-hover)';
+                            e.currentTarget.style.color = 'var(--primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--bg-tertiary)';
+                            e.currentTarget.style.color = 'var(--text-secondary)';
+                        }}
+                    >
+                        {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                    </button>
 
                     <NotificationBell />
 
@@ -261,9 +292,9 @@ const Dashboard = ({ children }) => {
                                 fontWeight: 700,
                                 color: 'white',
                                 cursor: 'pointer',
-                                border: showUserMenu ? '2px solid #6366f1' : '2px solid transparent',
+                                border: showUserMenu ? '2px solid var(--primary)' : '2px solid transparent',
                                 transition: 'all 0.2s ease',
-                                boxShadow: showUserMenu ? '0 0 0 4px rgba(99, 102, 241, 0.2)' : 'none'
+                                boxShadow: showUserMenu ? 'var(--input-focus-shadow)' : 'none'
                             }}
                         >
                             {user?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -281,24 +312,24 @@ const Dashboard = ({ children }) => {
                                     top: 'calc(100% + 12px)',
                                     right: 0,
                                     width: '260px',
-                                    background: 'white',
+                                    background: 'var(--bg-card)',
                                     borderRadius: '16px',
-                                    boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+                                    boxShadow: 'var(--shadow-xl)',
                                     overflow: 'hidden',
                                     zIndex: 1000,
-                                    border: '1px solid #e2e8f0'
+                                    border: '1px solid var(--border-color)'
                                 }}>
                                     {/* User Info */}
                                     <div style={{
                                         padding: '1.25rem',
-                                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                                        borderBottom: '1px solid #e2e8f0'
+                                        background: 'var(--bg-secondary)',
+                                        borderBottom: '1px solid var(--border-color)'
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                             <div style={{
                                                 width: 52,
                                                 height: 52,
-                                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                background: 'var(--primary-gradient)',
                                                 borderRadius: '14px',
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -313,14 +344,14 @@ const Dashboard = ({ children }) => {
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{
                                                     fontWeight: 700,
-                                                    color: '#0f172a',
+                                                    color: 'var(--text-primary)',
                                                     fontSize: '0.95rem',
                                                     marginBottom: '2px'
                                                 }}>
                                                     {user?.username || 'User'}
                                                 </div>
                                                 <div style={{
-                                                    color: '#64748b',
+                                                    color: 'var(--text-muted)',
                                                     fontSize: '0.8rem',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis'
@@ -347,18 +378,18 @@ const Dashboard = ({ children }) => {
                                                     padding: '0.75rem 1rem',
                                                     borderRadius: '10px',
                                                     cursor: 'pointer',
-                                                    color: '#475569',
+                                                    color: 'var(--text-secondary)',
                                                     fontSize: '0.9rem',
                                                     fontWeight: 500,
                                                     transition: 'all 0.15s ease'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = '#f1f5f9';
-                                                    e.currentTarget.style.color = '#0f172a';
+                                                    e.currentTarget.style.background = 'var(--bg-hover)';
+                                                    e.currentTarget.style.color = 'var(--text-primary)';
                                                 }}
                                                 onMouseLeave={(e) => {
                                                     e.currentTarget.style.background = 'transparent';
-                                                    e.currentTarget.style.color = '#475569';
+                                                    e.currentTarget.style.color = 'var(--text-secondary)';
                                                 }}
                                             >
                                                 <item.icon size={18} style={{ opacity: 0.7 }} />
@@ -368,7 +399,7 @@ const Dashboard = ({ children }) => {
                                     </div>
 
                                     {/* Logout */}
-                                    <div style={{ padding: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+                                    <div style={{ padding: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
                                         <div
                                             onClick={handleLogout}
                                             style={{
@@ -378,13 +409,13 @@ const Dashboard = ({ children }) => {
                                                 padding: '0.75rem 1rem',
                                                 borderRadius: '10px',
                                                 cursor: 'pointer',
-                                                color: '#ef4444',
+                                                color: 'var(--danger)',
                                                 fontSize: '0.9rem',
                                                 fontWeight: 600,
                                                 transition: 'all 0.15s ease'
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.background = '#fef2f2';
+                                                e.currentTarget.style.background = 'var(--danger-bg)';
                                             }}
                                             onMouseLeave={(e) => {
                                                 e.currentTarget.style.background = 'transparent';
@@ -597,7 +628,7 @@ const Dashboard = ({ children }) => {
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
-                                    color: '#64748b',
+                                    color: 'var(--sidebar-text)',
                                     letterSpacing: '0.5px'
                                 }}>
                                     Company
@@ -605,7 +636,7 @@ const Dashboard = ({ children }) => {
                             )}
                             {sidebarCollapsed && (
                                 <div style={{
-                                    borderTop: '1px solid #334155',
+                                    borderTop: '1px solid var(--sidebar-border)',
                                     margin: '0.5rem 0',
                                     paddingTop: '0.5rem'
                                 }} />
@@ -623,7 +654,7 @@ const Dashboard = ({ children }) => {
                     {/* Bottom Sidebar */}
                     <div style={{
                         padding: sidebarCollapsed ? '1rem 0.5rem' : '1rem 0.75rem',
-                        borderTop: '1px solid #334155'
+                        borderTop: '1px solid var(--sidebar-border)'
                     }}>
                         {[
                             { icon: UserPlus, label: 'Invite Team' },
@@ -666,7 +697,7 @@ const Dashboard = ({ children }) => {
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    background: '#f8fafc'
+                    background: 'var(--bg-secondary)'
                 }}>
                     {children ? children : <DashboardHome />}
                 </main>
@@ -715,23 +746,23 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                 {/* Header */}
                 <div style={{
                     padding: '1.5rem',
-                    borderBottom: '1px solid #e2e8f0',
+                    borderBottom: '1px solid var(--border-color)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between'
                 }}>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             Create Project
                         </h2>
-                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                             Add a new project to your workspace
                         </p>
                     </div>
                     <button
                         onClick={onClose}
                         style={{
-                            background: '#f1f5f9',
+                            background: 'var(--bg-tertiary)',
                             border: 'none',
                             borderRadius: '10px',
                             width: 36,
@@ -740,16 +771,16 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            color: '#64748b',
+                            color: 'var(--text-muted)',
                             transition: 'all 0.15s'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#e2e8f0';
-                            e.currentTarget.style.color = '#0f172a';
+                            e.currentTarget.style.background = 'var(--bg-hover)';
+                            e.currentTarget.style.color = 'var(--text-primary)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                            e.currentTarget.style.color = '#64748b';
+                            e.currentTarget.style.background = 'var(--bg-tertiary)';
+                            e.currentTarget.style.color = 'var(--text-muted)';
                         }}
                     >
                         <X size={18} />
@@ -765,7 +796,7 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                                 marginBottom: '0.5rem',
                                 fontSize: '0.875rem',
                                 fontWeight: 600,
-                                color: '#374151'
+                                color: 'var(--text-secondary)'
                             }}>
                                 Project Name
                             </label>
@@ -787,9 +818,9 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                                 marginBottom: '0.5rem',
                                 fontSize: '0.875rem',
                                 fontWeight: 600,
-                                color: '#374151'
+                                color: 'var(--text-secondary)'
                             }}>
-                                Description <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span>
+                                Description <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>(optional)</span>
                             </label>
                             <textarea
                                 value={description}
@@ -811,7 +842,7 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                                 marginBottom: '0.75rem',
                                 fontSize: '0.875rem',
                                 fontWeight: 600,
-                                color: '#374151'
+                                color: 'var(--text-secondary)'
                             }}>
                                 Project Color
                             </label>
@@ -826,7 +857,7 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                                             height: '40px',
                                             borderRadius: '12px',
                                             background: c,
-                                            border: color === c ? '3px solid #0f172a' : '3px solid transparent',
+                                            border: color === c ? '3px solid var(--text-primary)' : '3px solid transparent',
                                             cursor: 'pointer',
                                             transition: 'all 0.2s ease',
                                             transform: color === c ? 'scale(1.1)' : 'scale(1)',
@@ -841,11 +872,11 @@ const CreateProjectModal = ({ onClose, onCreate }) => {
                     {/* Footer */}
                     <div style={{
                         padding: '1rem 1.5rem',
-                        borderTop: '1px solid #e2e8f0',
+                        borderTop: '1px solid var(--border-color)',
                         display: 'flex',
                         justifyContent: 'flex-end',
                         gap: '0.75rem',
-                        background: '#f8fafc'
+                        background: 'var(--bg-secondary)'
                     }}>
                         <button
                             type="button"
