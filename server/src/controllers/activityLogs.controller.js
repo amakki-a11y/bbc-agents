@@ -64,10 +64,21 @@ const getLogs = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching activity logs:', error);
+        console.error('[ActivityLogs] Error fetching logs:', error.message);
+        console.error('[ActivityLogs] Error code:', error.code);
+        console.error('[ActivityLogs] Full error:', error);
+
+        // Provide helpful error message based on Prisma error codes
+        let errorMsg = 'Failed to fetch activity logs';
+        if (error.code === 'P2021') {
+            errorMsg = 'ActivityLog table does not exist. Please run prisma db push.';
+        } else if (error.code === 'P2002') {
+            errorMsg = 'Database constraint error';
+        }
+
         res.status(500).json({
-            error: 'Failed to fetch activity logs',
-            details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+            error: errorMsg,
+            details: error.message,
             code: error.code
         });
     }
