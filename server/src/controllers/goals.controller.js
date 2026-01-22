@@ -158,10 +158,13 @@ const createGoal = async (req, res) => {
             autoTrackField
         } = req.body;
 
-        // Get employee ID from authenticated user
+        // Get employee ID from authenticated user (optional)
         const employeeId = req.employee?.id;
-        if (!employeeId) {
-            return res.status(400).json({ error: 'Employee record required to create goals' });
+
+        // If ownerType is employee and no ownerId, use current employee
+        let finalOwnerId = ownerId;
+        if (ownerType === 'employee' && !finalOwnerId && employeeId) {
+            finalOwnerId = employeeId;
         }
 
         const goal = await prisma.goal.create({
@@ -169,15 +172,15 @@ const createGoal = async (req, res) => {
                 title,
                 description,
                 goalType,
-                targetValue: parseFloat(targetValue),
+                targetValue: targetValue ? parseFloat(targetValue) : null,
                 unit,
-                ownerType,
-                ownerId: ownerId || null,
+                ownerType: ownerType || 'employee',
+                ownerId: finalOwnerId || null,
                 startDate: startDate ? new Date(startDate) : new Date(),
-                dueDate: new Date(dueDate),
+                dueDate: dueDate ? new Date(dueDate) : null,
                 parentGoalId: parentGoalId ? parseInt(parentGoalId) : null,
                 autoTrackField,
-                createdBy: employeeId
+                createdBy: employeeId || null
             },
             include: {
                 creator: {
