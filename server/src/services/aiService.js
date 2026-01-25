@@ -5,6 +5,200 @@ const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
 });
 
+// ========== RATE LIMITING & CACHING CONFIGURATION ==========
+
+/**
+ * Simple LRU Cache for common AI responses
+ * Reduces API calls for frequently asked questions
+ */
+class ResponseCache {
+    constructor(maxSize = 100, ttlMs = 5 * 60 * 1000) { // 5 minute TTL
+        this.cache = new Map();
+        this.maxSize = maxSize;
+        this.ttlMs = ttlMs;
+    }
+
+    generateKey(message, contextHash) {
+        // Create a cache key from the message and a simplified context hash
+        const normalizedMessage = message.toLowerCase().trim();
+        return `${normalizedMessage}:${contextHash}`;
+    }
+
+    get(key) {
+        const entry = this.cache.get(key);
+        if (!entry) return null;
+
+        // Check if expired
+        if (Date.now() > entry.expiresAt) {
+            this.cache.delete(key);
+            return null;
+        }
+
+        // Move to end (most recently used)
+        this.cache.delete(key);
+        this.cache.set(key, entry);
+        return entry.value;
+    }
+
+    set(key, value) {
+        // Remove oldest entry if at capacity
+        if (this.cache.size >= this.maxSize) {
+            const oldestKey = this.cache.keys().next().value;
+            this.cache.delete(oldestKey);
+        }
+
+        this.cache.set(key, {
+            value,
+            expiresAt: Date.now() + this.ttlMs
+        });
+    }
+
+    clear() {
+        this.cache.clear();
+    }
+}
+
+/**
+ * Request Queue to prevent API overload
+ * Processes requests sequentially with rate limiting
+ */
+class RequestQueue {
+    constructor(maxConcurrent = 2, minDelayMs = 100) {
+        this.queue = [];
+        this.activeRequests = 0;
+        this.maxConcurrent = maxConcurrent;
+        this.minDelayMs = minDelayMs;
+        this.lastRequestTime = 0;
+    }
+
+    async enqueue(requestFn) {
+        return new Promise((resolve, reject) => {
+            this.queue.push({ requestFn, resolve, reject });
+            this.processQueue();
+        });
+    }
+
+    async processQueue() {
+        if (this.activeRequests >= this.maxConcurrent || this.queue.length === 0) {
+            return;
+        }
+
+        // Ensure minimum delay between requests
+        const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+        if (timeSinceLastRequest < this.minDelayMs) {
+            setTimeout(() => this.processQueue(), this.minDelayMs - timeSinceLastRequest);
+            return;
+        }
+
+        const { requestFn, resolve, reject } = this.queue.shift();
+        this.activeRequests++;
+        this.lastRequestTime = Date.now();
+
+        try {
+            const result = await requestFn();
+            resolve(result);
+        } catch (error) {
+            reject(error);
+        } finally {
+            this.activeRequests--;
+            this.processQueue();
+        }
+    }
+}
+
+// Initialize cache and queue
+const responseCache = new ResponseCache();
+const requestQueue = new RequestQueue();
+
+/**
+ * Exponential backoff retry wrapper
+ * @param {Function} fn - Async function to retry
+ * @param {number} maxRetries - Maximum number of retries (default: 3)
+ * @param {number} baseDelayMs - Base delay in ms (default: 1000)
+ * @returns {Promise} - Result of the function or throws after max retries
+ */
+const withRetry = async (fn, maxRetries = 3, baseDelayMs = 1000) => {
+    let lastError;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error;
+
+            // Check if this is a rate limit error
+            const isRateLimit = error.status === 429 ||
+                               error.message?.includes('rate') ||
+                               error.message?.includes('too many') ||
+                               error.message?.includes('overloaded');
+
+            // Don't retry on non-retryable errors
+            const isRetryable = isRateLimit ||
+                               error.status === 500 ||
+                               error.status === 502 ||
+                               error.status === 503 ||
+                               error.message?.includes('timeout');
+
+            if (!isRetryable || attempt === maxRetries) {
+                throw error;
+            }
+
+            // Calculate delay with exponential backoff + jitter
+            const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+            console.log(`AI API request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms...`);
+
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    throw lastError;
+};
+
+/**
+ * Generate a simple hash of the context for caching
+ * Only includes relevant fields that affect the response
+ */
+const hashContext = (context) => {
+    const relevantData = {
+        employeeId: context.employee?.id,
+        tasksCount: context.allTasks?.length || context.tasks?.length || 0,
+        unreadMessages: context.unreadMessages
+    };
+    return JSON.stringify(relevantData);
+};
+
+/**
+ * Friendly error messages for rate limiting
+ */
+const FRIENDLY_ERROR_MESSAGES = {
+    rateLimit: "I'm a bit busy right now. Please try again in a moment. 🙏",
+    overloaded: "Our AI service is experiencing high demand. Please try again shortly.",
+    timeout: "The request took too long. Please try again.",
+    generic: "Something went wrong. Please try again in a moment."
+};
+
+/**
+ * Check if a message is cacheable (simple queries without side effects)
+ */
+const isCacheableQuery = (message) => {
+    const lowerMessage = message.toLowerCase();
+    const cacheablePatterns = [
+        'who can i message',
+        'my contacts',
+        'my tasks',
+        'my attendance',
+        'my stats',
+        'my goals',
+        'leaderboard',
+        'who\'s in',
+        'who\'s out',
+        'pulse check',
+        'my profile'
+    ];
+
+    return cacheablePatterns.some(pattern => lowerMessage.includes(pattern));
+};
+
 /**
  * Tool definitions for Claude to use
  */
@@ -1051,6 +1245,7 @@ RULES:
 
 /**
  * Generate AI response using Claude with tool support
+ * Includes: exponential backoff, caching, request queuing
  */
 const generateAIResponse = async (userMessage, context, actionHandler = null) => {
     // Check if API key is configured
@@ -1059,23 +1254,42 @@ const generateAIResponse = async (userMessage, context, actionHandler = null) =>
         return null;
     }
 
-    try {
-        const systemPrompt = buildSystemPrompt(context);
-        const messages = [
-            {
-                role: 'user',
-                content: userMessage
-            }
-        ];
+    // Check cache for cacheable queries
+    const contextHash = hashContext(context);
+    const cacheKey = responseCache.generateKey(userMessage, contextHash);
 
-        // Initial response with tools
-        let response = await anthropic.messages.create({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 1024,
-            system: systemPrompt,
-            messages,
-            tools: toolDefinitions
-        });
+    if (isCacheableQuery(userMessage)) {
+        const cachedResponse = responseCache.get(cacheKey);
+        if (cachedResponse) {
+            console.log('Returning cached AI response');
+            return {
+                ...cachedResponse,
+                metadata: { ...cachedResponse.metadata, fromCache: true }
+            };
+        }
+    }
+
+    // Queue the request to prevent API overload
+    return requestQueue.enqueue(async () => {
+        try {
+            const systemPrompt = buildSystemPrompt(context);
+            const messages = [
+                {
+                    role: 'user',
+                    content: userMessage
+                }
+            ];
+
+            // Initial response with tools - wrapped in retry logic
+            let response = await withRetry(async () => {
+                return await anthropic.messages.create({
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 1024,
+                    system: systemPrompt,
+                    messages,
+                    tools: toolDefinitions
+                });
+            });
 
         const toolResults = [];
         let finalTextContent = '';
@@ -1126,13 +1340,15 @@ const generateAIResponse = async (userMessage, context, actionHandler = null) =>
                 content: toolResultsForMessage
             });
 
-            // Continue the conversation
-            response = await anthropic.messages.create({
-                model: 'claude-3-haiku-20240307',
-                max_tokens: 1024,
-                system: systemPrompt,
-                messages,
-                tools: toolDefinitions
+            // Continue the conversation - wrapped in retry logic
+            response = await withRetry(async () => {
+                return await anthropic.messages.create({
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 1024,
+                    system: systemPrompt,
+                    messages,
+                    tools: toolDefinitions
+                });
             });
         }
 
@@ -1143,7 +1359,7 @@ const generateAIResponse = async (userMessage, context, actionHandler = null) =>
         }
 
         if (finalTextContent) {
-            return {
+            const result = {
                 content: finalTextContent,
                 messageType: determineMessageType(userMessage, finalTextContent),
                 metadata: {
@@ -1154,15 +1370,47 @@ const generateAIResponse = async (userMessage, context, actionHandler = null) =>
                     toolsUsed: toolResults.length > 0 ? toolResults : undefined
                 }
             };
+
+            // Cache successful responses for cacheable queries (only if no tools were used)
+            if (isCacheableQuery(userMessage) && toolResults.length === 0) {
+                responseCache.set(cacheKey, result);
+            }
+
+            return result;
         }
 
         return null;
-    } catch (error) {
-        console.error('Claude API error:', error.message);
+        } catch (error) {
+            console.error('Claude API error:', error.message);
 
-        // Return null to trigger fallback to mock response
-        return null;
-    }
+            // Determine friendly error message based on error type
+            let friendlyMessage = FRIENDLY_ERROR_MESSAGES.generic;
+
+            if (error.status === 429 || error.message?.includes('rate') || error.message?.includes('too many')) {
+                friendlyMessage = FRIENDLY_ERROR_MESSAGES.rateLimit;
+            } else if (error.message?.includes('overloaded') || error.status === 529) {
+                friendlyMessage = FRIENDLY_ERROR_MESSAGES.overloaded;
+            } else if (error.message?.includes('timeout')) {
+                friendlyMessage = FRIENDLY_ERROR_MESSAGES.timeout;
+            }
+
+            // Return friendly error instead of null for rate limit errors
+            if (error.status === 429 || error.status === 529 || error.message?.includes('rate') || error.message?.includes('overloaded')) {
+                return {
+                    content: friendlyMessage,
+                    messageType: 'error',
+                    metadata: {
+                        action: 'rate_limited',
+                        error: true,
+                        retryAfter: error.headers?.['retry-after'] || 30
+                    }
+                };
+            }
+
+            // Return null for other errors to trigger fallback
+            return null;
+        }
+    });
 };
 
 /**
@@ -1184,8 +1432,26 @@ const determineMessageType = (userMessage, aiResponse) => {
     return 'question';
 };
 
+/**
+ * Clear the response cache (useful for testing or maintenance)
+ */
+const clearResponseCache = () => {
+    responseCache.clear();
+    console.log('AI response cache cleared');
+};
+
+/**
+ * Get current queue status (for monitoring)
+ */
+const getQueueStatus = () => ({
+    activeRequests: requestQueue.activeRequests,
+    queueLength: requestQueue.queue.length
+});
+
 module.exports = {
     generateAIResponse,
     buildSystemPrompt,
-    toolDefinitions
+    toolDefinitions,
+    clearResponseCache,
+    getQueueStatus
 };
