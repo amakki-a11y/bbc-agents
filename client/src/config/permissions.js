@@ -235,6 +235,33 @@ export const PERMISSION_CATEGORIES = {
             }
         }
     },
+    documents: {
+        name: 'Documents',
+        description: 'Document management permissions',
+        icon: 'FileText',
+        permissions: {
+            'documents.view': {
+                name: 'View Documents',
+                description: 'View company documents'
+            },
+            'documents.upload': {
+                name: 'Upload Documents',
+                description: 'Upload new documents'
+            },
+            'documents.edit': {
+                name: 'Edit Documents',
+                description: 'Modify document details'
+            },
+            'documents.delete': {
+                name: 'Delete Documents',
+                description: 'Remove documents'
+            },
+            'documents.manage_categories': {
+                name: 'Manage Categories',
+                description: 'Manage document categories'
+            }
+        }
+    },
     users: {
         name: 'Users',
         description: 'User account management',
@@ -311,6 +338,10 @@ export const PERMISSION_DEPENDENCIES = {
     'reports.export': ['reports.view_personal'],
     'ai.configure': ['ai.access'],
     'ai.view_logs': ['ai.access'],
+    'documents.upload': ['documents.view'],
+    'documents.edit': ['documents.view'],
+    'documents.delete': ['documents.view'],
+    'documents.manage_categories': ['documents.view'],
     'users.manage': ['users.view'],
     'users.delete': ['users.view', 'users.manage'],
     'system.audit_logs': ['system.settings'],

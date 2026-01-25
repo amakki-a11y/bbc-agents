@@ -29,6 +29,7 @@ const ActivityLogsPage = React.lazy(() => import('./pages/ActivityLogsPage'));
 const DocumentsPage = React.lazy(() => import('./pages/DocumentsPage'));
 const AgentBrainPage = React.lazy(() => import('./pages/AgentBrainPage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
+const AccessDeniedPage = React.lazy(() => import('./pages/AccessDeniedPage'));
 
 function App() {
     return (
@@ -45,20 +46,22 @@ function App() {
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
-                                <Route path="/employees" element={<ProtectedRoute><EmployeesPage /></ProtectedRoute>} />
-                                <Route path="/employees/:id" element={<ProtectedRoute><EmployeeProfilePage /></ProtectedRoute>} />
-                                <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
-                                <Route path="/roles" element={<ProtectedRoute><RolesPage /></ProtectedRoute>} />
-                                <Route path="/roles/:roleId" element={<ProtectedRoute><RoleDetailsPage /></ProtectedRoute>} />
-                                <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
-                                <Route path="/leave" element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
-                                <Route path="/org-chart" element={<ProtectedRoute><OrgChartPage /></ProtectedRoute>} />
+                                {/* Company Settings Routes - Permission Protected */}
+                                <Route path="/employees" element={<ProtectedRoute permission="employees.view"><EmployeesPage /></ProtectedRoute>} />
+                                <Route path="/employees/:id" element={<ProtectedRoute permission="employees.view"><EmployeeProfilePage /></ProtectedRoute>} />
+                                <Route path="/departments" element={<ProtectedRoute permission="departments.view"><DepartmentsPage /></ProtectedRoute>} />
+                                <Route path="/roles" element={<ProtectedRoute permission="roles.view"><RolesPage /></ProtectedRoute>} />
+                                <Route path="/roles/:roleId" element={<ProtectedRoute permission="roles.view"><RoleDetailsPage /></ProtectedRoute>} />
+                                <Route path="/attendance" element={<ProtectedRoute permission="attendance.view_own"><AttendancePage /></ProtectedRoute>} />
+                                <Route path="/leave" element={<ProtectedRoute permission="attendance.view_own"><LeavePage /></ProtectedRoute>} />
+                                <Route path="/org-chart" element={<ProtectedRoute permission="employees.view"><OrgChartPage /></ProtectedRoute>} />
                                 <Route path="/inbox" element={<ProtectedRoute><Dashboard><InboxPage /></Dashboard></ProtectedRoute>} />
-                                <Route path="/goals" element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />
-                                <Route path="/activity-logs" element={<ProtectedRoute><ActivityLogsPage /></ProtectedRoute>} />
-                                <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
-                                <Route path="/agent-brain" element={<ProtectedRoute><AgentBrainPage /></ProtectedRoute>} />
-                                <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+                                <Route path="/goals" element={<ProtectedRoute permission="goals.view_own"><GoalsPage /></ProtectedRoute>} />
+                                <Route path="/activity-logs" element={<ProtectedRoute permission="system.audit_logs"><ActivityLogsPage /></ProtectedRoute>} />
+                                <Route path="/documents" element={<ProtectedRoute permission="documents.view"><DocumentsPage /></ProtectedRoute>} />
+                                <Route path="/agent-brain" element={<ProtectedRoute permission="ai.view_logs"><AgentBrainPage /></ProtectedRoute>} />
+                                <Route path="/users" element={<ProtectedRoute permission="users.view"><UsersPage /></ProtectedRoute>} />
+                                <Route path="/access-denied" element={<ProtectedRoute><AccessDeniedPage /></ProtectedRoute>} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </Suspense>

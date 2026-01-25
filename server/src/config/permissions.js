@@ -237,6 +237,33 @@ const PERMISSION_CATEGORIES = {
             }
         }
     },
+    documents: {
+        name: 'Documents',
+        description: 'Document management permissions',
+        icon: 'file-text',
+        permissions: {
+            'documents.view': {
+                name: 'View Documents',
+                description: 'View company documents'
+            },
+            'documents.upload': {
+                name: 'Upload Documents',
+                description: 'Upload new documents'
+            },
+            'documents.edit': {
+                name: 'Edit Documents',
+                description: 'Modify document details'
+            },
+            'documents.delete': {
+                name: 'Delete Documents',
+                description: 'Remove documents'
+            },
+            'documents.manage_categories': {
+                name: 'Manage Categories',
+                description: 'Manage document categories'
+            }
+        }
+    },
     users: {
         name: 'Users',
         description: 'User account management',
@@ -332,6 +359,12 @@ const PERMISSION_DEPENDENCIES = {
     // AI
     'ai.configure': ['ai.access'],
     'ai.view_logs': ['ai.access'],
+
+    // Documents
+    'documents.upload': ['documents.view'],
+    'documents.edit': ['documents.view'],
+    'documents.delete': ['documents.view'],
+    'documents.manage_categories': ['documents.view'],
 
     // Users
     'users.manage': ['users.view'],

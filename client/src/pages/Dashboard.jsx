@@ -8,6 +8,7 @@ import {
     CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog
 } from 'lucide-react';
 import { http } from '../api/http';
+import { usePermissions } from '../hooks/usePermissions';
 import NotificationBell from '../components/NotificationBell';
 import BotButton from '../components/bot/BotButton';
 import DashboardHome from './DashboardHome';
@@ -67,9 +68,23 @@ const NavItem = ({ icon: Icon, label, href, badge, collapsed }) => {
     );
 };
 
+// Company Settings Menu Configuration with permissions
+const COMPANY_SETTINGS_MENU = [
+    { icon: Users, label: "Employees", href: "/employees", permission: "employees.view" },
+    { icon: Building2, label: "Departments", href: "/departments", permission: "departments.view" },
+    { icon: Shield, label: "Roles", href: "/roles", permission: "roles.view" },
+    { icon: Clock, label: "Attendance", href: "/attendance", permission: "attendance.view_own" },
+    { icon: CalendarOff, label: "Leave", href: "/leave", permission: "attendance.view_own" },
+    { icon: GitBranch, label: "Org Chart", href: "/org-chart", permission: "employees.view" },
+    { icon: Activity, label: "Activity Logs", href: "/activity-logs", permission: "system.audit_logs" },
+    { icon: FileText, label: "Documents", href: "/documents", permission: "documents.view" },
+    { icon: UserCog, label: "Users", href: "/users", permission: "users.view" }
+];
+
 const Dashboard = ({ children }) => {
     const { logout, user, token } = useAuth();
     const { theme, toggleTheme, isDark } = useTheme();
+    const { hasPermission, loading: permissionsLoading } = usePermissions();
     const [tasks, setTasks] = useState([]);
     const [events, setEvents] = useState([]);
     const [projects, setProjects] = useState([]);
@@ -85,6 +100,11 @@ const Dashboard = ({ children }) => {
         const saved = localStorage.getItem('sidebarCollapsed');
         return saved === 'true';
     });
+
+    // Filter company settings menu based on user permissions
+    const visibleCompanySettings = COMPANY_SETTINGS_MENU.filter(item =>
+        hasPermission(item.permission)
+    );
 
     // Save sidebar state to localStorage
     useEffect(() => {
@@ -648,37 +668,39 @@ const Dashboard = ({ children }) => {
                             <NavItem icon={Inbox} label="Inbox" href="/inbox" badge={unreadInbox} collapsed={sidebarCollapsed} />
                         </div>
 
-                        {/* Company Section */}
-                        <div>
-                            {!sidebarCollapsed && (
-                                <div style={{
-                                    padding: '0.5rem 0.875rem',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 700,
-                                    textTransform: 'uppercase',
-                                    color: 'var(--sidebar-text)',
-                                    letterSpacing: '0.5px'
-                                }}>
-                                    Company
-                                </div>
-                            )}
-                            {sidebarCollapsed && (
-                                <div style={{
-                                    borderTop: '1px solid var(--sidebar-border)',
-                                    margin: '0.5rem 0',
-                                    paddingTop: '0.5rem'
-                                }} />
-                            )}
-                            <NavItem icon={Users} label="Employees" href="/employees" collapsed={sidebarCollapsed} />
-                            <NavItem icon={Building2} label="Departments" href="/departments" collapsed={sidebarCollapsed} />
-                            <NavItem icon={Shield} label="Roles" href="/roles" collapsed={sidebarCollapsed} />
-                            <NavItem icon={Clock} label="Attendance" href="/attendance" collapsed={sidebarCollapsed} />
-                            <NavItem icon={CalendarOff} label="Leave" href="/leave" collapsed={sidebarCollapsed} />
-                            <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" collapsed={sidebarCollapsed} />
-                            <NavItem icon={Activity} label="Activity Logs" href="/activity-logs" collapsed={sidebarCollapsed} />
-                            <NavItem icon={FileText} label="Documents" href="/documents" collapsed={sidebarCollapsed} />
-                            <NavItem icon={UserCog} label="Users" href="/users" collapsed={sidebarCollapsed} />
-                        </div>
+                        {/* Company Settings Section - Permission Gated */}
+                        {visibleCompanySettings.length > 0 && (
+                            <div>
+                                {!sidebarCollapsed && (
+                                    <div style={{
+                                        padding: '0.5rem 0.875rem',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        color: 'var(--sidebar-text)',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        Company Settings
+                                    </div>
+                                )}
+                                {sidebarCollapsed && (
+                                    <div style={{
+                                        borderTop: '1px solid var(--sidebar-border)',
+                                        margin: '0.5rem 0',
+                                        paddingTop: '0.5rem'
+                                    }} />
+                                )}
+                                {visibleCompanySettings.map(item => (
+                                    <NavItem
+                                        key={item.href}
+                                        icon={item.icon}
+                                        label={item.label}
+                                        href={item.href}
+                                        collapsed={sidebarCollapsed}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Bottom Sidebar */}
