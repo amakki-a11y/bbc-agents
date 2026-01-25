@@ -18,6 +18,7 @@ const BotPage = React.lazy(() => import('./pages/BotPage'));
 const EmployeesPage = React.lazy(() => import('./pages/EmployeesPage'));
 const DepartmentsPage = React.lazy(() => import('./pages/DepartmentsPage'));
 const RolesPage = React.lazy(() => import('./pages/RolesPage'));
+const RoleDetailsPage = React.lazy(() => import('./pages/RoleDetailsPage'));
 const AttendancePage = React.lazy(() => import('./pages/AttendancePage'));
 const LeavePage = React.lazy(() => import('./pages/LeavePage'));
 const OrgChartPage = React.lazy(() => import('./pages/OrgChartPage'));
@@ -47,6 +48,7 @@ function App() {
                                 <Route path="/employees/:id" element={<ProtectedRoute><EmployeeProfilePage /></ProtectedRoute>} />
                                 <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
                                 <Route path="/roles" element={<ProtectedRoute><RolesPage /></ProtectedRoute>} />
+                                <Route path="/roles/:roleId" element={<ProtectedRoute><RoleDetailsPage /></ProtectedRoute>} />
                                 <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
                                 <Route path="/leave" element={<ProtectedRoute><LeavePage /></ProtectedRoute>} />
                                 <Route path="/org-chart" element={<ProtectedRoute><OrgChartPage /></ProtectedRoute>} />

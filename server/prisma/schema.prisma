@@ -39,11 +39,54 @@ model Department {
 }
 
 model Role {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  permissions String // JSON string for permissions
-  created_at  DateTime   @default(now())
-  employees   Employee[]
+  id            String     @id @default(cuid())
+  name          String     @unique
+  description   String?
+  color         String     @default("#6366f1")
+  icon          String?
+  isSystemRole  Boolean    @default(false) // Prevent deletion of Admin, etc.
+  isDefault     Boolean    @default(false) // Auto-assign to new employees
+  permissions   String     @default("{}") // Legacy JSON string for backwards compatibility
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now()) @updatedAt
+  created_by_id String?
+
+  employees         Employee[]
+  rolePermissions   RolePermission[]
+  activityLogs      RoleActivityLog[]
+  createdBy         Employee?          @relation("RoleCreator", fields: [created_by_id], references: [id])
+
+  @@index([isDefault])
+  @@index([isSystemRole])
+}
+
+model RolePermission {
+  id            Int      @id @default(autoincrement())
+  role_id       String
+  permissionKey String   // e.g., "employees.create"
+  granted       Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  role          Role     @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, permissionKey])
+  @@index([role_id])
+  @@index([permissionKey])
+}
+
+model RoleActivityLog {
+  id             Int      @id @default(autoincrement())
+  role_id        String
+  action         String   // "created", "updated", "permissions_changed", "employee_assigned"
+  details        Json?    // Store what changed
+  performed_by_id String?
+  performed_at   DateTime @default(now())
+
+  role           Role     @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  performedBy    Employee? @relation("RoleActivityPerformer", fields: [performed_by_id], references: [id])
+
+  @@index([role_id])
+  @@index([performed_at])
 }
 
 model Employee {
@@ -177,6 +220,10 @@ model Employee {
   conductedReviews       PerformanceReview[]     @relation("ReviewConductor")
   activityLogs           ActivityLog[]
   reviewedAgentActions   AgentAction[]
+
+  // Role Management
+  createdRoles           Role[]                  @relation("RoleCreator")
+  roleActivityLogs       RoleActivityLog[]       @relation("RoleActivityPerformer")
 
   @@index([status])
   @@index([department_id])

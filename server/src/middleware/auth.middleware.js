@@ -20,7 +20,14 @@ const authenticateToken = async (req, res, next) => {
             const employee = await prisma.employee.findUnique({
                 where: { user_id: user.userId },
                 include: {
-                    role: true,
+                    role: {
+                        include: {
+                            rolePermissions: {
+                                where: { granted: true },
+                                select: { permissionKey: true }
+                            }
+                        }
+                    },
                     department: true
                 }
             });
@@ -35,14 +42,31 @@ const authenticateToken = async (req, res, next) => {
                     role_id: employee.role_id,
                     role_name: employee.role?.name,
                     manager_id: employee.manager_id,
-                    status: employee.status
+                    status: employee.status,
+                    isSystemRole: employee.role?.isSystemRole || false
                 };
 
-                // Parse permissions from role
-                try {
-                    req.permissions = JSON.parse(employee.role?.permissions || '[]');
-                } catch {
-                    req.permissions = [];
+                // Get permissions from RolePermission table first
+                const rolePermissions = employee.role?.rolePermissions || [];
+
+                if (rolePermissions.length > 0) {
+                    // Use new RolePermission system
+                    req.permissions = rolePermissions.map(rp => rp.permissionKey);
+                } else {
+                    // Fall back to legacy JSON permissions
+                    try {
+                        const legacyPerms = JSON.parse(employee.role?.permissions || '{}');
+                        // Convert object format to array of keys
+                        if (Array.isArray(legacyPerms)) {
+                            req.permissions = legacyPerms;
+                        } else {
+                            req.permissions = Object.entries(legacyPerms)
+                                .filter(([_, value]) => value === true)
+                                .map(([key]) => key);
+                        }
+                    } catch {
+                        req.permissions = [];
+                    }
                 }
             } else {
                 // User exists but has no employee record - still allow access to basic features
