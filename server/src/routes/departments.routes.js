@@ -15,14 +15,15 @@ const {
 
 router.use(authenticateToken);
 
-// Get all departments (no permission required - all authenticated users)
-router.get('/', getDepartments);
+// Get all departments - requires departments.view permission
+router.get('/', checkPermission('departments.view'), getDepartments);
 
-// Get department stats (no permission required - all authenticated users)
-router.get('/stats', getDepartmentStats);
+// Get department stats - requires departments.view permission
+router.get('/stats', checkPermission('departments.view'), getDepartmentStats);
 
-// Get single department (no permission required - all authenticated users)
+// Get single department - requires departments.view permission
 router.get('/:id', [
+    checkPermission('departments.view'),
     check('id').notEmpty().withMessage('Department ID is required'),
     validate
 ], getDepartment);

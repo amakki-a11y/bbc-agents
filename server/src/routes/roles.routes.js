@@ -29,11 +29,11 @@ router.use(authenticateToken);
 
 // ===== Permissions Endpoints =====
 
-// Get all available permissions
-router.get('/permissions', getPermissions);
+// Get all available permissions - requires roles.view permission
+router.get('/permissions', checkPermission('roles.view'), getPermissions);
 
-// Get role templates
-router.get('/templates', getRoleTemplates);
+// Get role templates - requires roles.view permission
+router.get('/templates', checkPermission('roles.view'), getRoleTemplates);
 
 // ===== User's Own Permissions =====
 
@@ -42,11 +42,12 @@ router.get('/me/permissions', getMyPermissions);
 
 // ===== Role CRUD =====
 
-// Get all roles (requires roles.view or no permission for basic view)
-router.get('/', getRoles);
+// Get all roles - requires roles.view permission
+router.get('/', checkPermission('roles.view'), getRoles);
 
-// Get single role details
+// Get single role details - requires roles.view permission
 router.get('/:id', [
+    checkPermission('roles.view'),
     check('id').notEmpty().withMessage('Role ID is required'),
     validate
 ], getRole);
