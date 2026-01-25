@@ -5201,6 +5201,170 @@ Make it sound more formal and polished while keeping the same meaning. Use clear
     }
 };
 
+/**
+ * Get notifications summary for the bot interface
+ * Returns unread messages, urgent alerts, and pending approvals
+ */
+const getNotifications = async (req, res) => {
+    try {
+        const employeeId = req.employee?.id;
+
+        if (!employeeId) {
+            return res.status(400).json({ error: 'Employee profile required' });
+        }
+
+        // Get unread messages
+        const unreadMessages = await prisma.message.findMany({
+            where: {
+                employee_id: employeeId,
+                status: { in: ['pending', 'delivered'] }
+            },
+            include: {
+                senderEmployee: {
+                    select: {
+                        name: true,
+                        department: { select: { name: true } }
+                    }
+                }
+            },
+            orderBy: { created_at: 'desc' },
+            take: 20
+        });
+
+        // Separate urgent messages
+        const urgentMessages = unreadMessages.filter(m =>
+            m.priority === 'urgent' || m.priority === 'high' || m.message_type === 'escalation'
+        );
+
+        // Get pending leave approvals (if user is a manager)
+        const pendingApprovals = await prisma.leave.count({
+            where: {
+                employee: { manager_id: employeeId },
+                status: 'pending'
+            }
+        });
+
+        // Get pending approval requests
+        const pendingRequests = await prisma.approvalRequest.count({
+            where: {
+                approver_id: employeeId,
+                status: 'pending'
+            }
+        });
+
+        // Get team members needing attention (managers only)
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            select: { subordinates: { select: { id: true } } }
+        });
+
+        let teamAlerts = 0;
+        if (employee?.subordinates?.length > 0) {
+            // Check for subordinates with issues
+            teamAlerts = await prisma.employee.count({
+                where: {
+                    manager_id: employeeId,
+                    OR: [
+                        { attritionRisk: { in: ['high', 'critical'] } },
+                        { probationStatus: 'at_risk' },
+                        { status: 'on_leave' }
+                    ]
+                }
+            });
+        }
+
+        // Format urgent message previews
+        const urgentPreviews = urgentMessages.slice(0, 5).map(m => ({
+            id: m.id,
+            from: m.senderEmployee?.name || (m.sender === 'bot' ? 'System' : 'Unknown'),
+            fromDepartment: m.senderEmployee?.department?.name || '',
+            preview: m.content.replace(/\*\*/g, '').substring(0, 80) + (m.content.length > 80 ? '...' : ''),
+            priority: m.priority,
+            type: m.message_type,
+            time: m.created_at
+        }));
+
+        return res.json({
+            unread_count: unreadMessages.length,
+            urgent_count: urgentMessages.length,
+            urgent_messages: urgentPreviews,
+            pending_approvals: pendingApprovals + pendingRequests,
+            team_alerts: teamAlerts,
+            summary: {
+                hasUrgent: urgentMessages.length > 0,
+                needsAttention: urgentMessages.length > 0 || pendingApprovals > 0 || pendingRequests > 0,
+                isManager: employee?.subordinates?.length > 0
+            }
+        });
+    } catch (error) {
+        console.error('getNotifications error:', error);
+        res.status(500).json({ error: 'Failed to get notifications' });
+    }
+};
+
+/**
+ * Get quick contacts for messaging
+ */
+const getQuickContacts = async (req, res) => {
+    try {
+        const employeeId = req.employee?.id;
+
+        if (!employeeId) {
+            return res.status(400).json({ error: 'Employee profile required' });
+        }
+
+        const employee = await prisma.employee.findUnique({
+            where: { id: employeeId },
+            include: {
+                manager: {
+                    select: { id: true, name: true, jobTitle: true, department: { select: { name: true } } }
+                },
+                subordinates: {
+                    select: { id: true, name: true, jobTitle: true },
+                    take: 10
+                },
+                department: true
+            }
+        });
+
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        // Get HR contacts
+        const hrContacts = await prisma.employee.findMany({
+            where: {
+                department: { name: { contains: 'HR', mode: 'insensitive' } },
+                status: 'active'
+            },
+            select: { id: true, name: true, jobTitle: true },
+            take: 5
+        });
+
+        // Get same department colleagues
+        const colleagues = await prisma.employee.findMany({
+            where: {
+                department_id: employee.department_id,
+                id: { not: employeeId },
+                status: 'active'
+            },
+            select: { id: true, name: true, jobTitle: true },
+            take: 10
+        });
+
+        return res.json({
+            manager: employee.manager,
+            directReports: employee.subordinates,
+            hr: hrContacts,
+            colleagues: colleagues,
+            yourDepartment: employee.department?.name
+        });
+    } catch (error) {
+        console.error('getQuickContacts error:', error);
+        res.status(500).json({ error: 'Failed to get contacts' });
+    }
+};
+
 module.exports = {
     handleBotMessage,
     getConversationHistory,
@@ -5208,5 +5372,7 @@ module.exports = {
     routeMessage,
     markAsRead,
     clearHistory,
-    writeTaskDescription
+    writeTaskDescription,
+    getNotifications,
+    getQuickContacts
 };

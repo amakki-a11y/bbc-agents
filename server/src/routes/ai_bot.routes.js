@@ -10,7 +10,9 @@ const {
     routeMessage,
     markAsRead,
     clearHistory,
-    writeTaskDescription
+    writeTaskDescription,
+    getNotifications,
+    getQuickContacts
 } = require('../controllers/ai_bot.controller');
 
 // All routes require authentication
@@ -49,5 +51,11 @@ router.post('/write-description', [
     check('action').optional().isIn(['generate', 'improve', 'shorten', 'expand', 'criteria', 'bullets', 'professional']),
     validate
 ], writeTaskDescription);
+
+// Get notifications summary (unread messages, urgent alerts, pending approvals)
+router.get('/notifications', getNotifications);
+
+// Get quick contacts for messaging
+router.get('/contacts', getQuickContacts);
 
 module.exports = router;

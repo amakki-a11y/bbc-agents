@@ -3,12 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Bot, User, Clock, ListTodo, Calendar, MessageSquare,
     Settings, Trash2, ChevronRight, Briefcase, Send, CheckCircle2,
-    Sparkles, FileText, Users, Bell
+    Sparkles, FileText, Users, Bell, AlertTriangle, Mail, UserCheck,
+    Search, ArrowUpCircle
 } from 'lucide-react';
 import { http } from '../api/http';
 import BotChat from '../components/bot/BotChat';
 
 const COMMAND_CATEGORIES = [
+    {
+        name: 'Messages',
+        icon: Mail,
+        color: '#8b5cf6',
+        bgColor: '#f5f3ff',
+        commands: [
+            { label: 'Check my messages', command: 'check my messages' },
+            { label: 'Message my manager', command: 'message my manager' },
+            { label: 'Contact HR', command: 'contact HR' },
+            { label: 'Who can I message?', command: 'who can I message' },
+            { label: 'Escalate an issue', command: 'escalate issue' }
+        ]
+    },
     {
         name: 'Tasks',
         icon: ListTodo,
@@ -34,15 +48,15 @@ const COMMAND_CATEGORIES = [
         ]
     },
     {
-        name: 'Communication',
-        icon: MessageSquare,
-        color: '#8b5cf6',
-        bgColor: '#f5f3ff',
+        name: 'Team & Directory',
+        icon: Users,
+        color: '#f59e0b',
+        bgColor: '#fef3c7',
         commands: [
-            { label: 'Send message', command: 'send message to' },
-            { label: 'My team', command: 'show my team' },
-            { label: 'Contact manager', command: 'contact my manager' },
-            { label: 'Help', command: 'help' }
+            { label: 'Who is my manager?', command: 'who is my manager' },
+            { label: 'Show my team', command: 'show my team' },
+            { label: 'Find employee', command: 'find employee' },
+            { label: 'Team status', command: 'check team status' }
         ]
     }
 ];
@@ -212,14 +226,25 @@ const BotPage = () => {
     const navigate = useNavigate();
     const [context, setContext] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [expandedCategory, setExpandedCategory] = useState('Tasks');
+    const [expandedCategory, setExpandedCategory] = useState('Messages');
     const [recentConversations, setRecentConversations] = useState([]);
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
     const [selectedCommand, setSelectedCommand] = useState(null);
+    const [notifications, setNotifications] = useState({
+        unread_count: 0,
+        urgent_count: 0,
+        urgent_messages: [],
+        pending_approvals: 0,
+        team_alerts: 0
+    });
 
     useEffect(() => {
         loadContext();
         loadRecentConversations();
+        loadNotifications();
+        // Refresh notifications every 30 seconds
+        const interval = setInterval(loadNotifications, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const loadContext = async () => {
@@ -248,6 +273,15 @@ const BotPage = () => {
             setRecentConversations(userMessages);
         } catch (err) {
             console.error('Failed to load recent conversations:', err);
+        }
+    };
+
+    const loadNotifications = async () => {
+        try {
+            const response = await http.get('/bot/notifications');
+            setNotifications(response.data);
+        } catch (err) {
+            console.error('Failed to load notifications:', err);
         }
     };
 
@@ -361,18 +395,41 @@ const BotPage = () => {
                     </button>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                            width: '44px',
-                            height: '44px',
-                            borderRadius: '12px',
-                            background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            boxShadow: '0 4px 12px rgba(123, 104, 238, 0.25)'
-                        }}>
-                            <Bot size={24} />
+                        <div style={{ position: 'relative' }}>
+                            <div style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '12px',
+                                background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                boxShadow: '0 4px 12px rgba(123, 104, 238, 0.25)'
+                            }}>
+                                <Bot size={24} />
+                            </div>
+                            {notifications.unread_count > 0 && (
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '-4px',
+                                    right: '-4px',
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    background: notifications.urgent_count > 0 ? '#ef4444' : '#3b82f6',
+                                    color: 'white',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '2px solid white',
+                                    animation: notifications.urgent_count > 0 ? 'pulse 2s infinite' : 'none'
+                                }}>
+                                    {notifications.unread_count > 9 ? '9+' : notifications.unread_count}
+                                </span>
+                            )}
                         </div>
                         <div>
                             <h1 style={{
@@ -493,6 +550,146 @@ const BotPage = () => {
                         overflowY: 'auto',
                         padding: '20px'
                     }}>
+                        {/* Urgent Alerts Section */}
+                        {(notifications.urgent_count > 0 || notifications.pending_approvals > 0) && (
+                            <div style={{
+                                marginBottom: '20px',
+                                padding: '16px',
+                                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                                borderRadius: '12px',
+                                border: '1px solid #fecaca'
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    marginBottom: '12px'
+                                }}>
+                                    <AlertTriangle size={18} style={{ color: '#dc2626' }} />
+                                    <span style={{
+                                        fontWeight: 600,
+                                        fontSize: '14px',
+                                        color: '#991b1b'
+                                    }}>
+                                        Needs Your Attention
+                                    </span>
+                                </div>
+
+                                {notifications.urgent_count > 0 && (
+                                    <button
+                                        onClick={() => handleSelectCommand('check my messages')}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '10px 12px',
+                                            background: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            marginBottom: '8px'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Mail size={16} style={{ color: '#dc2626' }} />
+                                            <span style={{ fontSize: '13px', color: '#374151' }}>
+                                                {notifications.urgent_count} urgent message{notifications.urgent_count > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <ChevronRight size={14} style={{ color: '#9ca3af' }} />
+                                    </button>
+                                )}
+
+                                {notifications.pending_approvals > 0 && (
+                                    <button
+                                        onClick={() => handleSelectCommand('check pending approvals')}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '10px 12px',
+                                            background: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <UserCheck size={16} style={{ color: '#f59e0b' }} />
+                                            <span style={{ fontSize: '13px', color: '#374151' }}>
+                                                {notifications.pending_approvals} pending approval{notifications.pending_approvals > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <ChevronRight size={14} style={{ color: '#9ca3af' }} />
+                                    </button>
+                                )}
+
+                                {/* Urgent message previews */}
+                                {notifications.urgent_messages?.length > 0 && (
+                                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #fecaca' }}>
+                                        {notifications.urgent_messages.slice(0, 2).map((msg, i) => (
+                                            <div
+                                                key={msg.id || i}
+                                                style={{
+                                                    padding: '8px',
+                                                    background: 'white',
+                                                    borderRadius: '6px',
+                                                    marginBottom: i < notifications.urgent_messages.length - 1 ? '6px' : 0,
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: 500, color: '#374151' }}>
+                                                    From: {msg.from}
+                                                </div>
+                                                <div style={{ color: '#6b7280', marginTop: '2px' }}>
+                                                    {msg.preview}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Quick Notification Summary */}
+                        {notifications.unread_count > 0 && notifications.urgent_count === 0 && (
+                            <button
+                                onClick={() => handleSelectCommand('check my messages')}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '14px 16px',
+                                    marginBottom: '16px',
+                                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                                    border: '1px solid #bfdbfe',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '8px',
+                                        background: '#3b82f6',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Bell size={16} style={{ color: 'white' }} />
+                                    </div>
+                                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#1e40af' }}>
+                                        {notifications.unread_count} new message{notifications.unread_count > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                <ChevronRight size={16} style={{ color: '#3b82f6' }} />
+                            </button>
+                        )}
+
                         <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -723,6 +920,11 @@ const BotPage = () => {
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.1); opacity: 0.8; }
                 }
 
                 @keyframes slideDown {
