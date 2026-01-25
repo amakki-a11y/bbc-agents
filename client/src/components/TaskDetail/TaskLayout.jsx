@@ -1,6 +1,6 @@
 import { X, MoreHorizontal, Maximize2, Share2, Sparkles, ChevronRight, Home } from 'lucide-react';
 
-const TaskLayout = ({ children, onClose }) => {
+const TaskLayout = ({ children, onClose, projectName = 'Project', taskId = '' }) => {
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -27,10 +27,10 @@ const TaskLayout = ({ children, onClose }) => {
                     background: 'rgba(255,255,255,0.02)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#888' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Home size={14} /> Smart Market</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Home size={14} /> Projects</span>
                         <ChevronRight size={14} />
-                        <span>Business Requirements</span>
-                        <span style={{ background: '#333', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', color: '#aaa', marginLeft: '0.5rem' }}>TASK-123</span>
+                        <span>{projectName}</span>
+                        {taskId && <span style={{ background: '#333', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', color: '#aaa', marginLeft: '0.5rem' }}>TASK-{taskId}</span>}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

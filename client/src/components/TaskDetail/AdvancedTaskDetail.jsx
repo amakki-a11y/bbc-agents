@@ -4,8 +4,10 @@ import PropertyGrid from './PropertyGrid';
 import ActivityPanel from './ActivityPanel';
 import { Sparkles, FileText, CheckSquare, List } from 'lucide-react';
 import { http } from '../../api/http';
+import { useProject } from '../../context/ProjectContext';
 
 const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
+    const { activeProject } = useProject();
     const [task, setTask] = useState(initialTask);
     const [activeTab, setActiveTab] = useState('details');
     const [description, setDescription] = useState(initialTask.description || "");
@@ -57,7 +59,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
     };
 
     return (
-        <TaskLayout onClose={onClose}>
+        <TaskLayout onClose={onClose} projectName={activeProject?.name || 'Project'} taskId={task.id}>
             {/* Main Left Column */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                 <div style={{ padding: '2rem 2rem 0' }}>

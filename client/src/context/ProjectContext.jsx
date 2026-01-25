@@ -6,28 +6,57 @@ const ProjectContext = createContext();
 export const useProject = () => useContext(ProjectContext);
 
 export const ProjectProvider = ({ children }) => {
-    const [projects, setProjects] = useState([
-        { id: 1, name: 'Business Requirements', color: '#7b68ee' },
-        { id: 'web', name: 'Web App', color: '#10b981' },
-        { id: 'marketing', name: 'Marketing', color: '#f59e0b' },
-        { id: 'design', name: 'Design System', color: '#ec4899' },
-    ]);
-    const [activeProjectId, setActiveProjectId] = useState(1);
+    const [projects, setProjects] = useState([]);
+    const [activeProjectId, setActiveProjectId] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [viewSettings, setViewSettings] = useState({});
     const [searchQuery, setSearchQuery] = useState("");
     const [filters, setFilters] = useState({});
-    
+    const [isLoading, setIsLoading] = useState(true);
+
     // Track temp ID to real ID mappings
     const tempIdMapRef = useRef(new Map());
 
-    
-    useEffect(() => {
-        const savedSettings = localStorage.getItem('project_view_settings');
-        if (savedSettings) {
-            setViewSettings(JSON.parse(savedSettings));
+    // Fetch projects from backend
+    const fetchProjects = async () => {
+        try {
+            const res = await http.get('/projects');
+            // Filter out archived projects and map to expected format
+            const activeProjects = res.data
+                .filter(p => !p.archived)
+                .map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    description: p.description,
+                    color: p.color || '#6366f1'
+                }));
+            setProjects(activeProjects);
+            console.log('Projects fetched from database:', activeProjects.length);
+
+            // Set first project as active if none selected
+            if (activeProjects.length > 0 && !activeProjectId) {
+                setActiveProjectId(activeProjects[0].id);
+            }
+            return activeProjects;
+        } catch (error) {
+            console.error("Failed to fetch projects:", error);
+            setProjects([]);
+            return [];
         }
-        fetchTasks();
+    };
+
+    useEffect(() => {
+        const initData = async () => {
+            setIsLoading(true);
+            const savedSettings = localStorage.getItem('project_view_settings');
+            if (savedSettings) {
+                setViewSettings(JSON.parse(savedSettings));
+            }
+            await fetchProjects();
+            await fetchTasks();
+            setIsLoading(false);
+        };
+        initData();
     }, []);
 
     useEffect(() => {
@@ -273,14 +302,19 @@ export const ProjectProvider = ({ children }) => {
         return task;
     }, [tasks]);
 
+    // Get current project
+    const activeProject = useMemo(() => {
+        return projects.find(p => p.id === activeProjectId) || null;
+    }, [projects, activeProjectId]);
+
     const value = useMemo(() => ({
-        projects, activeProjectId, setActiveProjectId, tasks, addTask, updateTask,
+        projects, activeProjectId, setActiveProjectId, activeProject, tasks, addTask, updateTask,
         deleteTask, bulkUpdateTasks, bulkDeleteTasks, viewSettings, updateViewSetting,
-        searchQuery, setSearchQuery, filters, setFilters, fetchTasks, getTaskById,
-        getRealTaskId
-    }), [projects, activeProjectId, tasks, addTask, updateTask, deleteTask,
+        searchQuery, setSearchQuery, filters, setFilters, fetchTasks, fetchProjects, getTaskById,
+        getRealTaskId, isLoading
+    }), [projects, activeProjectId, activeProject, tasks, addTask, updateTask, deleteTask,
         bulkUpdateTasks, bulkDeleteTasks, viewSettings, updateViewSetting,
-        searchQuery, filters, getTaskById, getRealTaskId]);
+        searchQuery, filters, getTaskById, getRealTaskId, isLoading]);
 
     return (
         <ProjectContext.Provider value={value}>
