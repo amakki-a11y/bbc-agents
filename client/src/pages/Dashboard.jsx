@@ -5,7 +5,7 @@ import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
-    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain
+    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog
 } from 'lucide-react';
 import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
@@ -677,6 +677,7 @@ const Dashboard = ({ children }) => {
                             <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" collapsed={sidebarCollapsed} />
                             <NavItem icon={Activity} label="Activity Logs" href="/activity-logs" collapsed={sidebarCollapsed} />
                             <NavItem icon={FileText} label="Documents" href="/documents" collapsed={sidebarCollapsed} />
+                            <NavItem icon={UserCog} label="Users" href="/users" collapsed={sidebarCollapsed} />
                         </div>
                     </div>
 

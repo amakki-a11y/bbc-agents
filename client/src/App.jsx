@@ -28,6 +28,7 @@ const EmployeeProfilePage = React.lazy(() => import('./pages/EmployeeProfilePage
 const ActivityLogsPage = React.lazy(() => import('./pages/ActivityLogsPage'));
 const DocumentsPage = React.lazy(() => import('./pages/DocumentsPage'));
 const AgentBrainPage = React.lazy(() => import('./pages/AgentBrainPage'));
+const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 
 function App() {
     return (
@@ -57,6 +58,7 @@ function App() {
                                 <Route path="/activity-logs" element={<ProtectedRoute><ActivityLogsPage /></ProtectedRoute>} />
                                 <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
                                 <Route path="/agent-brain" element={<ProtectedRoute><AgentBrainPage /></ProtectedRoute>} />
+                                <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </Suspense>

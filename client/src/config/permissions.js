@@ -235,6 +235,25 @@ export const PERMISSION_CATEGORIES = {
             }
         }
     },
+    users: {
+        name: 'Users',
+        description: 'User account management',
+        icon: 'UserCog',
+        permissions: {
+            'users.view': {
+                name: 'View Users',
+                description: 'View user accounts and their linked employee profiles'
+            },
+            'users.manage': {
+                name: 'Manage Users',
+                description: 'Link and unlink users to employee profiles'
+            },
+            'users.delete': {
+                name: 'Delete Users',
+                description: 'Delete user accounts from the system'
+            }
+        }
+    },
     system: {
         name: 'System',
         description: 'System administration',
@@ -292,6 +311,8 @@ export const PERMISSION_DEPENDENCIES = {
     'reports.export': ['reports.view_personal'],
     'ai.configure': ['ai.access'],
     'ai.view_logs': ['ai.access'],
+    'users.manage': ['users.view'],
+    'users.delete': ['users.view', 'users.manage'],
     'system.audit_logs': ['system.settings'],
     'system.integrations': ['system.settings'],
     'system.billing': ['system.settings']
