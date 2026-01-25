@@ -1078,15 +1078,17 @@ const handleGetMessageableContacts = async (employeeId, context) => {
             }));
         }
 
-        // Same department colleagues
-        const deptColleagues = await prisma.employee.findMany({
-            where: {
-                department_id: context.department.id,
-                id: { not: employeeId }
-            },
-            select: { id: true, name: true, email: true }
-        });
-        contacts.sameDepartment = deptColleagues;
+        // Same department colleagues (only if department exists)
+        if (context.department?.id) {
+            const deptColleagues = await prisma.employee.findMany({
+                where: {
+                    department_id: context.department.id,
+                    id: { not: employeeId }
+                },
+                select: { id: true, name: true, email: true }
+            });
+            contacts.sameDepartment = deptColleagues;
+        }
 
         // HR department
         const hrEmployees = await prisma.employee.findMany({
@@ -1107,8 +1109,8 @@ const handleGetMessageableContacts = async (employeeId, context) => {
             success: true,
             totalContacts,
             contacts,
-            yourRole: context.role.name,
-            yourDepartment: context.department.name,
+            yourRole: context.role?.name || 'Employee',
+            yourDepartment: context.department?.name || 'Not assigned',
             isManager: context.subordinates?.length > 0
         };
     } catch (error) {
@@ -5260,17 +5262,22 @@ const getNotifications = async (req, res) => {
 
         let teamAlerts = 0;
         if (employee?.subordinates?.length > 0) {
-            // Check for subordinates with issues
-            teamAlerts = await prisma.employee.count({
-                where: {
-                    manager_id: employeeId,
-                    OR: [
-                        { attritionRisk: { in: ['high', 'critical'] } },
-                        { probationStatus: 'at_risk' },
-                        { status: 'on_leave' }
-                    ]
-                }
-            });
+            // Check for subordinates with issues - wrap in try/catch for safety
+            try {
+                teamAlerts = await prisma.employee.count({
+                    where: {
+                        manager_id: employeeId,
+                        OR: [
+                            { attritionRisk: { in: ['high', 'critical'] } },
+                            { probationStatus: { in: ['at_risk', 'failed'] } },
+                            { status: 'on_leave' }
+                        ]
+                    }
+                });
+            } catch (e) {
+                // If query fails, just set to 0
+                teamAlerts = 0;
+            }
         }
 
         // Format urgent message previews

@@ -418,11 +418,20 @@ const BotChat = ({ isFullPage = false, onClose, initialCommand = null }) => {
 
         } catch (err) {
             console.error('Failed to send message:', err);
+            const errorMessage = err.response?.data?.message ||
+                                 err.response?.data?.error ||
+                                 err.message ||
+                                 'Failed to send message. Please try again.';
             setError({
-                message: err.response?.data?.message || 'Failed to send message',
+                message: errorMessage,
                 originalContent: trimmedContent
             });
-            setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+            // Keep the user message visible but mark it as failed
+            setMessages(prev => prev.map(m =>
+                m.id === userMessage.id
+                    ? { ...m, failed: true }
+                    : m
+            ));
         } finally {
             setIsLoading(false);
             setIsTyping(false);
