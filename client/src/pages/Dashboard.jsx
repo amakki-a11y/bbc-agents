@@ -5,7 +5,7 @@ import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
-    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon
+    CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain
 } from 'lucide-react';
 import { http } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
@@ -643,6 +643,7 @@ const Dashboard = ({ children }) => {
                         <div style={{ marginBottom: '1.5rem' }}>
                             <NavItem icon={Calendar} label="Calendar" href="/calendar" collapsed={sidebarCollapsed} />
                             <NavItem icon={Bot} label="AI Assistant" href="/bot" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Brain} label="Agent Brain" href="/agent-brain" collapsed={sidebarCollapsed} />
                             <NavItem icon={Target} label="Goals" href="/goals" collapsed={sidebarCollapsed} />
                             <NavItem icon={Inbox} label="Inbox" href="/inbox" badge={unreadInbox} collapsed={sidebarCollapsed} />
                         </div>
@@ -675,6 +676,7 @@ const Dashboard = ({ children }) => {
                             <NavItem icon={CalendarOff} label="Leave" href="/leave" collapsed={sidebarCollapsed} />
                             <NavItem icon={GitBranch} label="Org Chart" href="/org-chart" collapsed={sidebarCollapsed} />
                             <NavItem icon={Activity} label="Activity Logs" href="/activity-logs" collapsed={sidebarCollapsed} />
+                            <NavItem icon={FileText} label="Documents" href="/documents" collapsed={sidebarCollapsed} />
                         </div>
                     </div>
 

@@ -25,6 +25,8 @@ const InboxPage = React.lazy(() => import('./pages/InboxPage'));
 const GoalsPage = React.lazy(() => import('./pages/GoalsPage'));
 const EmployeeProfilePage = React.lazy(() => import('./pages/EmployeeProfilePage'));
 const ActivityLogsPage = React.lazy(() => import('./pages/ActivityLogsPage'));
+const DocumentsPage = React.lazy(() => import('./pages/DocumentsPage'));
+const AgentBrainPage = React.lazy(() => import('./pages/AgentBrainPage'));
 
 function App() {
     return (
@@ -51,6 +53,8 @@ function App() {
                                 <Route path="/inbox" element={<ProtectedRoute><Dashboard><InboxPage /></Dashboard></ProtectedRoute>} />
                                 <Route path="/goals" element={<ProtectedRoute><GoalsPage /></ProtectedRoute>} />
                                 <Route path="/activity-logs" element={<ProtectedRoute><ActivityLogsPage /></ProtectedRoute>} />
+                                <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
+                                <Route path="/agent-brain" element={<ProtectedRoute><AgentBrainPage /></ProtectedRoute>} />
                                 <Route path="*" element={<Navigate to="/" replace />} />
                             </Routes>
                         </Suspense>
