@@ -13,7 +13,7 @@ const {
     updateEvent,
     deleteEvent,
 } = require('../controllers/data.controller');
-const { check } = require('express-validator');
+const { check, param } = require('express-validator');
 const validate = require('../middleware/validate');
 
 // All routes here are protected
@@ -56,7 +56,7 @@ router.delete('/tasks/bulk', [
 ], bulkDeleteTasks);
 
 router.put('/tasks/:id', [
-    check('id').isInt().withMessage('Invalid task ID').toInt(),
+    param('id').isInt().withMessage('Invalid task ID'),
     check('title').optional().trim().notEmpty().escape(),
     check('description').optional({ nullable: true }).trim(),
     check('status').optional().isIn(['todo', 'in_progress', 'in-progress', 'done', 'blocked']).withMessage('Invalid status'),
@@ -79,7 +79,7 @@ router.put('/tasks/:id', [
 ], updateTask);
 
 router.delete('/tasks/:id', [
-    check('id').isInt().withMessage('Invalid task ID').toInt(),
+    param('id').isInt().withMessage('Invalid task ID'),
     validate
 ], deleteTask);
 
@@ -95,7 +95,7 @@ router.post('/events', [
 ], createEvent);
 
 router.put('/events/:id', [
-    check('id').isInt().withMessage('Invalid event ID').toInt(),
+    param('id').isInt().withMessage('Invalid event ID'),
     check('title').optional().trim().notEmpty().escape(),
     check('description').optional().trim().escape(),
     check('start_time').optional().isISO8601().toDate(),
@@ -104,7 +104,7 @@ router.put('/events/:id', [
 ], updateEvent);
 
 router.delete('/events/:id', [
-    check('id').isInt().withMessage('Invalid event ID').toInt(),
+    param('id').isInt().withMessage('Invalid event ID'),
     validate
 ], deleteEvent);
 

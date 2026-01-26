@@ -166,8 +166,11 @@ const updateTask = async (req, res) => {
             removeBlockedBy // IDs to REMOVE
         } = req.body;
 
+        console.log('[updateTask] Starting update for task', id, 'with body:', JSON.stringify(req.body));
+
         // Get old task for activity logging comparison
         const oldTask = await prisma.task.findUnique({ where: { id: parseInt(id) } });
+        console.log('[updateTask] Old task:', oldTask ? { id: oldTask.id, status: oldTask.status, priority: oldTask.priority } : 'NOT FOUND');
 
         const updateData = {};
 
@@ -216,16 +219,21 @@ const updateTask = async (req, res) => {
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'none';
 
         // Log activity for changes (if oldTask exists)
+        console.log('[updateTask] Checking for activity logging. oldTask exists:', !!oldTask);
         if (oldTask) {
             const userId = req.user.userId;
+            console.log('[updateTask] Comparing - status:', { new: status, old: oldTask.status, diff: status !== oldTask.status });
+            console.log('[updateTask] Comparing - priority:', { new: priority, old: oldTask.priority, diff: priority !== oldTask.priority });
 
             // Status change
             if (status !== undefined && status !== oldTask.status) {
+                console.log('[updateTask] Logging status change activity');
                 await logActivity(id, userId, 'status_change', `changed status from ${formatStatus(oldTask.status)} to ${formatStatus(status)}`);
             }
 
             // Priority change
             if (priority !== undefined && priority !== oldTask.priority) {
+                console.log('[updateTask] Logging priority change activity');
                 await logActivity(id, userId, 'priority_change', `changed priority from ${formatPriority(oldTask.priority)} to ${formatPriority(priority)}`);
             }
 

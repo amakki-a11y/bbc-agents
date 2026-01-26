@@ -3,8 +3,9 @@ const { createNotification } = require('../services/notificationService');
 
 // Helper to log activity with optional metadata
 const logActivity = async (taskId, userId, type, content, metadata = null) => {
+    console.log('[logActivity] Creating activity:', { taskId, userId, type, content });
     try {
-        await prisma.activity.create({
+        const activity = await prisma.activity.create({
             data: {
                 task_id: parseInt(taskId),
                 user_id: userId,
@@ -13,8 +14,9 @@ const logActivity = async (taskId, userId, type, content, metadata = null) => {
                 metadata: metadata ? JSON.stringify(metadata) : null
             }
         });
+        console.log('[logActivity] Activity created successfully:', activity.id);
     } catch (e) {
-        console.error("Failed to log activity", e);
+        console.error("[logActivity] Failed to log activity", e);
     }
 };
 
