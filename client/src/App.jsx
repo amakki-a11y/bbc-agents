@@ -36,6 +36,8 @@ const CalendarPage = React.lazy(() => import('./pages/CalendarPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const WorkspacesPage = React.lazy(() => import('./pages/WorkspacesPage'));
+const WorkspaceDetailPage = React.lazy(() => import('./pages/WorkspaceDetailPage'));
+const FolderPage = React.lazy(() => import('./pages/FolderPage'));
 
 // Workspace hierarchy pages
 const SpacePage = React.lazy(() => import('./pages/SpacePage'));
@@ -62,7 +64,9 @@ function App() {
 
                                 {/* Workspace Hierarchy Routes */}
                                 <Route path="/workspaces" element={<ProtectedRoute><WorkspacesPage /></ProtectedRoute>} />
+                                <Route path="/workspace/:workspaceId" element={<ProtectedRoute><WorkspaceDetailPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/space/:spaceId" element={<ProtectedRoute><SpacePage /></ProtectedRoute>} />
+                                <Route path="/w/:workspaceId/folder/:folderId" element={<ProtectedRoute><FolderPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/list/:listId" element={<ProtectedRoute><ListPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/list/:listId/task/:taskId" element={<ProtectedRoute><WorkspaceTaskPage /></ProtectedRoute>} />
 
