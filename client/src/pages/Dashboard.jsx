@@ -512,35 +512,93 @@ const Dashboard = ({ children }) => {
                         {!sidebarCollapsed && (
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <div
-                                    onClick={() => setIsProjectsOpen(!isProjectsOpen)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         padding: '0.5rem 0.875rem',
                                         cursor: 'pointer',
-                                        color: '#64748b',
+                                        color: window.location.pathname === '/projects' ? '#e2e8f0' : '#64748b',
                                         fontSize: '0.7rem',
                                         fontWeight: 700,
                                         textTransform: 'uppercase',
-                                        letterSpacing: '0.5px'
+                                        letterSpacing: '0.5px',
+                                        borderRadius: '8px',
+                                        background: window.location.pathname === '/projects' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (window.location.pathname !== '/projects') {
+                                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                            e.currentTarget.style.color = '#94a3b8';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (window.location.pathname !== '/projects') {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = '#64748b';
+                                        }
                                     }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div
+                                        onClick={() => window.location.href = '/projects'}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}
+                                    >
                                         <Folder size={14} />
                                         Projects
                                     </div>
                                     <ChevronDown
                                         size={14}
+                                        onClick={(e) => { e.stopPropagation(); setIsProjectsOpen(!isProjectsOpen); }}
                                         style={{
                                             transition: 'transform 0.2s ease',
-                                            transform: isProjectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+                                            transform: isProjectsOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                            padding: '2px'
                                         }}
                                     />
                                 </div>
 
                                 {isProjectsOpen && (
                                     <div style={{ marginTop: '0.25rem' }}>
+                                        {/* View All Projects Link */}
+                                        <div
+                                            onClick={() => window.location.href = '/projects'}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.75rem',
+                                                padding: '0.5rem 0.875rem 0.5rem 1.75rem',
+                                                cursor: 'pointer',
+                                                color: window.location.pathname === '/projects' ? '#e2e8f0' : '#94a3b8',
+                                                fontSize: '0.85rem',
+                                                fontWeight: window.location.pathname === '/projects' ? 600 : 400,
+                                                borderRadius: '8px',
+                                                background: window.location.pathname === '/projects' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                                transition: 'all 0.15s ease',
+                                                marginBottom: '0.25rem'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (window.location.pathname !== '/projects') {
+                                                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                                    e.currentTarget.style.color = '#e2e8f0';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (window.location.pathname !== '/projects') {
+                                                    e.currentTarget.style.background = 'transparent';
+                                                    e.currentTarget.style.color = '#94a3b8';
+                                                }
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '2px',
+                                                background: '#6366f1',
+                                                boxShadow: '0 0 8px #6366f140'
+                                            }} />
+                                            <span>View All Projects</span>
+                                        </div>
                                         {projects.filter(p => !p.archived).map(project => (
                                             <div
                                                 key={project.id}

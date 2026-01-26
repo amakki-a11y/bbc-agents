@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Sparkles, FolderKanban, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import http from '../api/http';
 import { useAuth } from '../context/AuthContext';
+import Dashboard from './Dashboard';
 import ProjectCard from '../components/projects/ProjectCard';
 import ProjectFilters from '../components/projects/ProjectFilters';
 import CreateProjectModal from '../components/projects/CreateProjectModal';
@@ -93,7 +94,8 @@ function ProjectsPage() {
     };
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+        <Dashboard>
+            <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', height: '100%', overflow: 'auto' }}>
             {/* Header */}
             <div style={{
                 display: 'flex',
@@ -396,6 +398,7 @@ function ProjectsPage() {
                 }
             `}</style>
         </div>
+        </Dashboard>
     );
 }
 
