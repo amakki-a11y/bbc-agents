@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { WorkspaceProvider } from './context/WorkspaceContext';
+import { ClientsProvider } from './context/ClientsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -44,12 +45,17 @@ const SpacePage = React.lazy(() => import('./pages/SpacePage'));
 const ListPage = React.lazy(() => import('./pages/ListPage'));
 const WorkspaceTaskPage = React.lazy(() => import('./pages/WorkspaceTaskPage'));
 
+// CRM pages
+const ClientsPage = React.lazy(() => import('./pages/ClientsPage'));
+const ClientDetailPage = React.lazy(() => import('./pages/ClientDetailPage'));
+
 function App() {
     return (
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
                 <NotificationProvider>
                     <WorkspaceProvider>
+                    <ClientsProvider>
                     <ErrorBoundary>
                         <Suspense fallback={<LoadingSpinner />}>
                             <Routes>
@@ -69,6 +75,10 @@ function App() {
                                 <Route path="/w/:workspaceId/folder/:folderId" element={<ProtectedRoute><FolderPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/list/:listId" element={<ProtectedRoute><ListPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/list/:listId/task/:taskId" element={<ProtectedRoute><WorkspaceTaskPage /></ProtectedRoute>} />
+
+                                {/* CRM Routes */}
+                                <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+                                <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailPage /></ProtectedRoute>} />
 
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
@@ -93,6 +103,7 @@ function App() {
                             </Routes>
                         </Suspense>
                     </ErrorBoundary>
+                    </ClientsProvider>
                     </WorkspaceProvider>
                 </NotificationProvider>
             </AuthProvider>

@@ -75,6 +75,9 @@ model Department {
 
   // Workspace hierarchy relations
   spaces Space[]
+
+  // CRM relations
+  clients Client[]
 }
 
 model Role {
@@ -285,6 +288,15 @@ model Employee {
   taskComments         TaskComment[]
   taskAttachments      TaskAttachment[]
   taskActivities       TaskActivity[]
+
+  // CRM Relations
+  ownedClients         Client[]            @relation("ClientOwner")
+  clientInteractions   ClientInteraction[]
+  clientNotes          ClientNote[]
+  clientDocuments      ClientDocument[]
+  assignedClientTasks  ClientTask[]        @relation("ClientTaskAssignee")
+  createdClientTasks   ClientTask[]        @relation("ClientTaskCreator")
+  clientActivities     ClientActivity[]
 
   @@index([status])
   @@index([department_id])
@@ -1477,6 +1489,266 @@ model TaskActivity {
   createdAt DateTime @default(now())
 
   @@index([taskId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// CRM / CLIENTS MODELS
+// ============================================
+
+enum ClientStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+  LOST
+  DORMANT
+  BLACKLISTED
+}
+
+enum ClientStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+  RECONNECTED
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  COLD_CALL
+  EMAIL_CAMPAIGN
+  ADVERTISEMENT
+  TRADE_SHOW
+  PARTNER
+  OTHER
+}
+
+enum ClientRating {
+  HOT
+  WARM
+  COLD
+}
+
+enum InteractionType {
+  CALL
+  EMAIL
+  MEETING
+  VIDEO_CALL
+  SMS
+  WHATSAPP
+  LIVE_CHAT
+  SOCIAL_MEDIA
+  NOTE
+}
+
+enum ClientDocumentType {
+  ID_DOCUMENT
+  PROOF_OF_ADDRESS
+  CONTRACT
+  AGREEMENT
+  KYC_FORM
+  OTHER
+}
+
+// Client/Contact - Main entity
+model Client {
+  id              Int             @id @default(autoincrement())
+
+  // Basic Info
+  firstName       String
+  lastName        String
+  email           String?         @unique
+  phone           String?
+  alternatePhone  String?
+
+  // Company Info (for B2B)
+  companyName     String?
+  jobTitle        String?
+  website         String?
+
+  // Address
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+
+  // CRM Fields
+  status          ClientStatus    @default(LEAD)
+  stage           ClientStage     @default(NEW)
+  source          LeadSource?
+  rating          ClientRating?
+
+  // Assignment
+  ownerId         String
+  owner           Employee        @relation("ClientOwner", fields: [ownerId], references: [id])
+
+  // Financial (for Forex brokerage)
+  accountNumber   String?
+  accountType     String?
+  balance         Decimal?        @db.Decimal(15, 2)
+  totalDeposits   Decimal?        @db.Decimal(15, 2)
+  totalWithdrawals Decimal?       @db.Decimal(15, 2)
+
+  // Dates
+  lastContactedAt DateTime?
+  convertedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  department      Department?     @relation(fields: [departmentId], references: [id])
+  departmentId    String?
+  interactions    ClientInteraction[]
+  notes           ClientNote[]
+  documents       ClientDocument[]
+  tags            ClientTag[]
+  tasks           ClientTask[]
+  activities      ClientActivity[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([stage])
+  @@index([createdAt])
+}
+
+// Client Interactions (calls, emails, meetings)
+model ClientInteraction {
+  id              Int                 @id @default(autoincrement())
+  clientId        Int
+  client          Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  type            InteractionType
+  subject         String
+  description     String?
+  outcome         String?
+
+  // Scheduling
+  scheduledAt     DateTime?
+  completedAt     DateTime?
+  duration        Int?
+
+  // Assignment
+  conductedBy     String
+  conductor       Employee            @relation(fields: [conductedBy], references: [id])
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([clientId])
+  @@index([conductedBy])
+  @@index([type])
+}
+
+// Client Notes
+model ClientNote {
+  id              Int             @id @default(autoincrement())
+  clientId        Int
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  content         String
+  isPinned        Boolean         @default(false)
+
+  authorId        String
+  author          Employee        @relation(fields: [authorId], references: [id])
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([clientId])
+  @@index([authorId])
+}
+
+// Client Documents
+model ClientDocument {
+  id              Int                 @id @default(autoincrement())
+  clientId        Int
+  client          Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name            String
+  type            ClientDocumentType
+  fileUrl         String
+  fileSize        Int?
+
+  uploadedBy      String
+  uploader        Employee            @relation(fields: [uploadedBy], references: [id])
+
+  createdAt       DateTime            @default(now())
+
+  @@index([clientId])
+  @@index([type])
+}
+
+// CRM Tags for categorization
+model CRMTag {
+  id              Int             @id @default(autoincrement())
+  name            String          @unique
+  color           String          @default("#6B7280")
+  clients         ClientTag[]
+}
+
+model ClientTag {
+  id              Int             @id @default(autoincrement())
+  clientId        Int
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tagId           Int
+  tag             CRMTag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, tagId])
+  @@index([clientId])
+  @@index([tagId])
+}
+
+// Tasks related to clients
+model ClientTask {
+  id              Int             @id @default(autoincrement())
+  clientId        Int
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String?
+  dueDate         DateTime?
+  priority        TaskPriority    @default(NORMAL)
+  status          String          @default("pending")
+
+  assigneeId      String
+  assignee        Employee        @relation("ClientTaskAssignee", fields: [assigneeId], references: [id])
+  createdBy       String
+  creator         Employee        @relation("ClientTaskCreator", fields: [createdBy], references: [id])
+
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([clientId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Client Activity Log
+model ClientActivity {
+  id              Int             @id @default(autoincrement())
+  clientId        Int
+  client          Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  action          String
+  field           String?
+  oldValue        String?
+  newValue        String?
+
+  userId          String
+  user            Employee        @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime        @default(now())
+
+  @@index([clientId])
   @@index([userId])
   @@index([createdAt])
 }

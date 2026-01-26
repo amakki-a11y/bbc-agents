@@ -28,6 +28,9 @@ const folderRoutes = require('../folders.routes');
 const listRoutes = require('../lists.routes');
 const listTaskRoutes = require('../listTasks.routes');
 
+// CRM routes
+const clientsRoutes = require('../clients.routes');
+
 // Mount all routes under /api/v1
 router.use('/', dataRoutes);
 router.use('/tasks/details', detailedTaskRoutes);
@@ -54,5 +57,8 @@ router.use('/spaces', spaceRoutes);
 router.use('/folders', folderRoutes);
 router.use('/lists', listRoutes);
 router.use('/list-tasks', listTaskRoutes);
+
+// CRM routes
+router.use('/clients', clientsRoutes);
 
 module.exports = router;
