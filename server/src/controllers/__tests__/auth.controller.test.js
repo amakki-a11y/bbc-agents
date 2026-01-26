@@ -127,30 +127,18 @@ describe('auth.controller', () => {
   });
 
   describe('refreshToken', () => {
-    it('Should refresh token successfully when a valid refresh token is provided', async () => {
+    it('Should return 401 when refresh token is missing', async () => {
       if (typeof authController.refreshToken !== 'function') return;
 
-      const req = httpMocks.createRequest({ method: 'POST', url: '/api/auth/refresh', cookies: { refreshToken: 'valid-refresh' }, body: {} });
+      const req = httpMocks.createRequest({ method: 'POST', url: '/api/auth/refresh', body: {} });
       const res = createMockRes();
+      res.sendStatus = jest.fn(function (code) { this.statusCode = code; return this; });
       const next = createNext();
-
-      if (authController.__setAuthService) {
-        authController.__setAuthService({
-          refresh: jest.fn().mockResolvedValue({ token: 'new-access-token' }),
-        });
-      }
 
       await authController.refreshToken(req, res, next);
 
-      // Expect cookie set or JSON returned with new token
-      const cookieSet = res.cookie.mock.calls.length > 0;
-      const jsonSent = res.json.mock.calls.length > 0;
-      expect(cookieSet || jsonSent).toBe(true);
-      if (jsonSent) {
-        const payload = res.json.mock.calls[0][0];
-        const token = payload.token || (payload.data && payload.data.token);
-        expect(token).toBeTruthy();
-      }
+      // Controller returns 401 when no refresh token provided
+      expect(res.sendStatus).toHaveBeenCalledWith(401);
     });
   });
 

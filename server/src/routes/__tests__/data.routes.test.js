@@ -1,7 +1,6 @@
 const request = require('supertest');
 const app = require('../../app');
-const prisma = require('../../test-utils/setup');
-const { createTestUser } = require('../../test-utils/fixtures');
+const { createTestUser, prisma } = require('../../test-utils/fixtures');
 
 describe('Data Routes (Projects)', () => {
     let token;

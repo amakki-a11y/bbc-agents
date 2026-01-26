@@ -11,9 +11,9 @@
     "dev": "nodemon src/server.js",
     "build": "npx prisma generate && npx prisma db push",
     "postinstall": "npx prisma generate",
-    "test": "cross-env DATABASE_URL=\"file:./test.db\" jest --runInBand",
-    "test:watch": "cross-env DATABASE_URL=\"file:./test.db\" jest --watch --runInBand",
-    "pretest": "cross-env DATABASE_URL=\"file:./test.db\" npx prisma db push"
+    "test": "cross-env NODE_ENV=test jest --runInBand --forceExit",
+    "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand",
+    "test:ci": "cross-env NODE_ENV=test jest --runInBand --forceExit --ci"
   },
   "keywords": [],
   "author": "",
@@ -47,6 +47,7 @@
     "cross-env": "^10.1.0",
     "dotenv-cli": "^11.0.0",
     "jest": "^30.2.0",
+    "node-mocks-http": "^1.17.2",
     "nodemon": "^3.0.1",
     "supertest": "^7.2.2"
   }

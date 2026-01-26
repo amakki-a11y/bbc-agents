@@ -116,7 +116,7 @@ function ProjectsPage() {
                         Projects
                     </h1>
                     <p style={{ color: '#6b7280', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
-                        Manage and track your team's projects
+                        Manage and track your team&apos;s projects
                     </p>
                 </div>
 

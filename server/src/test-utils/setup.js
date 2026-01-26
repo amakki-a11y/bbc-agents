@@ -1,46 +1,101 @@
+/**
+ * Jest Test Setup
+ *
+ * This setup file configures the test environment for integration tests.
+ * Tests run against the actual PostgreSQL database, so test data is isolated
+ * using unique identifiers and cleaned up after each test.
+ */
+
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+// Create a dedicated test Prisma client
+const prisma = new PrismaClient({
+    log: ['error'], // Only log errors during tests
+});
+
+// Test data prefix to identify test records
+const TEST_PREFIX = 'test_';
 
 beforeAll(async () => {
     // Connect to the database
-    await prisma.$connect();
+    try {
+        await prisma.$connect();
+        console.log('Test database connected');
+    } catch (error) {
+        console.error('Failed to connect to test database:', error.message);
+        throw error;
+    }
 });
 
 afterAll(async () => {
+    // Clean up all test data at the end of all tests
+    await cleanupTestData();
     // Disconnect from the database
     await prisma.$disconnect();
+    console.log('Test database disconnected');
 });
 
-afterEach(async () => {
-    // Clean up database after each test
-    const deleteSubtasks = prisma.subtask.deleteMany();
-    const deleteActionItems = prisma.actionItem.deleteMany();
-    const deleteActivities = prisma.activity.deleteMany();
-    const deleteTimeEntries = prisma.timeEntry.deleteMany();
-    const deleteCustomFields = prisma.customField.deleteMany();
-    const deleteAttachments = prisma.attachment.deleteMany();
-    const deleteEvents = prisma.event.deleteMany();
-    const deleteNotifications = prisma.notification.deleteMany();
-    const deleteTaskTemplates = prisma.taskTemplate.deleteMany();
-    const deleteTasks = prisma.task.deleteMany();
-    const deleteProjects = prisma.project.deleteMany();
-    const deleteUsers = prisma.user.deleteMany(); // Users last due to foreign keys
+// Helper function to clean up test data
+const cleanupTestData = async () => {
+    try {
+        // Find test user IDs
+        const testUsers = await prisma.user.findMany({
+            where: {
+                email: { contains: TEST_PREFIX }
+            },
+            select: { id: true }
+        });
 
-    await prisma.$transaction([
-        deleteSubtasks,
-        deleteActionItems,
-        deleteActivities,
-        deleteTimeEntries,
-        deleteCustomFields,
-        deleteCustomFields,
-        deleteAttachments,
-        deleteEvents,
-        deleteNotifications,
-        deleteTaskTemplates,
-        deleteTasks,
-        deleteProjects,
-        deleteUsers,
-    ]);
-});
+        const testUserIds = testUsers.map(u => u.id);
 
-module.exports = prisma;
+        if (testUserIds.length > 0) {
+            // Delete in proper order to respect foreign keys
+            await prisma.$transaction([
+                // Delete task-related data
+                prisma.subtask.deleteMany({ where: { task: { user_id: { in: testUserIds } } } }),
+                prisma.actionItem.deleteMany({ where: { task: { user_id: { in: testUserIds } } } }),
+                prisma.activity.deleteMany({ where: { task: { user_id: { in: testUserIds } } } }),
+                prisma.timeEntry.deleteMany({ where: { task: { user_id: { in: testUserIds } } } }),
+                prisma.customField.deleteMany({ where: { task: { user_id: { in: testUserIds } } } }),
+                prisma.attachment.deleteMany({ where: { task: { user_id: { in: testUserIds } } } }),
+                prisma.notification.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.taskTemplate.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.task.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.event.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.projectMember.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.project.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.activityLog.deleteMany({ where: { user_id: { in: testUserIds } } }),
+                prisma.user.deleteMany({ where: { id: { in: testUserIds } } }),
+            ]);
+            console.log(`Cleaned up ${testUserIds.length} test users and their data`);
+        }
+    } catch (error) {
+        // Log but don't fail - cleanup errors shouldn't break test suite
+        console.warn('Test cleanup warning:', error.message);
+    }
+};
+
+// Export helpers for tests
+module.exports = {
+    prisma,
+    TEST_PREFIX,
+
+    // Helper to generate test email
+    generateTestEmail: () => `${TEST_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2)}@test.com`,
+
+    // Helper to create a test user
+    createTestUser: async (overrides = {}) => {
+        const bcrypt = require('bcrypt');
+        const email = overrides.email || `${TEST_PREFIX}${Date.now()}@test.com`;
+        const password = overrides.password || 'TestPass123!';
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        return prisma.user.create({
+            data: {
+                email,
+                password_hash: hashedPassword,
+                ...overrides,
+            },
+        });
+    },
+};

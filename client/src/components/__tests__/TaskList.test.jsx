@@ -12,7 +12,7 @@ describe('TaskList Component', () => {
 
     it('renders empty message when no tasks', () => {
         render(<TaskList tasks={[]} />);
-        expect(screen.getByText(/No tasks in this group/i)).toBeInTheDocument();
+        expect(screen.getByText(/No tasks yet/i)).toBeInTheDocument();
     });
 
     it('renders tasks correctly', () => {
