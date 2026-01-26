@@ -32,7 +32,7 @@ jobs:
       - name: Test
         env:
           CI: true
-        run: npm test -- --run
+        run: npm test -- --run --reporter=verbose 2>&1 || (echo "Test failed with exit code $?" && exit 1)
 
       - name: Build
         run: npm run build
