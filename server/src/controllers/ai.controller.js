@@ -44,18 +44,25 @@ const createProjectFromPlan = async (req, res) => {
     try {
         const { plan } = req.body;
         const userId = req.user?.userId;
+        const employeeId = req.employee?.id;
 
         if (!plan || !plan.name || !plan.tasks) {
             return res.status(400).json({ error: 'Valid plan with name and tasks required' });
         }
 
-        // Create the project
+        // Create the project with AI-generated flag (needs approval)
         const project = await prisma.project.create({
             data: {
                 name: plan.name,
                 description: plan.description || '',
                 color: '#7c3aed', // Default purple for AI projects
-                user_id: userId
+                user_id: userId,
+                createdById: employeeId || undefined,
+                priority: plan.priority || 'MEDIUM',
+                status: 'PENDING_APPROVAL',
+                approvalStatus: 'PENDING',
+                isAIGenerated: true,
+                aiGeneratedBy: 'Claude'
             }
         });
 
@@ -71,25 +78,124 @@ const createProjectFromPlan = async (req, res) => {
                         project_id: project.id,
                         user_id: userId,
                         time_estimate: task.time_estimate || null,
-                        order: index
+                        isAIGenerated: true,
+                        aiGeneratedBy: 'Claude'
                     }
                 })
             )
         );
 
-        console.log(`Created project "${project.name}" with ${createdTasks.length} tasks`);
+        console.log(`Created AI project "${project.name}" with ${createdTasks.length} tasks (pending approval)`);
 
         res.json({
             success: true,
             project,
             tasks: createdTasks,
-            message: `Created project "${plan.name}" with ${createdTasks.length} tasks`
+            message: `Created project "${plan.name}" with ${createdTasks.length} tasks. Pending approval.`
         });
     } catch (error) {
         console.error('Create project from plan error:', error);
         res.status(500).json({
             error: error.message || 'Failed to create project from plan'
         });
+    }
+};
+
+/**
+ * Generate a complete project with tasks from a natural language prompt
+ * POST /api/v1/ai/generate-project
+ */
+const generateProject = async (req, res) => {
+    const startTime = Date.now();
+    try {
+        const { prompt, existingProjectId } = req.body;
+
+        if (!prompt || prompt.trim().length < 5) {
+            return res.status(400).json({
+                error: 'Prompt is required and must be at least 5 characters'
+            });
+        }
+
+        const systemPrompt = `You are a project management assistant. Generate a well-structured project based on the user's description.
+
+Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
+{
+  "name": "Project name",
+  "description": "Brief description of the project",
+  "priority": "MEDIUM",
+  "tasks": [
+    {
+      "title": "Task title",
+      "description": "Task description",
+      "priority": "medium"
+    }
+  ]
+}
+
+Rules:
+- Generate 5-10 relevant tasks
+- Be specific and actionable
+- Priority must be one of: LOW, MEDIUM, HIGH, URGENT
+- Task priority must be lowercase: low, medium, high, urgent
+- Return ONLY valid JSON, no markdown code blocks`;
+
+        const client = new Anthropic();
+        const response = await client.messages.create({
+            model: "claude-3-haiku-20240307",
+            max_tokens: 2048,
+            system: systemPrompt,
+            messages: [
+                { role: "user", content: `Create a project for: ${prompt}` }
+            ]
+        });
+
+        const aiText = response.content[0].text.trim();
+
+        // Extract JSON from response
+        let generatedProject;
+        try {
+            // Remove markdown code blocks if present
+            const cleanedText = aiText
+                .replace(/^```json\s*/i, '')
+                .replace(/^```\s*/i, '')
+                .replace(/\s*```$/i, '')
+                .trim();
+            generatedProject = JSON.parse(cleanedText);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError, 'Raw text:', aiText);
+            return res.status(500).json({ error: 'Could not parse AI response' });
+        }
+
+        // Log the generation
+        await agentLogger.logSuccess(
+            'ProjectGenerator',
+            'generate_project',
+            'project',
+            null,
+            `Generated project "${generatedProject.name}" with ${generatedProject.tasks?.length || 0} tasks`,
+            0.9,
+            {
+                inputContext: { prompt },
+                outputData: { projectName: generatedProject.name, taskCount: generatedProject.tasks?.length },
+                executionTime: Date.now() - startTime
+            }
+        );
+
+        res.json({
+            message: `I've created a project called "${generatedProject.name}" with ${generatedProject.tasks?.length || 0} tasks. Review it below and click "Create Project" when ready.`,
+            project: generatedProject
+        });
+
+    } catch (error) {
+        await agentLogger.logFailure(
+            'ProjectGenerator',
+            'generate_project',
+            'project',
+            'Failed to generate project',
+            error.message
+        );
+        console.error('AI project generation error:', error);
+        res.status(500).json({ error: 'Failed to generate project' });
     }
 };
 
@@ -506,6 +612,7 @@ module.exports = {
     handleCommand,
     createProjectPlan,
     createProjectFromPlan,
+    generateProject,
     assistProject,
     generateSubtasks,
     saveSubtasks,

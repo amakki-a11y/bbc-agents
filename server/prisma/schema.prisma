@@ -8,6 +8,37 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Enums for Project System
+enum ProjectStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SharePermission {
+  VIEWER
+  EDITOR
+  ADMIN
+}
+
 model User {
   id                  Int             @id @default(autoincrement())
   email               String          @unique
@@ -36,6 +67,11 @@ model Department {
   created_at  DateTime   @default(now())
   employees   Employee[]
   messages    Message[]  @relation("DepartmentMessages")
+
+  // Project relations
+  projects            Project[]
+  projectsSharedWith  ProjectShare[]  @relation("ProjectSharedWithDept")
+  tasksSharedWith     TaskShare[]     @relation("TaskSharedWithDept")
 }
 
 model Role {
@@ -55,6 +91,10 @@ model Role {
   rolePermissions   RolePermission[]
   activityLogs      RoleActivityLog[]
   createdBy         Employee?          @relation("RoleCreator", fields: [created_by_id], references: [id])
+
+  // Project sharing relations
+  projectsSharedWith  ProjectShare[]
+  tasksSharedWith     TaskShare[]
 
   @@index([isDefault])
   @@index([isSystemRole])
@@ -225,6 +265,14 @@ model Employee {
   createdRoles           Role[]                  @relation("RoleCreator")
   roleActivityLogs       RoleActivityLog[]       @relation("RoleActivityPerformer")
 
+  // Project relations
+  createdProjects        Project[]               @relation("ProjectCreator")
+  projectsSharedWith     ProjectShare[]          @relation("ProjectSharedWithUser")
+  projectsSharedBy       ProjectShare[]          @relation("ProjectSharedBy")
+  tasksSharedWith        TaskShare[]             @relation("TaskSharedWithUser")
+  tasksSharedBy          TaskShare[]             @relation("TaskSharedBy")
+  projectActivities      ProjectActivity[]
+
   @@index([status])
   @@index([department_id])
   @@index([manager_id])
@@ -354,14 +402,41 @@ model Project {
   name          String
   description   String?
   color         String         @default("#6366f1")
+  icon          String?
   created_at    DateTime       @default(now())
   updated_at    DateTime       @default(now()) @updatedAt
   archived      Boolean        @default(false)
+
+  // Status & Priority
+  status        ProjectStatus  @default(ACTIVE)
+  priority      Priority       @default(MEDIUM)
+
+  // AI-related fields
+  isAIGenerated   Boolean        @default(false)
+  aiGeneratedBy   String?        // Which AI agent created it
+  approvalStatus  ApprovalStatus @default(NOT_REQUIRED)
+  approvedBy      Int?
+  approvedAt      DateTime?
+
+  // Ownership
   user_id       Int
   user          User           @relation(fields: [user_id], references: [id])
+  createdById   String?        // Employee who created it
+  creator       Employee?      @relation("ProjectCreator", fields: [createdById], references: [id])
+  departmentId  String?
+  department    Department?    @relation(fields: [departmentId], references: [id])
+
+  // Dates
+  startDate     DateTime?
+  dueDate       DateTime?
+  completedAt   DateTime?
+
+  // Relations
   tasks         Task[]
   notifications Notification[]
   members       ProjectMember[]
+  shares        ProjectShare[]
+  activities    ProjectActivity[]
 
   // AI Monitoring
   ai_monitoring_enabled Boolean   @default(false)
@@ -371,6 +446,9 @@ model Project {
 
   @@index([user_id])
   @@index([archived])
+  @@index([status])
+  @@index([approvalStatus])
+  @@index([departmentId])
   @@index([ai_monitoring_enabled])
 }
 
@@ -390,6 +468,85 @@ model ProjectMember {
   @@index([user_id])
 }
 
+// Project Sharing Model - Share with users, roles, or departments
+model ProjectShare {
+  id              Int             @id @default(autoincrement())
+  projectId       Int
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Share with user, role, or department
+  sharedWithUserId    String?
+  sharedWithUser      Employee?   @relation("ProjectSharedWithUser", fields: [sharedWithUserId], references: [id])
+  sharedWithRoleId    String?
+  sharedWithRole      Role?       @relation(fields: [sharedWithRoleId], references: [id])
+  sharedWithDeptId    String?
+  sharedWithDept      Department? @relation("ProjectSharedWithDept", fields: [sharedWithDeptId], references: [id])
+
+  // Permission level
+  permission      SharePermission @default(VIEWER)
+
+  // Metadata
+  sharedBy        String
+  sharedByUser    Employee        @relation("ProjectSharedBy", fields: [sharedBy], references: [id])
+  sharedAt        DateTime        @default(now())
+
+  @@unique([projectId, sharedWithUserId])
+  @@unique([projectId, sharedWithRoleId])
+  @@unique([projectId, sharedWithDeptId])
+  @@index([projectId])
+  @@index([sharedWithUserId])
+  @@index([sharedWithRoleId])
+  @@index([sharedWithDeptId])
+}
+
+// Task Sharing Model
+model TaskShare {
+  id              Int             @id @default(autoincrement())
+  taskId          Int
+  task            Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Share with user, role, or department
+  sharedWithUserId    String?
+  sharedWithUser      Employee?   @relation("TaskSharedWithUser", fields: [sharedWithUserId], references: [id])
+  sharedWithRoleId    String?
+  sharedWithRole      Role?       @relation(fields: [sharedWithRoleId], references: [id])
+  sharedWithDeptId    String?
+  sharedWithDept      Department? @relation("TaskSharedWithDept", fields: [sharedWithDeptId], references: [id])
+
+  // Permission level
+  permission      SharePermission @default(VIEWER)
+
+  // Metadata
+  sharedBy        String
+  sharedByUser    Employee        @relation("TaskSharedBy", fields: [sharedBy], references: [id])
+  sharedAt        DateTime        @default(now())
+
+  @@unique([taskId, sharedWithUserId])
+  @@unique([taskId, sharedWithRoleId])
+  @@unique([taskId, sharedWithDeptId])
+  @@index([taskId])
+  @@index([sharedWithUserId])
+  @@index([sharedWithRoleId])
+  @@index([sharedWithDeptId])
+}
+
+// Project Activity Log
+model ProjectActivity {
+  id          Int         @id @default(autoincrement())
+  projectId   Int
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        Employee    @relation(fields: [userId], references: [id])
+  action      String      // created, updated, shared, task_added, approved, rejected, etc.
+  details     Json?       // Additional context
+  createdAt   DateTime    @default(now())
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
 model Task {
   id            Int       @id @default(autoincrement())
   title         String
@@ -407,6 +564,10 @@ model Task {
   project_id    Int?
   project       Project?  @relation(fields: [project_id], references: [id])
 
+  // AI-related fields
+  isAIGenerated Boolean   @default(false)
+  aiGeneratedBy String?   // Which AI agent created it
+
   // Recurrence
   recurrenceType     String? // daily, weekly, monthly, yearly
   recurrenceInterval Int? // e.g., every 2 days
@@ -423,8 +584,10 @@ model Task {
   activities    Activity[]
   timeEntries   TimeEntry[]
   notifications Notification[]
+  shares        TaskShare[]
 
   @@index([project_id])
+  @@index([isAIGenerated])
 }
 
 model TaskTemplate {

@@ -5,6 +5,7 @@ const {
     handleCommand,
     createProjectPlan,
     createProjectFromPlan,
+    generateProject,
     assistProject,
     generateSubtasks,
     saveSubtasks,
@@ -41,6 +42,14 @@ router.post('/plan/create', [
     check('plan.tasks').isArray({ min: 1 }).withMessage('Plan must have at least one task'),
     validate
 ], createProjectFromPlan);
+
+// Generate a complete project from natural language prompt (for AI Project Helper)
+router.post('/generate-project', [
+    check('prompt').trim().notEmpty().withMessage('Prompt is required')
+        .isLength({ min: 5 }).withMessage('Prompt must be at least 5 characters'),
+    check('existingProjectId').optional().isInt(),
+    validate
+], generateProject);
 
 // ==========================================
 // AI ASSIST ENDPOINTS

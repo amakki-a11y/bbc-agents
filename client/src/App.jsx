@@ -30,6 +30,8 @@ const DocumentsPage = React.lazy(() => import('./pages/DocumentsPage'));
 const AgentBrainPage = React.lazy(() => import('./pages/AgentBrainPage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 const AccessDeniedPage = React.lazy(() => import('./pages/AccessDeniedPage'));
+const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
+const ProjectDetailsPage = React.lazy(() => import('./pages/ProjectDetailsPage'));
 
 function App() {
     return (
@@ -43,6 +45,8 @@ function App() {
                                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                                 <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
                                 <Route path="/projects/:id" element={<ProtectedRoute><Dashboard><ProjectListView /></Dashboard></ProtectedRoute>} />
+                                <Route path="/projects" element={<ProtectedRoute permission="projects.view"><ProjectsPage /></ProtectedRoute>} />
+                                <Route path="/projects/:projectId" element={<ProtectedRoute permission="projects.view"><ProjectDetailsPage /></ProtectedRoute>} />
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />

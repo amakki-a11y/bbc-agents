@@ -19,6 +19,7 @@ const activityLogRoutes = require('../activityLogs.routes');
 const agentActionsRoutes = require('../agentActions.routes');
 const aiRoutes = require('../ai.routes');
 const userRoutes = require('../users.routes');
+const automationRoutes = require('../automation.routes');
 
 // Mount all routes under /api/v1
 router.use('/', dataRoutes);
@@ -38,5 +39,6 @@ router.use('/activity-logs', activityLogRoutes);
 router.use('/agent-actions', agentActionsRoutes);
 router.use('/ai', aiRoutes);
 router.use('/users', userRoutes);
+router.use('/automation', automationRoutes);
 
 module.exports = router;
