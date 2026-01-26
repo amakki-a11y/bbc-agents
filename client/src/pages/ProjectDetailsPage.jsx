@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import http from '../api/http';
 import { useAuth } from '../context/AuthContext';
+import Dashboard from './Dashboard';
 import ShareModal from '../components/projects/ShareModal';
 
 const statusColors = {
@@ -133,51 +134,56 @@ function ProjectDetailsPage() {
 
     if (loading) {
         return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                color: '#6b7280'
-            }}>
-                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} />
-            </div>
+            <Dashboard>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100%',
+                    color: '#6b7280'
+                }}>
+                    <Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+            </Dashboard>
         );
     }
 
     if (error) {
         return (
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                gap: '1rem'
-            }}>
-                <AlertCircle size={48} color="#dc2626" />
-                <p style={{ color: '#dc2626', fontSize: '1.1rem' }}>{error}</p>
-                <button
-                    onClick={() => navigate('/projects')}
-                    style={{
-                        padding: '10px 20px',
-                        background: '#6366f1',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Back to Projects
-                </button>
-            </div>
+            <Dashboard>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100%',
+                    gap: '1rem'
+                }}>
+                    <AlertCircle size={48} color="#dc2626" />
+                    <p style={{ color: '#dc2626', fontSize: '1.1rem' }}>{error}</p>
+                    <button
+                        onClick={() => navigate('/projects')}
+                        style={{
+                            padding: '10px 20px',
+                            background: '#6366f1',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Back to Projects
+                    </button>
+                </div>
+            </Dashboard>
         );
     }
 
-    if (!project) return null;
+    if (!project) return <Dashboard><div /></Dashboard>;
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <Dashboard>
+            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', height: '100%', overflow: 'auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
                 <button
@@ -758,6 +764,7 @@ function ProjectDetailsPage() {
                 }
             `}</style>
         </div>
+        </Dashboard>
     );
 }
 

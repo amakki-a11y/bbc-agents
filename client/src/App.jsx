@@ -11,7 +11,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 const Login = React.lazy(() => import('./pages/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const AnalyticsDashboard = React.lazy(() => import('./pages/AnalyticsDashboard'));
-const ProjectListView = React.lazy(() => import('./pages/ProjectListView'));
 const TaskTemplates = React.lazy(() => import('./pages/TaskTemplates'));
 const TaskDetailsPage = React.lazy(() => import('./pages/TaskDetailsPage'));
 const BotPage = React.lazy(() => import('./pages/BotPage'));
