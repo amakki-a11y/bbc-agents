@@ -30,6 +30,8 @@ jobs:
         run: npm run lint
 
       - name: Test
+        env:
+          CI: true
         run: npm test -- --run
 
       - name: Build
