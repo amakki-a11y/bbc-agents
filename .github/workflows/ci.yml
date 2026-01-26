@@ -72,7 +72,7 @@ jobs:
       - name: Setup Database
         env:
           DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb
-        run: npx prisma db push --skip-generate
+        run: npx prisma generate && npx prisma db push
 
       - name: Run Tests
         env:

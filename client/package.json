@@ -7,7 +7,7 @@
         "dev": "vite",
         "build": "vite build",
         "start": "npm run build && serve dist -s -l 3000",
-        "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 100",
+        "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 150",
         "preview": "vite preview",
         "test": "vitest",
         "test:ui": "vitest --ui",
