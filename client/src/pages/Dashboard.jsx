@@ -83,17 +83,17 @@ const COMPANY_SETTINGS_MENU = [
 
 const Dashboard = ({ children }) => {
     const { logout, user, token } = useAuth();
-    const { theme, toggleTheme, isDark } = useTheme();
-    const { hasPermission, loading: permissionsLoading } = usePermissions();
-    const [tasks, setTasks] = useState([]);
-    const [events, setEvents] = useState([]);
+    const { toggleTheme, isDark } = useTheme();
+    const { hasPermission, loading: _permissionsLoading } = usePermissions();
+    const [_tasks, setTasks] = useState([]);
+    const [_events, setEvents] = useState([]);
     const [projects, setProjects] = useState([]);
     const [isProjectsOpen, setIsProjectsOpen] = useState(true);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showCreateProject, setShowCreateProject] = useState(false);
     const [showAiProject, setShowAiProject] = useState(false);
     const [projectHoverId, setProjectHoverId] = useState(null);
-    const [unreadInbox, setUnreadInbox] = useState(0);
+    const [unreadInbox, _setUnreadInbox] = useState(0);
     const [searchFocused, setSearchFocused] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         // Persist sidebar state in localStorage
@@ -138,6 +138,7 @@ const Dashboard = ({ children }) => {
         if (token) {
             fetchData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
     const handleCreateProject = async (projectData) => {
@@ -159,7 +160,7 @@ const Dashboard = ({ children }) => {
         }
     };
 
-    const handleDeleteProject = async (projectId) => {
+    const _handleDeleteProject = async (projectId) => {
         if (!window.confirm('Delete this project? All tasks will be permanently removed.')) return;
         try {
             await http.delete(`/projects/${projectId}`);

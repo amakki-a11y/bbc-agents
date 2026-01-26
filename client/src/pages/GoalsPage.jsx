@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { http } from '../api/http';
 import Dashboard from './Dashboard';
-import { Target, Plus, ChevronDown, ChevronUp, Calendar, User, Building2, Globe, Trash2, Edit3, X, Check, TrendingUp, AlertTriangle, CheckCircle2, Rocket } from 'lucide-react';
+import { Target, Plus, ChevronDown, Calendar, User, Building2, Globe, Trash2, Edit3, X, Check, AlertTriangle, CheckCircle2, Rocket } from 'lucide-react';
 
 const GoalsPage = () => {
     const [goals, setGoals] = useState([]);

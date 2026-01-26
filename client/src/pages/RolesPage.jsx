@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { http } from '../api/http';
 import Dashboard from './Dashboard';
-import { Search, Plus, Shield, Users, FileText, Loader2 } from 'lucide-react';
+import { Search, Plus, Shield, FileText, Loader2 } from 'lucide-react';
 import RoleCard from '../components/roles/RoleCard';
 import RoleFormModal from '../components/roles/RoleFormModal';
 import RoleTemplateSelector from '../components/roles/RoleTemplateSelector';
@@ -15,7 +15,7 @@ const RolesPage = () => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [templateData, setTemplateData] = useState(null);
-    const [duplicatingRole, setDuplicatingRole] = useState(null);
+    const [_duplicatingRole, setDuplicatingRole] = useState(null);
 
     const fetchRoles = async () => {
         try {

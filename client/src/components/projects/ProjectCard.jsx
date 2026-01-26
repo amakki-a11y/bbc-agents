@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Users, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { Calendar, Users, CheckCircle, Sparkles } from 'lucide-react';
 
 const statusColors = {
     DRAFT: { bg: '#f3f4f6', text: '#6b7280', border: '#e5e7eb' },

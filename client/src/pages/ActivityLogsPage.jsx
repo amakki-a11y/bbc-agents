@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { http } from '../api/http';
 import Dashboard from './Dashboard';
 import {
-    Activity, Filter, Download, RefreshCw, Search, Calendar,
-    User, FileText, Clock, ChevronLeft, ChevronRight, X,
-    LogIn, LogOut, Plus, Edit3, Trash2, Upload, Eye, Target
+    Activity, Download, RefreshCw, Search, Filter,
+    Clock, ChevronLeft, ChevronRight, X,
+    LogIn, LogOut, Plus, Edit3, Trash2, Upload, Eye
 } from 'lucide-react';
 
 const ActivityLogsPage = () => {

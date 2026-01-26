@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, X, Loader } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { http } from '../../api/http';

@@ -475,7 +475,7 @@ const BoardColumn = memo(({ col, tasks, onDrop, onDragOver, onDragLeave, onOpenT
 const BoardView = memo(({ onOpenTask }) => {
     const { tasks, updateTask, addTask, activeProjectId } = useProject();
     const [dragOverColumn, setDragOverColumn] = useState(null);
-    const [draggingTaskId, setDraggingTaskId] = useState(null);
+    const [_draggingTaskId, setDraggingTaskId] = useState(null);
 
     const projectTasks = tasks.filter(t => t.projectId === activeProjectId || t.projectId === parseInt(activeProjectId));
 

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Login from './Login';
 import { BrowserRouter } from 'react-router-dom';
-import * as AuthContext from '../context/AuthContext';
+// import * as AuthContext from '../context/AuthContext';
 
 // Mock the AuthContext
 const mockLogin = vi.fn();

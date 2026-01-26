@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-    X, Save, Plus, Loader2, ChevronDown, ChevronRight, Check, Lock, Info,
+    X, Save, Plus, Loader2, ChevronDown, ChevronRight, Lock, Info,
     Shield, Users, User, UserCheck, Heart, Eye, Crown, Star, Building,
     CheckSquare, Clock, Target, MessageCircle, BarChart2, Bot, Settings
 } from 'lucide-react';
@@ -27,7 +27,7 @@ const IconComponent = ({ name, size = 20, ...props }) => {
     return <Icon size={size} {...props} />;
 };
 
-const RoleFormModal = ({ role = null, onClose, onSave, templates = [] }) => {
+const RoleFormModal = ({ role = null, onClose, onSave, templates: _templates = [] }) => {
     const isEditMode = !!role;
 
     const [formData, setFormData] = useState({
@@ -43,7 +43,7 @@ const RoleFormModal = ({ role = null, onClose, onSave, templates = [] }) => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
-    const [showPreview, setShowPreview] = useState(false);
+    const [_showPreview, _setShowPreview] = useState(false);
 
     const {
         togglePermission,
@@ -194,7 +194,7 @@ const RoleFormModal = ({ role = null, onClose, onSave, templates = [] }) => {
         }
     };
 
-    const applyTemplate = (template) => {
+    const _applyTemplate = (template) => {
         setFormData({
             name: template.name,
             description: template.description,

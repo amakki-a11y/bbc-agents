@@ -1,4 +1,4 @@
-import { User, Calendar, Clock, Tag, Flag, Users, PlusCircle, Share2 } from 'lucide-react';
+import { Calendar, Clock, Tag, Flag, Users, PlusCircle, Share2 } from 'lucide-react';
 
 const PropertyRow = ({ icon: Icon, label, value, onClick }) => (
     <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem', fontSize: '0.9rem' }}>

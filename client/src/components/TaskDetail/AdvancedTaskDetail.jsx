@@ -23,6 +23,7 @@ const AdvancedTaskDetail = ({ task: initialTask, onClose, onUpdate }) => {
 
     useEffect(() => {
         loadDetails();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialTask.id]);
 
     const handlePropertyUpdate = async (updates) => {

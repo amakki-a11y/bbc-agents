@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { http, API_BASE } from '../api/http';
 import Dashboard from './Dashboard';
 import {
-    FileText, Plus, Download, Trash2, Search, Filter, X, Upload,
-    File, FileImage, FileSpreadsheet, FileArchive, Eye, Calendar,
-    User, Building2, ChevronDown, AlertCircle, CheckCircle2, Clock
+    FileText, Download, Trash2, Search, X, Upload,
+    File, FileImage, FileSpreadsheet, FileArchive, Calendar,
+    User, AlertCircle, CheckCircle2
 } from 'lucide-react';
 
 const DocumentsPage = () => {

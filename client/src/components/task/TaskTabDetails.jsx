@@ -3,7 +3,7 @@ import { Plus, Upload, FileText, Image, File, X, Layers, Download, Loader2 } fro
 import { API_URL } from '../../api/http';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-const TaskTabDetails = ({ task, onUpdate, onTaskRefresh }) => {
+const TaskTabDetails = ({ task, onUpdate: _onUpdate, onTaskRefresh }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);

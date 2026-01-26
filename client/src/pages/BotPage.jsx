@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Bot, User, Clock, ListTodo, Calendar, MessageSquare,
-    Settings, Trash2, ChevronRight, Briefcase, Send, CheckCircle2,
-    Sparkles, FileText, Users, Bell, AlertTriangle, Mail, UserCheck,
-    Search, ArrowUpCircle
+    ArrowLeft, Bot, User, Clock, ListTodo, MessageSquare,
+    Settings, Trash2, ChevronRight, Send,
+    Sparkles, Users, Bell, AlertTriangle, Mail, UserCheck
 } from 'lucide-react';
 import { http } from '../api/http';
 import BotChat from '../components/bot/BotChat';
@@ -245,6 +244,7 @@ const BotPage = () => {
         // Refresh notifications every 30 seconds
         const interval = setInterval(loadNotifications, 30000);
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadContext = async () => {

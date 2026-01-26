@@ -57,6 +57,7 @@ export const ProjectProvider = ({ children }) => {
             setIsLoading(false);
         };
         initData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -312,6 +313,7 @@ export const ProjectProvider = ({ children }) => {
         deleteTask, bulkUpdateTasks, bulkDeleteTasks, viewSettings, updateViewSetting,
         searchQuery, setSearchQuery, filters, setFilters, fetchTasks, fetchProjects, getTaskById,
         getRealTaskId, isLoading
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [projects, activeProjectId, activeProject, tasks, addTask, updateTask, deleteTask,
         bulkUpdateTasks, bulkDeleteTasks, viewSettings, updateViewSetting,
         searchQuery, filters, getTaskById, getRealTaskId, isLoading]);

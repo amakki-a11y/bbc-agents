@@ -2,9 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { http } from '../api/http';
 import Dashboard from './Dashboard';
 import {
-    Calendar, CalendarOff, Plus, ChevronLeft, ChevronRight,
-    Check, X, Clock, AlertCircle, Filter, Download,
-    User, Users, Building2, Loader2, CalendarDays
+    CalendarOff, Plus, ChevronLeft, ChevronRight,
+    Check, X, User, Users, CalendarDays
 } from 'lucide-react';
 
 const LeavePage = () => {
@@ -21,7 +20,7 @@ const LeavePage = () => {
     const [calendarLeaves, setCalendarLeaves] = useState([]);
 
     // Loading states
-    const [loadingTypes, setLoadingTypes] = useState(true);
+    const [_loadingTypes, setLoadingTypes] = useState(true);
     const [loadingLeaves, setLoadingLeaves] = useState(false);
     const [loadingBalance, setLoadingBalance] = useState(true);
 
@@ -107,6 +106,7 @@ const LeavePage = () => {
     useEffect(() => {
         fetchLeaveTypes();
         fetchMyBalance();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedYear]);
 
     useEffect(() => {

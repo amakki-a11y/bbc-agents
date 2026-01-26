@@ -5,7 +5,7 @@ import {
     Clock, LogIn, LogOut, Calendar as CalendarIcon,
     ChevronLeft, ChevronRight, CheckCircle, XCircle,
     AlertCircle, Coffee, Palmtree, Users, User, Download,
-    X, Edit2, Save, Loader2
+    X
 } from 'lucide-react';
 
 const AttendancePage = () => {
@@ -1027,7 +1027,7 @@ const DayDetailsModal = ({ day, onClose }) => {
 };
 
 // Employee Attendance Modal (for managers)
-const EmployeeAttendanceModal = ({ data, onClose, onUpdate }) => {
+const EmployeeAttendanceModal = ({ data, onClose, onUpdate: _onUpdate }) => {
     const [records] = useState(data.records || []);
 
     return (

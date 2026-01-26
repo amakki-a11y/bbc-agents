@@ -3,8 +3,8 @@ import { http } from '../api/http';
 import Dashboard from './Dashboard';
 import {
     Brain, Activity, CheckCircle2, XCircle, AlertTriangle, RotateCcw,
-    ChevronDown, ChevronUp, Search, Filter, RefreshCw, Eye, Clock,
-    Zap, Target, TrendingUp, BarChart3, User, Calendar, X, MessageSquare
+    ChevronDown, ChevronUp, Search, RefreshCw, Eye, Clock,
+    Zap, Target, TrendingUp, X, MessageSquare
 } from 'lucide-react';
 
 const AgentBrainPage = () => {
@@ -395,7 +395,7 @@ const AgentBrainPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredActions.map((action, index) => {
+                                    {filteredActions.map((action, _index) => {
                                         const isExpanded = expandedId === action.id;
                                         const confidence = getConfidenceColor(action.confidence_score);
 

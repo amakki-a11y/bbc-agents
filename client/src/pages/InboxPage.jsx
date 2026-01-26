@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { http } from '../api/http';
 import {
-    Inbox, Mail, MailOpen, Filter, Search, Plus, ChevronDown,
-    User, Users, Building2, Bot, Clock, Check, Archive, Trash2
+    Inbox, Mail, MailOpen, Search, Plus,
+    User, Building2, Bot, Clock, Archive, Trash2
 } from 'lucide-react';
 
 const InboxPage = () => {
@@ -11,7 +11,7 @@ const InboxPage = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [filter, setFilter] = useState('all'); // all, unread, hr, manager
     const [searchQuery, setSearchQuery] = useState('');
-    const [showCompose, setShowCompose] = useState(false);
+    const [_showCompose, setShowCompose] = useState(false);
 
     useEffect(() => {
         fetchMessages();

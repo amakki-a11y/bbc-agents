@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Paperclip, Smile, Bell } from 'lucide-react';
+import { Paperclip, Smile, Bell } from 'lucide-react';
 import { http } from '../../api/http';
 
 const ActivityPanel = ({ taskId, activities: initialActivities }) => {

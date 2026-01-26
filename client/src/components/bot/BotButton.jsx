@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, X, MessageCircle, Sparkles } from 'lucide-react';
+import { X, MessageCircle, Sparkles } from 'lucide-react';
 import { http } from '../../api/http';
 import BotChat from './BotChat';
 
@@ -14,6 +14,7 @@ const BotButton = () => {
         checkEmployeeAndUnread();
         const interval = setInterval(checkUnread, 30000);
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Show tooltip after hover delay

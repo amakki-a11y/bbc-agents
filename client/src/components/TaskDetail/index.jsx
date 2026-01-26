@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { X, CheckCircle2, Circle } from 'lucide-react';
 import TaskComments from './TaskComments';
-import TaskAttachments from './TaskAttachments';
+// import TaskAttachments from './TaskAttachments';
 import TaskSubtasks from './TaskSubtasks';
 import TaskMetadata from './TaskMetadata';
 import TaskDescription from './TaskDescription';

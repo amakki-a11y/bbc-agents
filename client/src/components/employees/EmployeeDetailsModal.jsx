@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { http } from '../../api/http';
 import EmployeeForm from './EmployeeForm';
-import { X, Mail, Phone, Building2, Shield, Calendar, Users, Clock, Edit2, UserX, CheckCircle } from 'lucide-react';
+import { X, Mail, Phone, Building2, Shield, Calendar, Users, Clock, Edit2, UserX } from 'lucide-react';
 
 const EmployeeDetailsModal = ({ employee, onClose, onUpdate, departments = [], roles = [], employees = [] }) => {
     const [attendance, setAttendance] = useState([]);
@@ -11,6 +11,7 @@ const EmployeeDetailsModal = ({ employee, onClose, onUpdate, departments = [], r
 
     useEffect(() => {
         fetchAttendance();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee.id]);
 
     const fetchAttendance = async () => {

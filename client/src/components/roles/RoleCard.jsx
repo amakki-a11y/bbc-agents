@@ -1,6 +1,6 @@
 import { Shield, Users, Check, Edit2, Copy, ExternalLink, Crown, Star, User, UserCheck, Heart, Eye, Building, CheckSquare, Clock, Target, MessageCircle, BarChart2, Bot, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { PERMISSION_CATEGORIES, getPermissionName } from '../../config/permissions';
+import { getPermissionName } from '../../config/permissions';
 
 // Icon component mapper
 const IconComponent = ({ name, size = 24, ...props }) => {

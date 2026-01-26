@@ -8,7 +8,7 @@ const formatDate = (dateString) => {
 };
 
 const DatesField = ({ startDate, dueDate, onUpdate }) => {
-    const [isHovered, setIsHovered] = useState(false);
+    const [_isHovered, setIsHovered] = useState(false);
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

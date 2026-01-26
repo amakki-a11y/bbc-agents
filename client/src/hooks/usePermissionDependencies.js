@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import {
     PERMISSION_DEPENDENCIES,
-    getPermissionName,
-    getAllPermissionKeys
+    getPermissionName
 } from '../config/permissions';
 
 /**

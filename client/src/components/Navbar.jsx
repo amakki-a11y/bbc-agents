@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ChevronDown } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
 const Navbar = () => {

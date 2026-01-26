@@ -27,6 +27,7 @@ function ShareModal({ isOpen, onClose, project, onShareUpdated }) {
             fetchShares();
             fetchOptions();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, project]);
 
     const fetchShares = async () => {

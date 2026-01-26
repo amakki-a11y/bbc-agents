@@ -4,11 +4,11 @@ import { http } from '../api/http';
 import Dashboard from './Dashboard';
 import {
     User, Mail, Phone, MapPin, Calendar, Building2, Briefcase, Clock,
-    Edit3, MessageSquare, MoreVertical, ChevronRight, Award, Target,
-    FileText, Star, TrendingUp, AlertTriangle, CheckCircle2, X, Upload,
-    Plus, Download, Eye, Trash2, Shield, Globe, Home, Laptop, Users,
-    GraduationCap, Code, Languages, BadgeCheck, History, ArrowUpRight,
-    Flame, Zap, Trophy, Medal, Crown, Sparkles, BarChart3, PieChart
+    Edit3, MessageSquare, MoreVertical, Target,
+    FileText, Star, TrendingUp, CheckCircle2, X, Upload,
+    Plus, Download, Eye, Trash2, Home, Laptop, Users,
+    Code, Languages, BadgeCheck, History, ArrowUpRight,
+    Flame, Trophy, Medal, Sparkles, BarChart3, PieChart
 } from 'lucide-react';
 
 const EmployeeProfilePage = () => {
@@ -57,6 +57,7 @@ const EmployeeProfilePage = () => {
         } finally {
             setLoading(false);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     useEffect(() => {
@@ -658,7 +659,7 @@ const OverviewTab = ({ employee, stats, probation, formatDate, calculateTenure }
     );
 };
 
-const PerformanceTab = ({ performance, stats, formatDate }) => {
+const PerformanceTab = ({ performance, stats: _stats, formatDate: _formatDate }) => {
     const latestReview = performance.reviews?.[0];
 
     return (
@@ -1163,7 +1164,7 @@ const DocumentsTab = ({ documents, formatDate, onUpload, onRefresh }) => {
     );
 };
 
-const SkillsTab = ({ skills, getSkillProficiencyBar, onAddSkill, onRefresh }) => {
+const SkillsTab = ({ skills, getSkillProficiencyBar, onAddSkill, onRefresh: _onRefresh }) => {
     const technicalSkills = skills.filter(s => s.category === 'technical');
     const softSkills = skills.filter(s => s.category === 'soft');
     const languages = skills.filter(s => s.category === 'language');

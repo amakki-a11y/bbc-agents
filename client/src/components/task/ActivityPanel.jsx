@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-    Bell, Filter, Search, MessageCircle, GitBranch, UserCheck, Clock, Send,
+    Bell, Filter, Search, MessageCircle, UserCheck, Clock, Send,
     Smile, Paperclip, AtSign, Pencil, Trash2, Flag, Calendar, FileText,
     CheckSquare, Tag, Link2, FolderInput, Plus, RefreshCw, Upload, Timer, Loader2,
     ChevronDown, ChevronUp, AlignLeft
@@ -500,7 +500,7 @@ const CommentComposer = ({ onPost }) => {
     );
 };
 
-const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
+const ActivityPanel = ({ task, onUpdate: _onUpdate, onTaskRefresh, refreshKey = 0 }) => {
     const [isPosting, setIsPosting] = useState(false);
     const [activities, setActivities] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -558,6 +558,7 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
             // No activities in prop, fetch from API
             fetchActivities();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [task?.id, task?.activities?.length, fetchActivities]);
 
     // Refresh activities when refreshKey changes

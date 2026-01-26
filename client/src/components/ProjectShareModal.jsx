@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Users, UserPlus, Trash2, Shield, Eye, Edit3, Crown, Loader2, Check, Search } from 'lucide-react';
+import { X, Users, UserPlus, Trash2, Shield, Eye, Edit3, Crown, Loader2, Search } from 'lucide-react';
 import { http } from '../api/http';
 
 const ROLE_CONFIG = {
@@ -11,7 +11,7 @@ const ROLE_CONFIG = {
 const ProjectShareModal = ({ isOpen, onClose, project, onMembersUpdate }) => {
     const [members, setMembers] = useState([]);
     const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [_loading, _setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
     const [selectedRole, setSelectedRole] = useState('editor');
@@ -23,6 +23,7 @@ const ProjectShareModal = ({ isOpen, onClose, project, onMembersUpdate }) => {
             fetchMembers();
             fetchUsers();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, project]);
 
     const fetchMembers = async () => {

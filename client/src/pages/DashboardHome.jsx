@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { http } from '../api/http';
 import {
-    CheckSquare, Clock, Users, TrendingUp, Calendar, Plus, ArrowRight,
+    CheckSquare, Clock, Users, Calendar, Plus, ArrowRight,
     CheckCircle2, AlertCircle, Bell, FileText, UserCheck, LogIn, Target,
-    Zap, Activity, BarChart3, Sparkles
+    Zap, Activity, Sparkles
 } from 'lucide-react';
 
 const DashboardHome = () => {

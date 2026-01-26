@@ -1,4 +1,4 @@
-import { X, MoreHorizontal, Maximize2, Share2, Sparkles, ChevronRight, Home } from 'lucide-react';
+import { X, MoreHorizontal, Maximize2, Share2, ChevronRight, Home } from 'lucide-react';
 
 const TaskLayout = ({ children, onClose, projectName = 'Project', taskId = '' }) => {
     return (

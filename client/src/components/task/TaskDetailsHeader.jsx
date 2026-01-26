@@ -19,6 +19,7 @@ const MoveToProjectModal = ({ isOpen, onClose, currentProjectId, onMove }) => {
         if (isOpen) {
             fetchProjects();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     const fetchProjects = async () => {

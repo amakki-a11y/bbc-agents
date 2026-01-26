@@ -6,7 +6,7 @@ import TaskDetailsMain from '../components/task/TaskDetailsMain';
 import ActivityPanel from '../components/task/ActivityPanel';
 import TaskTabActionItems from '../components/task/TaskTabActionItems';
 import TaskDetailsHeader from "../components/task/TaskDetailsHeader";
-import { Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
     const params = useParams();
@@ -19,7 +19,7 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
     const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
     const { updateTask, tasks, projects, getRealTaskId } = useProject();
-    const activityPanelRef = useRef(null);
+    const _activityPanelRef = useRef(null);
     const initialFetchDone = useRef(false);
 
     // Using centralized API_URL from http.js

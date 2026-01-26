@@ -2,7 +2,7 @@ import { useState, useEffect, Suspense, lazy, useCallback, useMemo, useRef } fro
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useProject } from '../context/ProjectContext';
 import {
-    Plus, Filter, Search, Layers, Columns, SlidersHorizontal, LayoutDashboard, List as ListIcon, Trash2, CheckSquare, X, ChevronDown, ChevronRight, ArrowUpDown, Flag, Users
+    Plus, Filter, Search, Layers, LayoutDashboard, List as ListIcon, Trash2, CheckSquare, X, ChevronDown, ChevronRight, ArrowUpDown, Flag, Users
 } from 'lucide-react';
 import TaskList from '../components/TaskList';
 import BoardView from '../components/BoardView';
@@ -46,7 +46,7 @@ const DUE_DATE_FILTERS = [
 const FilterDropdown = ({ isOpen, onClose, filters, setFilters, tasks }) => {
     if (!isOpen) return null;
 
-    const uniquePriorities = [...new Set(tasks.map(t => t.priority).filter(Boolean))];
+    const _uniquePriorities = [...new Set(tasks.map(t => t.priority).filter(Boolean))];
     const uniqueTags = [...new Set(tasks.flatMap(t => t.tags || []))];
 
     const togglePriority = (priority) => {

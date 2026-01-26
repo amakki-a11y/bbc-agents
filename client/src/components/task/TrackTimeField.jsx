@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Timer, Play, Square, Plus, Clock, Trash2, X } from 'lucide-react';
+import { Timer, Play, Square, Plus, Clock, X } from 'lucide-react';
 import { API_URL } from '../../api/http';
 
 const formatDuration = (seconds) => {

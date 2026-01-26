@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link2, Plus, ArrowRight, ArrowLeft, X, Search, Lock } from 'lucide-react';
+import { Link2, ArrowRight, X, Search, Lock } from 'lucide-react';
 import { API_URL } from '../../api/http';
 
 const RelationshipsField = ({ taskId, blockedBy = [], blocking = [], onTaskRefresh }) => {

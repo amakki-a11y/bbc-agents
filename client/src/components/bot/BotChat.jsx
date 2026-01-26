@@ -313,7 +313,7 @@ const BotChat = ({ isFullPage = false, onClose, initialCommand = null }) => {
     const [lastProcessedCommand, setLastProcessedCommand] = useState(null);
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null);
-    const inputRef = useRef(null);
+    const _inputRef = useRef(null);
     const textareaRef = useRef(null);
     const { fetchTasks } = useProject();
 
@@ -326,6 +326,7 @@ const BotChat = ({ isFullPage = false, onClose, initialCommand = null }) => {
             setLastProcessedCommand(initialCommand);
             sendMessage(initialCommand);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialCommand]);
 
     useEffect(() => {

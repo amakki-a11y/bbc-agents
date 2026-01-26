@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Settings, Share2, Clock, Users, Calendar,
-    CheckCircle2, Circle, Plus, Loader2, AlertCircle,
-    Sparkles, MoreVertical, Trash2, Edit2, Play, Pause
+    ArrowLeft, Share2, Clock, Calendar,
+    CheckCircle2, Circle, Loader2, AlertCircle,
+    Sparkles, MoreVertical, Trash2, Play, Pause
 } from 'lucide-react';
 import http from '../api/http';
 import { useAuth } from '../context/AuthContext';
@@ -44,6 +44,7 @@ function ProjectDetailsPage() {
 
     useEffect(() => {
         fetchProject();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]);
 
     const fetchProject = async () => {

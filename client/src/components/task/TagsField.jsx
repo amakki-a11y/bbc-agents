@@ -19,7 +19,7 @@ const getTagColor = (tag) => {
 const TagsField = ({ tags = [], onUpdate }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newTag, setNewTag] = useState('');
-    const [isHovered, setIsHovered] = useState(false);
+    const [_isHovered, setIsHovered] = useState(false);
 
     const tagList = Array.isArray(tags) ? tags : [];
 

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { http } from '../api/http';
 import Dashboard from './Dashboard';
-import { PERMISSION_CATEGORIES, getPermissionName } from '../config/permissions';
+import { PERMISSION_CATEGORIES } from '../config/permissions';
 import RoleFormModal from '../components/roles/RoleFormModal';
 
 // Icon component mapper
@@ -38,12 +38,14 @@ const RoleDetailsPage = () => {
 
     useEffect(() => {
         fetchRole();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roleId]);
 
     useEffect(() => {
         if (activeTab === 'activity') {
             fetchActivityLog();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, roleId]);
 
     const fetchRole = async () => {

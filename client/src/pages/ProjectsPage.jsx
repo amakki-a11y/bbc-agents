@@ -61,6 +61,7 @@ function ProjectsPage() {
 
     useEffect(() => {
         fetchProjects();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters]);
 
     const handleApprove = async (projectId) => {
@@ -83,7 +84,7 @@ function ProjectsPage() {
         }
     };
 
-    const handleProjectCreated = (newProject) => {
+    const handleProjectCreated = (_newProject) => {
         fetchProjects();
     };
 
