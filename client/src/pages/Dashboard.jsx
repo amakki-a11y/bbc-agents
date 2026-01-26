@@ -5,7 +5,7 @@ import {
     Search, UserPlus, Copy, ChevronDown,
     Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus,
-    CalendarOff, Target, Sparkles, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog
+    CalendarOff, Target, Sparkles, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog, Layers
 } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import NotificationBell from '../components/NotificationBell';
@@ -445,6 +445,7 @@ const Dashboard = ({ children }) => {
                             <NavItem icon={LayoutDashboard} label="Dashboard" href="/" collapsed={sidebarCollapsed} />
                             <NavItem icon={TrendingUp} label="Analytics" href="/analytics" collapsed={sidebarCollapsed} />
                             <NavItem icon={Folder} label="Projects" href="/projects" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Layers} label="Workspaces" href="/workspaces" collapsed={sidebarCollapsed} />
                             <NavItem icon={Copy} label="Templates" href="/templates" collapsed={sidebarCollapsed} />
                         </div>
 

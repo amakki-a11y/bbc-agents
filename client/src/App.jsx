@@ -32,6 +32,10 @@ const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 const AccessDeniedPage = React.lazy(() => import('./pages/AccessDeniedPage'));
 const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
 const ProjectDetailsPage = React.lazy(() => import('./pages/ProjectDetailsPage'));
+const CalendarPage = React.lazy(() => import('./pages/CalendarPage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const WorkspacesPage = React.lazy(() => import('./pages/WorkspacesPage'));
 
 // Workspace hierarchy pages
 const SpacePage = React.lazy(() => import('./pages/SpacePage'));
@@ -52,8 +56,12 @@ function App() {
                                 <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
                                 <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
                                 <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+                                <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+                                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
                                 {/* Workspace Hierarchy Routes */}
+                                <Route path="/workspaces" element={<ProtectedRoute><WorkspacesPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/space/:spaceId" element={<ProtectedRoute><SpacePage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/list/:listId" element={<ProtectedRoute><ListPage /></ProtectedRoute>} />
                                 <Route path="/w/:workspaceId/list/:listId/task/:taskId" element={<ProtectedRoute><WorkspaceTaskPage /></ProtectedRoute>} />
