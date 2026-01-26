@@ -44,9 +44,8 @@ function App() {
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                                 <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
-                                <Route path="/projects/:id" element={<ProtectedRoute><Dashboard><ProjectListView /></Dashboard></ProtectedRoute>} />
-                                <Route path="/projects" element={<ProtectedRoute permission="projects.view"><ProjectsPage /></ProtectedRoute>} />
-                                <Route path="/projects/:projectId" element={<ProtectedRoute permission="projects.view"><ProjectDetailsPage /></ProtectedRoute>} />
+                                <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+                                <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
