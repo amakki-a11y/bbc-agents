@@ -17,6 +17,10 @@ module.exports = {
             { allowConstantExport: true },
         ],
         'react/prop-types': 'off', // Turn off prop-types as we might add TS or just skip it for now
-        'no-unused-vars': 'warn',
+        'no-unused-vars': ['warn', {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            caughtErrorsIgnorePattern: '^_'
+        }],
     },
 }
