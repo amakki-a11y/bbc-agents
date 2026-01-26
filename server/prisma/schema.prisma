@@ -1586,8 +1586,8 @@ model Client {
   rating          ClientRating?
 
   // Assignment
-  ownerId         String
-  owner           Employee        @relation("ClientOwner", fields: [ownerId], references: [id])
+  ownerId         String?
+  owner           Employee?       @relation("ClientOwner", fields: [ownerId], references: [id])
 
   // Financial (for Forex brokerage)
   accountNumber   String?
@@ -1743,8 +1743,8 @@ model ClientActivity {
   oldValue        String?
   newValue        String?
 
-  userId          String
-  user            Employee        @relation(fields: [userId], references: [id])
+  userId          String?
+  user            Employee?       @relation(fields: [userId], references: [id])
 
   createdAt       DateTime        @default(now())
 

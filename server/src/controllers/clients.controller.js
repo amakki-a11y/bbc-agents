@@ -203,7 +203,7 @@ exports.createClient = async (req, res) => {
                 stage: stage || 'NEW',
                 source,
                 rating,
-                ownerId: ownerId || userId,
+                ownerId: ownerId || req.user.employeeId || null,
                 departmentId: departmentId || null,
                 accountNumber,
                 accountType
@@ -231,7 +231,7 @@ exports.createClient = async (req, res) => {
             data: {
                 clientId: client.id,
                 action: 'created',
-                userId
+                userId: req.user.employeeId || null
             }
         });
 
