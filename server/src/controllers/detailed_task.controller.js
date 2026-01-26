@@ -270,9 +270,23 @@ const addComment = async (req, res) => {
     try {
         const { taskId } = req.params;
         const { content } = req.body;
+
+        const taskIdNum = parseInt(taskId);
+
+        // Check if task ID is valid (not a temp ID)
+        if (taskIdNum > 1000000000000) {
+            return res.status(400).json({ error: "Invalid task ID. Please save the task first." });
+        }
+
+        // Verify task exists
+        const task = await prisma.task.findUnique({ where: { id: taskIdNum } });
+        if (!task) {
+            return res.status(404).json({ error: "Task not found" });
+        }
+
         const activity = await prisma.activity.create({
             data: {
-                task_id: parseInt(taskId),
+                task_id: taskIdNum,
                 user_id: req.user.userId,
                 type: 'comment',
                 content
@@ -281,8 +295,7 @@ const addComment = async (req, res) => {
         });
 
         // Notify Task Owner
-        const task = await prisma.task.findUnique({ where: { id: parseInt(taskId) } });
-        if (task && task.user_id !== req.user.userId) {
+        if (task.user_id !== req.user.userId) {
             await createNotification({
                 userId: task.user_id,
                 type: 'comment',
@@ -294,6 +307,7 @@ const addComment = async (req, res) => {
 
         res.status(201).json(activity);
     } catch (error) {
+        console.error('Error adding comment:', error);
         res.status(500).json({ error: "Failed to add comment" });
     }
 };

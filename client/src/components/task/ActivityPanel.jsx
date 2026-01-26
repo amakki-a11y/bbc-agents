@@ -570,6 +570,14 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
     const handlePostComment = async (content) => {
         if (!task?.id || !content.trim()) return;
 
+        // Check if task ID is a temporary ID (Date.now() style - greater than 1 trillion)
+        // Real database IDs are much smaller (auto-increment integers)
+        const isTemporaryTask = Number(task.id) > 1000000000000;
+        if (isTemporaryTask) {
+            alert('Please save the task first before adding comments.');
+            return;
+        }
+
         // Create optimistic comment for immediate display
         const optimisticComment = {
             id: `temp-${Date.now()}`,
@@ -596,7 +604,8 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to post comment');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to post comment');
             }
 
             // Fetch fresh activities to replace optimistic comment with real one
@@ -610,7 +619,7 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
             console.error('Error posting comment:', error);
             // Remove optimistic comment on error
             setActivities(prev => prev.filter(a => a.id !== optimisticComment.id));
-            alert('Failed to post comment. Please try again.');
+            alert(error.message || 'Failed to post comment. Please try again.');
         } finally {
             setIsPosting(false);
         }
