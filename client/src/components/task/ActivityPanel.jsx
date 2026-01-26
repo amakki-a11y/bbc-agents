@@ -527,12 +527,6 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
         }
     }, [sortedActivities]);
 
-    // Initialize activities from task prop
-    useEffect(() => {
-        const initialActivities = task?.activities || task?.activity || [];
-        setActivities(initialActivities);
-    }, [task?.id]); // Only reset when task ID changes, not on every task prop change
-
     // Fetch activities function
     const fetchActivities = useCallback(async () => {
         if (!task?.id || Number(task.id) > 1000000000000) return;
@@ -555,6 +549,17 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
         }
     }, [task?.id]);
 
+    // Initialize activities from task prop OR fetch if not present
+    useEffect(() => {
+        const initialActivities = task?.activities || task?.activity || [];
+        if (initialActivities.length > 0) {
+            setActivities(initialActivities);
+        } else if (task?.id && Number(task.id) <= 1000000000000) {
+            // No activities in prop, fetch from API
+            fetchActivities();
+        }
+    }, [task?.id, task?.activities?.length, fetchActivities]);
+
     // Refresh activities when refreshKey changes
     useEffect(() => {
         if (refreshKey > 0 && task?.id) {
@@ -565,7 +570,20 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
     const handlePostComment = async (content) => {
         if (!task?.id || !content.trim()) return;
 
+        // Create optimistic comment for immediate display
+        const optimisticComment = {
+            id: `temp-${Date.now()}`,
+            type: 'comment',
+            content: content.trim(),
+            user: { email: 'You' },
+            timestamp: new Date().toISOString(),
+            isOptimistic: true
+        };
+
+        // Add optimistic comment immediately
+        setActivities(prev => [...prev, optimisticComment]);
         setIsPosting(true);
+
         try {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             const response = await fetch(`${API_URL}/tasks/details/${task.id}/comments`, {
@@ -581,7 +599,7 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
                 throw new Error('Failed to post comment');
             }
 
-            // Fetch fresh activities after posting
+            // Fetch fresh activities to replace optimistic comment with real one
             await fetchActivities();
 
             // Also call parent refresh if available
@@ -590,6 +608,8 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
             }
         } catch (error) {
             console.error('Error posting comment:', error);
+            // Remove optimistic comment on error
+            setActivities(prev => prev.filter(a => a.id !== optimisticComment.id));
             alert('Failed to post comment. Please try again.');
         } finally {
             setIsPosting(false);

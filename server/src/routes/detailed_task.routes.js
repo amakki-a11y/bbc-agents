@@ -63,7 +63,7 @@ router.put('/subtasks/:id', [
 // Comments
 router.post('/:taskId/comments', [
     param('taskId').custom(isValidId).withMessage('Invalid task ID'),
-    check('content').trim().notEmpty().withMessage('Comment content is required').escape(),
+    check('content').trim().notEmpty().withMessage('Comment content is required'),
     validate
 ], addComment);
 
