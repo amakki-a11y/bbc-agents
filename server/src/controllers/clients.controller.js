@@ -448,7 +448,7 @@ exports.getClientStats = async (req, res) => {
 exports.addInteraction = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user.employeeId || req.user.id;
+        const employeeId = req.user.employeeId || null;
         const { type, subject, description, outcome, scheduledAt, duration } = req.body;
 
         const interaction = await prisma.clientInteraction.create({
@@ -461,7 +461,7 @@ exports.addInteraction = async (req, res) => {
                 scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
                 completedAt: new Date(),
                 duration,
-                conductedBy: userId
+                conductedBy: employeeId
             },
             include: {
                 conductor: { select: { id: true, name: true } }
@@ -480,7 +480,7 @@ exports.addInteraction = async (req, res) => {
                 clientId: parseInt(id),
                 action: 'interaction_added',
                 newValue: type,
-                userId
+                userId: employeeId
             }
         });
 
@@ -495,7 +495,7 @@ exports.addInteraction = async (req, res) => {
 exports.addNote = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user.employeeId || req.user.id;
+        const employeeId = req.user.employeeId || null;
         const { content, isPinned } = req.body;
 
         const note = await prisma.clientNote.create({
@@ -503,7 +503,7 @@ exports.addNote = async (req, res) => {
                 clientId: parseInt(id),
                 content,
                 isPinned: isPinned || false,
-                authorId: userId
+                authorId: employeeId
             },
             include: {
                 author: { select: { id: true, name: true } }
@@ -515,7 +515,7 @@ exports.addNote = async (req, res) => {
             data: {
                 clientId: parseInt(id),
                 action: 'note_added',
-                userId
+                userId: employeeId
             }
         });
 

@@ -1635,8 +1635,8 @@ model ClientInteraction {
   duration        Int?
 
   // Assignment
-  conductedBy     String
-  conductor       Employee            @relation(fields: [conductedBy], references: [id])
+  conductedBy     String?
+  conductor       Employee?           @relation(fields: [conductedBy], references: [id])
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
@@ -1655,8 +1655,8 @@ model ClientNote {
   content         String
   isPinned        Boolean         @default(false)
 
-  authorId        String
-  author          Employee        @relation(fields: [authorId], references: [id])
+  authorId        String?
+  author          Employee?       @relation(fields: [authorId], references: [id])
 
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
