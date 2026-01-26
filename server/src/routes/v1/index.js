@@ -21,6 +21,13 @@ const aiRoutes = require('../ai.routes');
 const userRoutes = require('../users.routes');
 const automationRoutes = require('../automation.routes');
 
+// Workspace hierarchy routes
+const workspaceRoutes = require('../workspaces.routes');
+const spaceRoutes = require('../spaces.routes');
+const folderRoutes = require('../folders.routes');
+const listRoutes = require('../lists.routes');
+const listTaskRoutes = require('../listTasks.routes');
+
 // Mount all routes under /api/v1
 router.use('/', dataRoutes);
 router.use('/tasks/details', detailedTaskRoutes);
@@ -40,5 +47,12 @@ router.use('/agent-actions', agentActionsRoutes);
 router.use('/ai', aiRoutes);
 router.use('/users', userRoutes);
 router.use('/automation', automationRoutes);
+
+// Workspace hierarchy routes
+router.use('/workspaces', workspaceRoutes);
+router.use('/spaces', spaceRoutes);
+router.use('/folders', folderRoutes);
+router.use('/lists', listRoutes);
+router.use('/list-tasks', listTaskRoutes);
 
 module.exports = router;

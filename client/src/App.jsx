@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { WorkspaceProvider } from './context/WorkspaceContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -32,11 +33,17 @@ const AccessDeniedPage = React.lazy(() => import('./pages/AccessDeniedPage'));
 const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage'));
 const ProjectDetailsPage = React.lazy(() => import('./pages/ProjectDetailsPage'));
 
+// Workspace hierarchy pages
+const SpacePage = React.lazy(() => import('./pages/SpacePage'));
+const ListPage = React.lazy(() => import('./pages/ListPage'));
+const WorkspaceTaskPage = React.lazy(() => import('./pages/WorkspaceTaskPage'));
+
 function App() {
     return (
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
                 <NotificationProvider>
+                    <WorkspaceProvider>
                     <ErrorBoundary>
                         <Suspense fallback={<LoadingSpinner />}>
                             <Routes>
@@ -45,6 +52,12 @@ function App() {
                                 <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
                                 <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
                                 <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailsPage /></ProtectedRoute>} />
+
+                                {/* Workspace Hierarchy Routes */}
+                                <Route path="/w/:workspaceId/space/:spaceId" element={<ProtectedRoute><SpacePage /></ProtectedRoute>} />
+                                <Route path="/w/:workspaceId/list/:listId" element={<ProtectedRoute><ListPage /></ProtectedRoute>} />
+                                <Route path="/w/:workspaceId/list/:listId/task/:taskId" element={<ProtectedRoute><WorkspaceTaskPage /></ProtectedRoute>} />
+
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
@@ -68,6 +81,7 @@ function App() {
                             </Routes>
                         </Suspense>
                     </ErrorBoundary>
+                    </WorkspaceProvider>
                 </NotificationProvider>
             </AuthProvider>
         </Router>

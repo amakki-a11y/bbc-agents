@@ -69,32 +69,35 @@ model Department {
   messages    Message[]  @relation("DepartmentMessages")
 
   // Project relations
-  projects            Project[]
-  projectsSharedWith  ProjectShare[]  @relation("ProjectSharedWithDept")
-  tasksSharedWith     TaskShare[]     @relation("TaskSharedWithDept")
+  projects           Project[]
+  projectsSharedWith ProjectShare[] @relation("ProjectSharedWithDept")
+  tasksSharedWith    TaskShare[]    @relation("TaskSharedWithDept")
+
+  // Workspace hierarchy relations
+  spaces Space[]
 }
 
 model Role {
-  id            String     @id @default(cuid())
-  name          String     @unique
+  id            String   @id @default(cuid())
+  name          String   @unique
   description   String?
-  color         String     @default("#6366f1")
+  color         String   @default("#6366f1")
   icon          String?
-  isSystemRole  Boolean    @default(false) // Prevent deletion of Admin, etc.
-  isDefault     Boolean    @default(false) // Auto-assign to new employees
-  permissions   String     @default("{}") // Legacy JSON string for backwards compatibility
-  created_at    DateTime   @default(now())
-  updated_at    DateTime   @default(now()) @updatedAt
+  isSystemRole  Boolean  @default(false) // Prevent deletion of Admin, etc.
+  isDefault     Boolean  @default(false) // Auto-assign to new employees
+  permissions   String   @default("{}") // Legacy JSON string for backwards compatibility
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
   created_by_id String?
 
-  employees         Employee[]
-  rolePermissions   RolePermission[]
-  activityLogs      RoleActivityLog[]
-  createdBy         Employee?          @relation("RoleCreator", fields: [created_by_id], references: [id])
+  employees       Employee[]
+  rolePermissions RolePermission[]
+  activityLogs    RoleActivityLog[]
+  createdBy       Employee?         @relation("RoleCreator", fields: [created_by_id], references: [id])
 
   // Project sharing relations
-  projectsSharedWith  ProjectShare[]
-  tasksSharedWith     TaskShare[]
+  projectsSharedWith ProjectShare[]
+  tasksSharedWith    TaskShare[]
 
   @@index([isDefault])
   @@index([isSystemRole])
@@ -103,11 +106,11 @@ model Role {
 model RolePermission {
   id            Int      @id @default(autoincrement())
   role_id       String
-  permissionKey String   // e.g., "employees.create"
+  permissionKey String // e.g., "employees.create"
   granted       Boolean  @default(true)
   created_at    DateTime @default(now())
 
-  role          Role     @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
 
   @@unique([role_id, permissionKey])
   @@index([role_id])
@@ -115,15 +118,15 @@ model RolePermission {
 }
 
 model RoleActivityLog {
-  id             Int      @id @default(autoincrement())
-  role_id        String
-  action         String   // "created", "updated", "permissions_changed", "employee_assigned"
-  details        Json?    // Store what changed
+  id              Int      @id @default(autoincrement())
+  role_id         String
+  action          String // "created", "updated", "permissions_changed", "employee_assigned"
+  details         Json? // Store what changed
   performed_by_id String?
-  performed_at   DateTime @default(now())
+  performed_at    DateTime @default(now())
 
-  role           Role     @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  performedBy    Employee? @relation("RoleActivityPerformer", fields: [performed_by_id], references: [id])
+  role        Role      @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  performedBy Employee? @relation("RoleActivityPerformer", fields: [performed_by_id], references: [id])
 
   @@index([role_id])
   @@index([performed_at])
@@ -249,29 +252,39 @@ model Employee {
   points              EmployeePoints?
 
   // Employee Lifecycle Relations
-  skills             EmployeeSkill[]
-  documents          EmployeeDocument[]
-  education          EmployeeEducation[]
-  experience         EmployeeExperience[]
-  probationReviews   ProbationReview[]
-  performanceReviews PerformanceReview[]
-  statusHistory      EmployeeStatusHistory[]
-  roleHistory        EmployeeRoleHistory[]
-  conductedReviews       PerformanceReview[]     @relation("ReviewConductor")
-  activityLogs           ActivityLog[]
-  reviewedAgentActions   AgentAction[]
+  skills               EmployeeSkill[]
+  documents            EmployeeDocument[]
+  education            EmployeeEducation[]
+  experience           EmployeeExperience[]
+  probationReviews     ProbationReview[]
+  performanceReviews   PerformanceReview[]
+  statusHistory        EmployeeStatusHistory[]
+  roleHistory          EmployeeRoleHistory[]
+  conductedReviews     PerformanceReview[]     @relation("ReviewConductor")
+  activityLogs         ActivityLog[]
+  reviewedAgentActions AgentAction[]
 
   // Role Management
-  createdRoles           Role[]                  @relation("RoleCreator")
-  roleActivityLogs       RoleActivityLog[]       @relation("RoleActivityPerformer")
+  createdRoles     Role[]            @relation("RoleCreator")
+  roleActivityLogs RoleActivityLog[] @relation("RoleActivityPerformer")
 
   // Project relations
-  createdProjects        Project[]               @relation("ProjectCreator")
-  projectsSharedWith     ProjectShare[]          @relation("ProjectSharedWithUser")
-  projectsSharedBy       ProjectShare[]          @relation("ProjectSharedBy")
-  tasksSharedWith        TaskShare[]             @relation("TaskSharedWithUser")
-  tasksSharedBy          TaskShare[]             @relation("TaskSharedBy")
-  projectActivities      ProjectActivity[]
+  createdProjects    Project[]         @relation("ProjectCreator")
+  projectsSharedWith ProjectShare[]    @relation("ProjectSharedWithUser")
+  projectsSharedBy   ProjectShare[]    @relation("ProjectSharedBy")
+  tasksSharedWith    TaskShare[]       @relation("TaskSharedWithUser")
+  tasksSharedBy      TaskShare[]       @relation("TaskSharedBy")
+  projectActivities  ProjectActivity[]
+
+  // Workspace hierarchy relations
+  ownedWorkspaces      Workspace[]        @relation("WorkspaceOwner")
+  workspaceMemberships WorkspaceMember[]
+  spaceMemberships     SpaceMember[]
+  createdListTasks     ListTask[]         @relation("ListTaskCreator")
+  listTaskAssignments  ListTaskAssignee[]
+  taskComments         TaskComment[]
+  taskAttachments      TaskAttachment[]
+  taskActivities       TaskActivity[]
 
   @@index([status])
   @@index([department_id])
@@ -398,38 +411,38 @@ model Attendance {
 }
 
 model Project {
-  id            Int            @id @default(autoincrement())
-  name          String
-  description   String?
-  color         String         @default("#6366f1")
-  icon          String?
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @default(now()) @updatedAt
-  archived      Boolean        @default(false)
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  icon        String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
+  archived    Boolean  @default(false)
 
   // Status & Priority
-  status        ProjectStatus  @default(ACTIVE)
-  priority      Priority       @default(MEDIUM)
+  status   ProjectStatus @default(ACTIVE)
+  priority Priority      @default(MEDIUM)
 
   // AI-related fields
-  isAIGenerated   Boolean        @default(false)
-  aiGeneratedBy   String?        // Which AI agent created it
-  approvalStatus  ApprovalStatus @default(NOT_REQUIRED)
-  approvedBy      Int?
-  approvedAt      DateTime?
+  isAIGenerated  Boolean        @default(false)
+  aiGeneratedBy  String? // Which AI agent created it
+  approvalStatus ApprovalStatus @default(NOT_REQUIRED)
+  approvedBy     Int?
+  approvedAt     DateTime?
 
   // Ownership
-  user_id       Int
-  user          User           @relation(fields: [user_id], references: [id])
-  createdById   String?        // Employee who created it
-  creator       Employee?      @relation("ProjectCreator", fields: [createdById], references: [id])
-  departmentId  String?
-  department    Department?    @relation(fields: [departmentId], references: [id])
+  user_id      Int
+  user         User        @relation(fields: [user_id], references: [id])
+  createdById  String? // Employee who created it
+  creator      Employee?   @relation("ProjectCreator", fields: [createdById], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
 
   // Dates
-  startDate     DateTime?
-  dueDate       DateTime?
-  completedAt   DateTime?
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
 
   // Relations
   tasks         Task[]
@@ -441,8 +454,8 @@ model Project {
   // AI Monitoring
   ai_monitoring_enabled Boolean   @default(false)
   last_ai_check         DateTime?
-  ai_risk_level         String?   // low, medium, high, critical
-  ai_health_score       Float?    // 0-100 project health score
+  ai_risk_level         String? // low, medium, high, critical
+  ai_health_score       Float? // 0-100 project health score
 
   @@index([user_id])
   @@index([archived])
@@ -461,7 +474,7 @@ model ProjectMember {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   role       String   @default("viewer") // viewer, editor, admin
   added_at   DateTime @default(now())
-  added_by   Int?     // User who added this member
+  added_by   Int? // User who added this member
 
   @@unique([project_id, user_id])
   @@index([project_id])
@@ -470,25 +483,25 @@ model ProjectMember {
 
 // Project Sharing Model - Share with users, roles, or departments
 model ProjectShare {
-  id              Int             @id @default(autoincrement())
-  projectId       Int
-  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        Int     @id @default(autoincrement())
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   // Share with user, role, or department
-  sharedWithUserId    String?
-  sharedWithUser      Employee?   @relation("ProjectSharedWithUser", fields: [sharedWithUserId], references: [id])
-  sharedWithRoleId    String?
-  sharedWithRole      Role?       @relation(fields: [sharedWithRoleId], references: [id])
-  sharedWithDeptId    String?
-  sharedWithDept      Department? @relation("ProjectSharedWithDept", fields: [sharedWithDeptId], references: [id])
+  sharedWithUserId String?
+  sharedWithUser   Employee?   @relation("ProjectSharedWithUser", fields: [sharedWithUserId], references: [id])
+  sharedWithRoleId String?
+  sharedWithRole   Role?       @relation(fields: [sharedWithRoleId], references: [id])
+  sharedWithDeptId String?
+  sharedWithDept   Department? @relation("ProjectSharedWithDept", fields: [sharedWithDeptId], references: [id])
 
   // Permission level
-  permission      SharePermission @default(VIEWER)
+  permission SharePermission @default(VIEWER)
 
   // Metadata
-  sharedBy        String
-  sharedByUser    Employee        @relation("ProjectSharedBy", fields: [sharedBy], references: [id])
-  sharedAt        DateTime        @default(now())
+  sharedBy     String
+  sharedByUser Employee @relation("ProjectSharedBy", fields: [sharedBy], references: [id])
+  sharedAt     DateTime @default(now())
 
   @@unique([projectId, sharedWithUserId])
   @@unique([projectId, sharedWithRoleId])
@@ -501,25 +514,25 @@ model ProjectShare {
 
 // Task Sharing Model
 model TaskShare {
-  id              Int             @id @default(autoincrement())
-  taskId          Int
-  task            Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id     Int  @id @default(autoincrement())
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   // Share with user, role, or department
-  sharedWithUserId    String?
-  sharedWithUser      Employee?   @relation("TaskSharedWithUser", fields: [sharedWithUserId], references: [id])
-  sharedWithRoleId    String?
-  sharedWithRole      Role?       @relation(fields: [sharedWithRoleId], references: [id])
-  sharedWithDeptId    String?
-  sharedWithDept      Department? @relation("TaskSharedWithDept", fields: [sharedWithDeptId], references: [id])
+  sharedWithUserId String?
+  sharedWithUser   Employee?   @relation("TaskSharedWithUser", fields: [sharedWithUserId], references: [id])
+  sharedWithRoleId String?
+  sharedWithRole   Role?       @relation(fields: [sharedWithRoleId], references: [id])
+  sharedWithDeptId String?
+  sharedWithDept   Department? @relation("TaskSharedWithDept", fields: [sharedWithDeptId], references: [id])
 
   // Permission level
-  permission      SharePermission @default(VIEWER)
+  permission SharePermission @default(VIEWER)
 
   // Metadata
-  sharedBy        String
-  sharedByUser    Employee        @relation("TaskSharedBy", fields: [sharedBy], references: [id])
-  sharedAt        DateTime        @default(now())
+  sharedBy     String
+  sharedByUser Employee @relation("TaskSharedBy", fields: [sharedBy], references: [id])
+  sharedAt     DateTime @default(now())
 
   @@unique([taskId, sharedWithUserId])
   @@unique([taskId, sharedWithRoleId])
@@ -532,14 +545,14 @@ model TaskShare {
 
 // Project Activity Log
 model ProjectActivity {
-  id          Int         @id @default(autoincrement())
-  projectId   Int
-  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId      String
-  user        Employee    @relation(fields: [userId], references: [id])
-  action      String      // created, updated, shared, task_added, approved, rejected, etc.
-  details     Json?       // Additional context
-  createdAt   DateTime    @default(now())
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      Employee @relation(fields: [userId], references: [id])
+  action    String // created, updated, shared, task_added, approved, rejected, etc.
+  details   Json? // Additional context
+  createdAt DateTime @default(now())
 
   @@index([projectId])
   @@index([userId])
@@ -565,8 +578,8 @@ model Task {
   project       Project?  @relation(fields: [project_id], references: [id])
 
   // AI-related fields
-  isAIGenerated Boolean   @default(false)
-  aiGeneratedBy String?   // Which AI agent created it
+  isAIGenerated Boolean @default(false)
+  aiGeneratedBy String? // Which AI agent created it
 
   // Recurrence
   recurrenceType     String? // daily, weekly, monthly, yearly
@@ -1100,11 +1113,11 @@ model ActivityLog {
   user        User?     @relation(fields: [user_id], references: [id])
   employee_id String?
   employee    Employee? @relation(fields: [employee_id], references: [id])
-  action      String    // login, logout, create, update, delete, upload, download, view, etc.
-  entity_type String    // task, employee, document, attendance, leave, goal, department, role, etc.
-  entity_id   String?   // ID of the affected entity
+  action      String // login, logout, create, update, delete, upload, download, view, etc.
+  entity_type String // task, employee, document, attendance, leave, goal, department, role, etc.
+  entity_id   String? // ID of the affected entity
   description String
-  metadata    Json?     // Additional context data
+  metadata    Json? // Additional context data
   ip_address  String?
   user_agent  String?
   created_at  DateTime  @default(now())
@@ -1122,39 +1135,39 @@ model ActivityLog {
 // ===========================================
 
 model AgentAction {
-  id               Int       @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   // Agent identification
-  agent_name       String    // e.g., "SchedulerBot", "RiskAnalyzer", "TaskPrioritizer"
-  agent_version    String?   // Optional version tracking
+  agent_name    String // e.g., "SchedulerBot", "RiskAnalyzer", "TaskPrioritizer"
+  agent_version String? // Optional version tracking
 
   // Action details
-  action           String    // e.g., "auto_schedule", "risk_assessment", "task_assignment"
-  entity_type      String    // e.g., "task", "employee", "meeting", "leave_request"
-  entity_id        Int?      // ID of the affected entity
+  action      String // e.g., "auto_schedule", "risk_assessment", "task_assignment"
+  entity_type String // e.g., "task", "employee", "meeting", "leave_request"
+  entity_id   Int? // ID of the affected entity
 
   // AI Decision tracking (CRITICAL for debugging)
-  reasoning        String    @db.Text // AI's explanation of why it made this decision
-  confidence_score Float     // 0.0 to 1.0
+  reasoning        String @db.Text // AI's explanation of why it made this decision
+  confidence_score Float // 0.0 to 1.0
 
   // Context and metadata
-  input_context    Json?     // The prompt/context given to the AI
-  output_data      Json?     // The structured output/decision made
-  metadata         Json?     // Additional metadata (model used, tokens, etc.)
+  input_context Json? // The prompt/context given to the AI
+  output_data   Json? // The structured output/decision made
+  metadata      Json? // Additional metadata (model used, tokens, etc.)
 
   // Status tracking
-  status           String    @default("success") // success, failed, flagged_for_review, rolled_back
-  error_message    String?   // If failed, store error details
+  status        String  @default("success") // success, failed, flagged_for_review, rolled_back
+  error_message String? // If failed, store error details
 
   // Review tracking
-  reviewed_by      String?   // Employee ID who reviewed this action
-  reviewer         Employee? @relation(fields: [reviewed_by], references: [id], onDelete: SetNull)
-  reviewed_at      DateTime?
-  review_notes     String?
+  reviewed_by  String? // Employee ID who reviewed this action
+  reviewer     Employee? @relation(fields: [reviewed_by], references: [id], onDelete: SetNull)
+  reviewed_at  DateTime?
+  review_notes String?
 
   // Timing
-  execution_time   Int?      // Milliseconds taken
-  created_at       DateTime  @default(now())
+  execution_time Int? // Milliseconds taken
+  created_at     DateTime @default(now())
 
   @@index([agent_name])
   @@index([action])
@@ -1162,4 +1175,308 @@ model AgentAction {
   @@index([status])
   @@index([confidence_score])
   @@index([created_at])
+}
+
+// ===========================================
+// WORKSPACE HIERARCHY SYSTEM
+// ClickUp-style 5-level hierarchy:
+// Workspace → Space → Folder → List → Task
+// ===========================================
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum SpaceRole {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum ListView {
+  LIST
+  BOARD
+  CALENDAR
+  TIMELINE
+  GANTT
+}
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  NORMAL
+  LOW
+  NONE
+}
+
+// Top-level container (Company)
+model Workspace {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  icon        String?  @default("🏢")
+  color       String?  @default("#3B82F6")
+  ownerId     String
+  owner       Employee @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members WorkspaceMember[]
+  spaces  Space[]
+
+  @@index([ownerId])
+}
+
+// Workspace membership
+model WorkspaceMember {
+  id          Int           @id @default(autoincrement())
+  workspaceId Int
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+
+  @@unique([workspaceId, employeeId])
+  @@index([workspaceId])
+  @@index([employeeId])
+}
+
+// Department/Major Area level
+model Space {
+  id           Int         @id @default(autoincrement())
+  workspaceId  Int
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  icon         String?     @default("📁")
+  color        String?     @default("#6366F1")
+  departmentId String? // Optional link to department
+  department   Department? @relation(fields: [departmentId], references: [id])
+  isPrivate    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  members SpaceMember[]
+  folders Folder[]
+  lists   List[] // Lists directly in space (no folder)
+
+  @@index([workspaceId])
+  @@index([departmentId])
+}
+
+// Space membership
+model SpaceMember {
+  id         Int       @id @default(autoincrement())
+  spaceId    Int
+  space      Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  role       SpaceRole @default(MEMBER)
+  joinedAt   DateTime  @default(now())
+
+  @@unique([spaceId, employeeId])
+  @@index([spaceId])
+  @@index([employeeId])
+}
+
+// Optional grouping within spaces
+model Folder {
+  id         Int      @id @default(autoincrement())
+  spaceId    Int
+  space      Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  name       String
+  icon       String?  @default("📂")
+  color      String?
+  isExpanded Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lists List[]
+
+  @@index([spaceId])
+}
+
+// Project/Task collection (replaces old Project model for new hierarchy)
+model List {
+  id          Int      @id @default(autoincrement())
+  spaceId     Int
+  space       Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  folderId    Int? // Null if directly in space
+  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  icon        String?  @default("📋")
+  color       String?  @default("#10B981")
+  defaultView ListView @default(LIST)
+  sortOrder   Int      @default(0)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks    ListTask[]
+  statuses ListStatus[]
+
+  @@index([spaceId])
+  @@index([folderId])
+  @@index([isArchived])
+}
+
+// Custom statuses per list
+model ListStatus {
+  id        Int     @id @default(autoincrement())
+  listId    Int
+  list      List    @relation(fields: [listId], references: [id], onDelete: Cascade)
+  name      String
+  color     String  @default("#6B7280")
+  sortOrder Int     @default(0)
+  isDefault Boolean @default(false)
+  isClosed  Boolean @default(false) // Marks task as complete
+
+  tasks ListTask[]
+
+  @@index([listId])
+}
+
+// Tasks within lists
+model ListTask {
+  id           Int          @id @default(autoincrement())
+  listId       Int
+  list         List         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  statusId     Int?
+  status       ListStatus?  @relation(fields: [statusId], references: [id])
+  title        String
+  description  String?      @db.Text
+  priority     TaskPriority @default(NONE)
+  dueDate      DateTime?
+  startDate    DateTime?
+  timeEstimate Int? // Minutes
+  timeSpent    Int?         @default(0) // Minutes
+  sortOrder    Int          @default(0)
+  isArchived   Boolean      @default(false)
+  createdById  String
+  createdBy    Employee     @relation("ListTaskCreator", fields: [createdById], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Parent task for subtasks
+  parentTaskId Int?
+  parentTask   ListTask?  @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
+  subtasks     ListTask[] @relation("TaskSubtasks")
+
+  // Relations
+  assignees   ListTaskAssignee[]
+  comments    TaskComment[]
+  attachments TaskAttachment[]
+  tags        TaskTag[]
+  activities  TaskActivity[]
+
+  @@index([listId])
+  @@index([statusId])
+  @@index([createdById])
+  @@index([parentTaskId])
+  @@index([dueDate])
+  @@index([priority])
+  @@index([isArchived])
+}
+
+// Task assignees (many-to-many)
+model ListTaskAssignee {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  task       ListTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@unique([taskId, employeeId])
+  @@index([taskId])
+  @@index([employeeId])
+}
+
+// Task comments
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  task      ListTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    Employee @relation(fields: [authorId], references: [id])
+  content   String   @db.Text
+  isEdited  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Reply to another comment
+  parentId Int?
+  parent   TaskComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  TaskComment[] @relation("CommentReplies")
+
+  @@index([taskId])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+// Task attachments
+model TaskAttachment {
+  id           Int      @id @default(autoincrement())
+  taskId       Int
+  task         ListTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   Employee @relation(fields: [uploadedById], references: [id])
+  fileName     String
+  fileUrl      String
+  fileSize     Int // Bytes
+  mimeType     String?
+  createdAt    DateTime @default(now())
+
+  @@index([taskId])
+  @@index([uploadedById])
+}
+
+// Tags for tasks
+model Tag {
+  id          Int    @id @default(autoincrement())
+  name        String
+  color       String @default("#6B7280")
+  workspaceId Int? // Workspace-level tags (null = global)
+
+  tasks TaskTag[]
+
+  @@unique([name, workspaceId])
+  @@index([workspaceId])
+}
+
+// Task-Tag relationship
+model TaskTag {
+  id     Int      @id @default(autoincrement())
+  taskId Int
+  task   ListTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tagId  Int
+  tag    Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, tagId])
+  @@index([taskId])
+  @@index([tagId])
+}
+
+// Task activity/history log
+model TaskActivity {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  task      ListTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      Employee @relation(fields: [userId], references: [id])
+  action    String // created, updated, status_changed, assigned, commented, etc.
+  field     String? // Which field changed
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([createdAt])
 }
