@@ -307,7 +307,7 @@ const OrgChartPage = () => {
                                     Organization Chart
                                 </h1>
                                 <p style={{ color: '#6b7280', marginTop: '4px', margin: 0 }}>
-                                    View your company's reporting structure
+                                    View your company&apos;s reporting structure
                                 </p>
                             </div>
                         </div>

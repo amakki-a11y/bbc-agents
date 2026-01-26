@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
 
 const ActivityFeed = ({ events = [], tasks = [] }) => {

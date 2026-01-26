@@ -468,7 +468,7 @@ const LeavePage = () => {
                                 <CalendarOff size={48} style={{ marginBottom: '12px', opacity: 0.3 }} />
                                 <p style={{ margin: 0, fontWeight: 500 }}>No leave requests found</p>
                                 <p style={{ margin: '8px 0 0', fontSize: '14px' }}>
-                                    Click "Request Leave" to create a new request
+                                    Click &quot;Request Leave&quot; to create a new request
                                 </p>
                             </div>
                         ) : (

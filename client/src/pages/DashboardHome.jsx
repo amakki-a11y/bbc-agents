@@ -58,13 +58,17 @@ const DashboardHome = () => {
             try {
                 const attendanceRes = await http.get('/attendance/me/today');
                 setAttendanceStatus(attendanceRes.data);
-            } catch (e) {}
+            } catch {
+                // Attendance data not available
+            }
 
             try {
                 const employeesRes = await http.get('/employees?limit=1');
                 const total = employeesRes.data?.pagination?.total || 0;
                 setStats(prev => ({ ...prev, teamMembers: total }));
-            } catch (e) {}
+            } catch {
+                // Employee data not available
+            }
 
             setRecentActivity([
                 { id: 1, type: 'task_completed', message: 'Completed "Review design specs"', time: '2 hours ago' },
@@ -333,7 +337,7 @@ const DashboardHome = () => {
                             margin: '0.75rem 0 0',
                             maxWidth: '500px'
                         }}>
-                            Here's what's happening with your workspace today. Let's make it productive!
+                            Here&apos;s what&apos;s happening with your workspace today. Let&apos;s make it productive!
                         </p>
                     </div>
                 </div>
@@ -647,7 +651,7 @@ const DashboardHome = () => {
                                 fontWeight: 700,
                                 color: 'var(--text-primary)'
                             }}>
-                                Today's Attendance
+                                Today&apos;s Attendance
                             </h2>
                             {attendanceStatus ? (
                                 <div style={{

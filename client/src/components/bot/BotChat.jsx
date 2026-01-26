@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { http } from '../../api/http';
 import {
-    Send, Bot, User, AlertCircle, X, Maximize2, Minimize2,
-    Paperclip, Smile, Clock, CheckCircle2, Calendar, ListTodo,
+    Send, Bot, User, AlertCircle, X,
+    Clock, Calendar, ListTodo,
     RefreshCw, Copy, Check, Sparkles
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
@@ -250,7 +250,7 @@ const EmptyState = ({ onQuickAction }) => (
             color: '#1f2937',
             marginBottom: '8px'
         }}>
-            Hi! I'm BBC Assistant
+            Hi! I&apos;m BBC Assistant
         </h3>
         <p style={{
             margin: 0,

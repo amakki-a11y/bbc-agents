@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import {
     Search, UserPlus, Copy,
     ChevronDown, Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
-    Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, MoreHorizontal, Archive, Trash2, Edit3,
+    Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus, Archive,
     CalendarOff, Target, Sparkles, X, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog
 } from 'lucide-react';
 import { http } from '../api/http';

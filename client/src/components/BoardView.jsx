@@ -1,4 +1,4 @@
-import React, { useState, memo, useCallback } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { Plus, MoreHorizontal, Calendar, Flag, User as UserIcon, GripVertical, CheckCircle2 } from 'lucide-react';
 

@@ -913,7 +913,7 @@ const ProjectListView = () => {
                                     fontSize: '0.75rem',
                                     color: '#4b5563'
                                 }}>
-                                    Search: "{searchQuery}"
+                                    Search: &quot;{searchQuery}&quot;
                                     <X size={12} style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')} />
                                 </span>
                             )}

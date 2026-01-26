@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { CheckCircle2, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
 
 const StatCard = ({ title, value, subtext, icon: Icon, color, trend }) => (

@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import { memo, useState } from 'react';
 import { CheckCircle2, Circle, Calendar, Flag, MoreHorizontal, User as UserIcon, CheckSquare, Square, AlertCircle, ListTodo } from 'lucide-react';
 
 const formatDueDate = (dateString) => {
@@ -59,7 +59,7 @@ const getAssigneeColor = (name) => {
     return colors[index];
 };
 
-const TaskRow = memo(({ task, onToggleStatus, onOpenTask, isSelected, onToggleSelect }) => {
+const TaskRow = memo(function TaskRow({ task, onToggleStatus, onOpenTask, isSelected, onToggleSelect }) {
     const [isHovered, setIsHovered] = useState(false);
     const dueInfo = formatDueDate(task.due_date);
     const priorityConfig = getPriorityConfig(task.priority);
@@ -310,7 +310,7 @@ const EmptyState = () => (
     </div>
 );
 
-const TaskList = memo(({ tasks, onToggleStatus, onOpenTask, selectedIds = [], onToggleSelect }) => {
+const TaskList = memo(function TaskList({ tasks, onToggleStatus, onOpenTask, selectedIds = [], onToggleSelect }) {
     if (!tasks || !tasks.length) return <EmptyState />;
 
     return (

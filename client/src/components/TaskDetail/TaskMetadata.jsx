@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Calendar, Flag, Tag } from 'lucide-react';
 
 const TaskMetadata = ({ task, onUpdate }) => {

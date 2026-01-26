@@ -235,7 +235,7 @@ const EmployeeProfilePage = () => {
                         <User size={64} style={{ color: '#cbd5e1', marginBottom: '1rem' }} />
                         <h2 style={{ color: '#0f172a', marginBottom: '0.5rem' }}>Employee Not Found</h2>
                         <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
-                            The employee profile you're looking for doesn't exist.
+                            The employee profile you&apos;re looking for doesn&apos;t exist.
                         </p>
                         <button
                             onClick={() => navigate('/employees')}
@@ -650,7 +650,7 @@ const OverviewTab = ({ employee, stats, probation, formatDate, calculateTenure }
                         fontStyle: 'italic',
                         borderLeft: '4px solid #8b5cf6'
                     }}>
-                        "{employee.aiProfileSummary}"
+                        &quot;{employee.aiProfileSummary}&quot;
                     </p>
                 </div>
             )}
@@ -1337,7 +1337,7 @@ const SkillsTab = ({ skills, getSkillProficiencyBar, onAddSkill, onRefresh }) =>
                 <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                     <Code size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
                     <p style={{ margin: 0, fontWeight: 500 }}>No skills added yet</p>
-                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.9rem' }}>Click "Add Skill" to get started</p>
+                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.9rem' }}>Click &quot;Add Skill&quot; to get started</p>
                 </div>
             )}
         </div>

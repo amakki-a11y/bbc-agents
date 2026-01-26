@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldX, ArrowLeft, Home } from 'lucide-react';
 import Dashboard from './Dashboard';
@@ -46,7 +45,7 @@ const AccessDeniedPage = () => {
                     margin: '0 0 8px 0',
                     maxWidth: '400px'
                 }}>
-                    You don't have permission to view this page.
+                    You don&apos;t have permission to view this page.
                 </p>
 
                 <p style={{
