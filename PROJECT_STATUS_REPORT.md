@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-BBC Agents is a full-stack AI-powered task management and HR platform built with React/Vite frontend and Node.js/Express backend using PostgreSQL (Prisma ORM). The project is **production-ready** with 38 database models, 19 API route modules, 20 frontend pages, and comprehensive AI integration via Anthropic Claude. Recent development has focused on deployment fixes for Railway/Vercel and AI project planning features.
+BBC Agents is a full-stack AI-powered task management and HR platform built with React/Vite frontend and Node.js/Express backend using PostgreSQL (Prisma ORM). The project is **production-ready** with 38 database models, 19 API route modules, 20 frontend pages, and comprehensive AI integration via Anthropic Claude. Recent development has focused on deployment fixes for Railway and AI project planning features.
 
 ---
 
@@ -74,8 +74,8 @@ BBC Agents is a full-stack AI-powered task management and HR platform built with
 - **Testing:** Jest + Supertest
 
 ### Deployment
-- **Frontend:** Vercel
-- **Backend:** Railway
+- **Frontend:** Railway (https://front-end-production-ad4c.up.railway.app)
+- **Backend:** Railway (https://back-end-production-bad8.up.railway.app)
 - **Database:** PostgreSQL (Railway)
 
 ---
