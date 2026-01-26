@@ -69,12 +69,14 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # Note: Server does not have a lint script currently.
-      # - name: Lint
-      #   run: npm run lint
+      - name: Setup Database
+        env:
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb
+        run: npx prisma db push --skip-generate
 
       - name: Run Tests
         env:
-          DATABASE_URL: postgres://testuser:testpassword@localhost:5432/testdb
-          JWT_SECRET: test_secret
+          DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb
+          JWT_SECRET: test_secret_key_for_ci
+          JWT_REFRESH_SECRET: test_refresh_secret_key_for_ci
         run: npm test
