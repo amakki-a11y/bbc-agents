@@ -572,9 +572,17 @@ const ActivityPanel = ({ task, onUpdate, onTaskRefresh, refreshKey = 0 }) => {
 
         // Check if task ID is a temporary ID (Date.now() style - greater than 1 trillion)
         // Real database IDs are much smaller (auto-increment integers)
-        const isTemporaryTask = Number(task.id) > 1000000000000;
+        const taskIdNum = Number(task.id);
+        const isTemporaryTask = taskIdNum > 1000000000000;
         if (isTemporaryTask) {
-            alert('Please save the task first before adding comments.');
+            // Task hasn't been saved yet - wait and retry
+            alert('Task is being saved. Please try again in a moment.');
+            return;
+        }
+
+        // Ensure we have a valid task ID
+        if (!taskIdNum || taskIdNum <= 0) {
+            alert('Invalid task. Please refresh the page.');
             return;
         }
 

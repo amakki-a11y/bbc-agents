@@ -18,7 +18,7 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
     const [activeTab, setActiveTab] = useState("details");
     const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
-    const { updateTask, tasks, projects } = useProject();
+    const { updateTask, tasks, projects, getRealTaskId } = useProject();
     const activityPanelRef = useRef(null);
     const initialFetchDone = useRef(false);
 
@@ -39,11 +39,13 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
                 return;
             }
 
-            const numericId = Number(taskId);
+            // Try to get real ID if this is a temp ID
+            const realId = getRealTaskId(taskId);
+            const numericId = Number(realId);
             const isTemporaryId = numericId > 1000000000000;
 
             if (isTemporaryId) {
-                // For temp IDs, find task in context (use a ref to avoid dependency)
+                // For temp IDs that haven't been saved yet, find task in context
                 const contextTask = tasks.find(t =>
                     t.id === numericId ||
                     t.id === taskId ||
@@ -51,7 +53,14 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
                 );
 
                 if (contextTask) {
-                    setTaskDetails(contextTask);
+                    // Check if we now have a real ID for this task
+                    const savedRealId = getRealTaskId(contextTask.id);
+                    if (savedRealId !== contextTask.id && savedRealId < 1000000000000) {
+                        // Task has been saved, use the real ID
+                        setTaskDetails({ ...contextTask, id: savedRealId });
+                    } else {
+                        setTaskDetails(contextTask);
+                    }
                     setLoading(false);
                     return;
                 }
@@ -62,7 +71,7 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
             }
 
             const response = await fetch(
-                `${API_URL}/tasks/details/${taskId}`,
+                `${API_URL}/tasks/details/${realId}`,
                 {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }
@@ -83,7 +92,7 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
         } finally {
             setLoading(false);
         }
-    }, [taskId, API_URL]); // Removed 'tasks' dependency to prevent refetch on context updates
+    }, [taskId, getRealTaskId, tasks]); // Include getRealTaskId and tasks for ID mapping
 
     // Initial fetch only when taskId changes
     useEffect(() => {
@@ -102,14 +111,27 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
         initialFetchDone.current = false;
     }, [taskId]);
 
+    // Auto-retry when task is saved (temp ID becomes real ID)
+    useEffect(() => {
+        if (taskDetails && Number(taskDetails.id) > 1000000000000) {
+            // Task has temp ID, check if it's been saved
+            const realId = getRealTaskId(taskDetails.id);
+            if (realId !== taskDetails.id && Number(realId) < 1000000000000) {
+                // Task has been saved, update details with real ID
+                setTaskDetails(prev => prev ? { ...prev, id: realId } : prev);
+            }
+        }
+    }, [taskDetails, getRealTaskId, tasks]);
+
     // Function to refresh only activities (not the whole task)
     const refreshActivities = useCallback(async () => {
-        if (!taskId || Number(taskId) > 1000000000000) return;
+        const realId = getRealTaskId(taskId);
+        if (!realId || Number(realId) > 1000000000000) return;
 
         try {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             const response = await fetch(
-                `${API_URL}/tasks/details/${taskId}`,
+                `${API_URL}/tasks/details/${realId}`,
                 {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }
@@ -126,7 +148,7 @@ const TaskDetailsPage = ({ onClose, taskId: propTaskId }) => {
         } catch (err) {
             console.error('Error refreshing activities:', err);
         }
-    }, [taskId, API_URL]);
+    }, [taskId, getRealTaskId]);
 
     // Full refresh function (for manual refresh button)
     const refreshTaskDetails = async () => {
