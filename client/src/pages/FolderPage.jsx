@@ -6,7 +6,7 @@ import {
     Folder, Plus, List, MoreHorizontal, ChevronRight, Edit2, Trash2,
     LayoutGrid, LayoutList, Search, Settings, ArrowLeft
 } from 'lucide-react';
-import api from '../services/api';
+import http from '../api/http';
 
 const FolderPage = () => {
     const { workspaceId, folderId } = useParams();
@@ -33,17 +33,17 @@ const FolderPage = () => {
             setLoading(true);
 
             // Fetch folder details
-            const folderResponse = await api.get(`/folders/${folderId}`);
+            const folderResponse = await http.get(`/folders/${folderId}`);
             setFolder(folderResponse.data);
 
             // Fetch space details
             if (folderResponse.data.spaceId) {
-                const spaceResponse = await api.get(`/spaces/${folderResponse.data.spaceId}`);
+                const spaceResponse = await http.get(`/spaces/${folderResponse.data.spaceId}`);
                 setSpace(spaceResponse.data);
             }
 
             // Fetch lists in this folder
-            const listsResponse = await api.get(`/lists?folderId=${folderId}`);
+            const listsResponse = await http.get(`/lists?folderId=${folderId}`);
             setLists(listsResponse.data || []);
 
             // Fetch workspace if not loaded
@@ -62,7 +62,7 @@ const FolderPage = () => {
 
         try {
             setCreating(true);
-            const response = await api.post('/lists', {
+            const response = await http.post('/lists', {
                 ...newList,
                 folderId: folderId,
                 spaceId: folder?.spaceId
@@ -81,7 +81,7 @@ const FolderPage = () => {
         if (!confirm('Are you sure you want to delete this list?')) return;
 
         try {
-            await api.delete(`/lists/${listId}`);
+            await http.delete(`/lists/${listId}`);
             setLists(lists.filter(l => l.id !== listId));
         } catch (error) {
             console.error('Error deleting list:', error);

@@ -5,7 +5,7 @@ import {
     User, Mail, Phone, Building2, Shield, Calendar, Clock,
     Edit2, Save, X, Camera, Key, Bell, Globe
 } from 'lucide-react';
-import api from '../services/api';
+import http from '../api/http';
 
 const ProfilePage = () => {
     const { user, updateUser } = useAuth();
@@ -23,7 +23,7 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/auth/me');
+            const response = await http.get('/auth/me');
             setProfile(response.data);
             setFormData({
                 username: response.data.username || '',
@@ -40,7 +40,7 @@ const ProfilePage = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            await api.put('/auth/profile', formData);
+            await http.put('/auth/profile', formData);
             await fetchProfile();
             setEditing(false);
         } catch (error) {

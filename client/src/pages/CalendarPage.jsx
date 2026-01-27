@@ -5,7 +5,7 @@ import {
     ChevronLeft, ChevronRight, Plus, Clock, Users, MapPin,
     Calendar as CalendarIcon, MoreHorizontal, X
 } from 'lucide-react';
-import api from '../services/api';
+import http from '../api/http';
 
 const CalendarPage = () => {
     const { user } = useAuth();
@@ -25,7 +25,7 @@ const CalendarPage = () => {
         try {
             setLoading(true);
             // Fetch tasks with due dates
-            const response = await api.get('/tasks', {
+            const response = await http.get('/tasks', {
                 params: {
                     startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString(),
                     endDate: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString()

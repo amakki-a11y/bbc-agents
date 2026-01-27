@@ -7,7 +7,7 @@ import {
     Sparkles, Lock, Globe, Trash2, Edit2, UserPlus, ArrowLeft, LayoutGrid,
     LayoutList, Star, Clock
 } from 'lucide-react';
-import api from '../services/api';
+import http from '../api/http';
 
 const WorkspaceDetailPage = () => {
     const { workspaceId } = useParams();
@@ -31,7 +31,7 @@ const WorkspaceDetailPage = () => {
     const fetchWorkspaceData = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/workspaces/${workspaceId}`);
+            const response = await http.get(`/workspaces/${workspaceId}`);
             setCurrentWorkspace(response.data);
             setSpaces(response.data.spaces || []);
             setMembers(response.data.members || []);
@@ -47,7 +47,7 @@ const WorkspaceDetailPage = () => {
 
         try {
             setCreating(true);
-            const response = await api.post('/spaces', {
+            const response = await http.post('/spaces', {
                 ...newSpace,
                 workspaceId
             });
