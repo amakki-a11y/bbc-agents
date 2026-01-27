@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
+import http from '../api/http';
 
 const ClientsContext = createContext();
 
@@ -52,7 +52,7 @@ export const ClientsProvider = ({ children }) => {
                 ...(filters.ownerId && { ownerId: filters.ownerId })
             });
 
-            const response = await api.get(`/clients?${queryParams}`);
+            const response = await http.get(`/clients?${queryParams}`);
             setClients(response.data.clients);
             setPagination(response.data.pagination);
         } catch (err) {
@@ -68,7 +68,7 @@ export const ClientsProvider = ({ children }) => {
 
         setLoading(true);
         try {
-            const response = await api.get(`/clients/${id}`);
+            const response = await http.get(`/clients/${id}`);
             setCurrentClient(response.data);
             return response.data;
         } catch (err) {
@@ -83,7 +83,7 @@ export const ClientsProvider = ({ children }) => {
         if (!token) return;
 
         try {
-            const response = await api.get('/clients/stats');
+            const response = await http.get('/clients/stats');
             setStats(response.data);
         } catch (err) {
             console.error('Error fetching stats:', err);
@@ -94,7 +94,7 @@ export const ClientsProvider = ({ children }) => {
         if (!token) return;
 
         try {
-            const response = await api.get('/clients/tags');
+            const response = await http.get('/clients/tags');
             setTags(response.data);
         } catch (err) {
             console.error('Error fetching tags:', err);
@@ -102,13 +102,13 @@ export const ClientsProvider = ({ children }) => {
     }, [token]);
 
     const createClient = async (clientData) => {
-        const response = await api.post('/clients', clientData);
+        const response = await http.post('/clients', clientData);
         setClients(prev => [response.data, ...prev]);
         return response.data;
     };
 
     const updateClient = async (id, updates) => {
-        const response = await api.put(`/clients/${id}`, updates);
+        const response = await http.put(`/clients/${id}`, updates);
         setClients(prev => prev.map(c => c.id === id ? response.data : c));
         if (currentClient?.id === id) {
             setCurrentClient(response.data);
@@ -117,51 +117,51 @@ export const ClientsProvider = ({ children }) => {
     };
 
     const deleteClient = async (id) => {
-        await api.delete(`/clients/${id}`);
+        await http.delete(`/clients/${id}`);
         setClients(prev => prev.filter(c => c.id !== id));
     };
 
     const moveClient = async (id, status, stage) => {
-        const response = await api.post(`/clients/${id}/move`, { status, stage });
+        const response = await http.post(`/clients/${id}/move`, { status, stage });
         setClients(prev => prev.map(c => c.id === id ? response.data : c));
         return response.data;
     };
 
     const addInteraction = async (clientId, interactionData) => {
-        const response = await api.post(`/clients/${clientId}/interactions`, interactionData);
+        const response = await http.post(`/clients/${clientId}/interactions`, interactionData);
         return response.data;
     };
 
     const addNote = async (clientId, noteData) => {
-        const response = await api.post(`/clients/${clientId}/notes`, noteData);
+        const response = await http.post(`/clients/${clientId}/notes`, noteData);
         return response.data;
     };
 
     const deleteNote = async (clientId, noteId) => {
-        await api.delete(`/clients/${clientId}/notes/${noteId}`);
+        await http.delete(`/clients/${clientId}/notes/${noteId}`);
     };
 
     const addTask = async (clientId, taskData) => {
-        const response = await api.post(`/clients/${clientId}/tasks`, taskData);
+        const response = await http.post(`/clients/${clientId}/tasks`, taskData);
         return response.data;
     };
 
     const updateTask = async (clientId, taskId, updates) => {
-        const response = await api.put(`/clients/${clientId}/tasks/${taskId}`, updates);
+        const response = await http.put(`/clients/${clientId}/tasks/${taskId}`, updates);
         return response.data;
     };
 
     const addTagToClient = async (clientId, tagName) => {
-        const response = await api.post(`/clients/${clientId}/tags`, { tagName });
+        const response = await http.post(`/clients/${clientId}/tags`, { tagName });
         return response.data;
     };
 
     const removeTagFromClient = async (clientId, tagId) => {
-        await api.delete(`/clients/${clientId}/tags/${tagId}`);
+        await http.delete(`/clients/${clientId}/tags/${tagId}`);
     };
 
     const importClients = async (clients) => {
-        const response = await api.post('/clients/import', { clients });
+        const response = await http.post('/clients/import', { clients });
         return response.data;
     };
 
