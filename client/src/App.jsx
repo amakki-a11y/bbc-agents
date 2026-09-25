@@ -48,6 +48,7 @@ const WorkspaceTaskPage = React.lazy(() => import('./pages/WorkspaceTaskPage'));
 // CRM pages
 const ClientsPage = React.lazy(() => import('./pages/ClientsPage'));
 const ClientDetailPage = React.lazy(() => import('./pages/ClientDetailPage'));
+const MeetingNotesPage = React.lazy(() => import('./pages/MeetingNotesPage'));
 
 function App() {
     return (
@@ -83,6 +84,8 @@ function App() {
                                 <Route path="/templates" element={<ProtectedRoute><TaskTemplates /></ProtectedRoute>} />
                                 <Route path="/tasks/:taskId" element={<ProtectedRoute><TaskDetailsPage /></ProtectedRoute>} />
                                 <Route path="/bot" element={<ProtectedRoute><BotPage /></ProtectedRoute>} />
+                                <Route path="/meetings" element={<ProtectedRoute><MeetingNotesPage /></ProtectedRoute>} />
+                                <Route path="/meetings/:id" element={<ProtectedRoute><MeetingNotesPage /></ProtectedRoute>} />
                                 {/* Company Settings Routes - Permission Protected */}
                                 <Route path="/employees" element={<ProtectedRoute permission="employees.view"><EmployeesPage /></ProtectedRoute>} />
                                 <Route path="/employees/:id" element={<ProtectedRoute permission="employees.view"><EmployeeProfilePage /></ProtectedRoute>} />
