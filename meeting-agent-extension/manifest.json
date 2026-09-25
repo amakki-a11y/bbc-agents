@@ -10,7 +10,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["tabCapture", "offscreen", "storage"],
+  "permissions": ["tabCapture", "offscreen", "storage", "scripting"],
   "host_permissions": [
     "https://meet.google.com/*",
     "http://localhost/*",

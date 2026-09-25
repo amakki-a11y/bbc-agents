@@ -180,5 +180,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.target !== 'offscreen') return;
     if (msg.type === 'start') start(msg);
     else if (msg.type === 'stop') stop();
+    else if (msg.type === 'meet-info' && ws?.readyState === WebSocket.OPEN) {
+        // Attendees / current speaker read from the Meet page
+        ws.send(JSON.stringify({ type: 'meet-info', participants: msg.participants, speaker: msg.speaker }));
+    }
     sendResponse({ ok: true });
 });

@@ -72,3 +72,27 @@ describe('Meeting agent - notes transcript', () => {
         expect(text).toBe('[00:01] مرحبا\n[00:03] Sara: Hello');
     });
 });
+
+describe('Meeting agent - speaker from Meet captions', () => {
+    const { pickSpeaker } = require('../services/meetingAgent/sessionManager');
+
+    test('picks whoever spoke longest in the window', () => {
+        const log = [{ t: 0, name: 'Toufic' }, { t: 8000, name: 'Saad' }];
+        expect(pickSpeaker(log, 1000, 7000)).toBe('Toufic');
+        expect(pickSpeaker(log, 9000, 15000)).toBe('Saad');
+    });
+
+    test('names both when the second speaker had a real share', () => {
+        const log = [{ t: 0, name: 'Toufic' }, { t: 6000, name: 'Saad' }];
+        expect(pickSpeaker(log, 0, 10000)).toBe('Toufic / Saad');
+    });
+
+    test('ignores a very short interruption', () => {
+        const log = [{ t: 0, name: 'Toufic' }, { t: 9500, name: 'Saad' }];
+        expect(pickSpeaker(log, 0, 10000)).toBe('Toufic');
+    });
+
+    test('returns null when captions gave no names', () => {
+        expect(pickSpeaker([], 0, 10000)).toBeNull();
+    });
+});

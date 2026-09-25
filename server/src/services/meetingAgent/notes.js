@@ -85,7 +85,17 @@ Action items are concrete follow-ups someone agreed to or was asked to do. Skip 
 - assignee_employee_id: only when owner_name clearly matches exactly one person in the employee list; otherwise null.
 - due_date: resolve relative dates ("next Sunday", "by end of month") against the meeting date; null if no deadline was mentioned.
 
+Speaker names in the transcript and the attendee list come from Google Meet. A line without a name means the speaker is unknown; a line like "A / B" means both spoke in it. Use these names to decide who owns each action item and to match employees.
+
 Screenshots show what was on screen during the meeting. Use them to understand the discussion and list the important visible content under screen_highlights.`;
+
+const attendeesOf = (session) => {
+    try {
+        return JSON.parse(session.participants || '[]');
+    } catch {
+        return [];
+    }
+};
 
 const formatOffset = (ms) => {
     const total = Math.floor(ms / 1000);
@@ -144,6 +154,7 @@ const generateMeetingNotes = async ({ session, segments, employees }) => {
         text: [
             `Meeting: ${session.title}`,
             `Meeting date: ${new Date(session.started_at).toISOString().slice(0, 10)}`,
+            `Attendees (from Google Meet): ${attendeesOf(session).join(', ') || 'unknown'}`,
             '',
             '<employees>',
             'id | name | email | job title',

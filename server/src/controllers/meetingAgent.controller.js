@@ -67,7 +67,7 @@ const listSessions = async (req, res) => {
             orderBy: { started_at: 'desc' },
             take: 100,
             select: {
-                id: true, title: true, meet_url: true, status: true,
+                id: true, title: true, meet_url: true, status: true, participants: true,
                 started_at: true, ended_at: true, summary_en: true, error: true,
                 _count: { select: { actionItems: true, segments: true } }
             }
@@ -101,6 +101,7 @@ const getSession = async (req, res) => {
         res.json({
             ...session,
             notes: parseNotes(session.notes),
+            participants: parseNotes(session.participants) || [],
             live: manager.isLive(session.id),
             segments,
             actionItems

@@ -111,6 +111,9 @@ const start = async ({ tabId, streamId, title, meetUrl }) => {
     });
     chrome.action.setBadgeText({ text: 'REC' });
     chrome.action.setBadgeBackgroundColor({ color: '#dc2626' });
+    // Read attendee names and the current speaker from the Meet page (optional extra)
+    chrome.scripting.executeScript({ target: { tabId }, files: ['meet-content.js'] })
+        .catch((error) => console.warn('Could not read the Meet page:', error.message));
     return session;
 };
 

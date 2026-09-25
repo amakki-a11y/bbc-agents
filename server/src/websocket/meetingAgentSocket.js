@@ -65,6 +65,8 @@ const handleConnection = async (ws, req) => {
             const msg = JSON.parse(data.toString());
             if (msg.type === 'stop' && isCapture) {
                 manager.finishSession(sessionId);
+            } else if (msg.type === 'meet-info' && isCapture) {
+                await manager.updateMeetInfo(sessionId, msg);
             } else if (msg.type === 'ping') {
                 ws.send(JSON.stringify({ type: 'pong' }));
             }

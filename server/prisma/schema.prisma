@@ -377,6 +377,7 @@ model MeetingSession {
   summary_en String?
   summary_ar String?
   notes      String? // JSON: { decisions, topics, screen_highlights, attendees }
+  participants String? // JSON array of names read from the Meet page
   error      String?
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt

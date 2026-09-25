@@ -30,6 +30,30 @@ const broadcast = (entry, message) => {
 
 const offsetFor = (entry) => Math.max(0, Date.now() - entry.startedAt);
 
+const MAX_NAMES = 100;
+const MAX_SPEAKER_EVENTS = 2000;
+
+/**
+ * Who spoke during [start, end]? `log` is [{ t, name }] (ms offsets, oldest first);
+ * each name counts from its event until the next one. Returns the main speaker,
+ * or "A / B" when a second person spoke for at least a quarter of the time.
+ */
+const pickSpeaker = (log, start, end) => {
+    const time = new Map();
+    for (let i = 0; i < log.length; i++) {
+        const from = Math.max(log[i].t, start);
+        const to = Math.min(i + 1 < log.length ? log[i + 1].t : end, end);
+        if (to > from) time.set(log[i].name, (time.get(log[i].name) || 0) + (to - from));
+    }
+    const ranked = [...time.entries()].sort((a, b) => b[1] - a[1]);
+    if (!ranked.length) return null;
+    const total = ranked.reduce((sum, [, ms]) => sum + ms, 0);
+    const names = ranked.filter(([, ms], i) => i === 0 || ms / total >= 0.25).slice(0, 2).map(([n]) => n);
+    return names.join(' / ');
+};
+
+const cleanName = (n) => (typeof n === 'string' ? n.replace(/\s+/g, ' ').trim().slice(0, 80) : '');
+
 const getOrStartLive = async (session) => {
     let entry = live.get(session.id);
     if (entry) return entry;
@@ -41,11 +65,19 @@ const getOrStartLive = async (session) => {
         startedAt: new Date(session.started_at).getTime(),
         screenshots: await prisma.meetingTranscriptSegment.count({ where: { session_id: session.id, kind: 'screen' } }),
         lastShotAt: 0,
-        status: 'connecting'
+        status: 'connecting',
+        participants: new Set(JSON.parse(session.participants || '[]')),
+        speakerLog: [],          // [{ t, name }] from Meet's captions
+        utteranceStart: null    // when the words of the next segment started
     };
     live.set(session.id, entry);
 
     transcriber.on('segment', async ({ text, speaker, language }) => {
+        const end = offsetFor(entry);
+        // Gemini gives no names; use who Meet showed as speaking while these words were said
+        const start = entry.utteranceStart ?? end - 5000;
+        entry.utteranceStart = null;
+        speaker = speaker || pickSpeaker(entry.speakerLog, start - 1500, end);
         try {
             const segment = await prisma.meetingTranscriptSegment.create({
                 data: {
@@ -54,7 +86,7 @@ const getOrStartLive = async (session) => {
                     text,
                     speaker,
                     language,
-                    offset_ms: offsetFor(entry)
+                    offset_ms: Math.max(0, start)
                 }
             });
             broadcast(entry, { type: 'segment', segment });
@@ -63,6 +95,7 @@ const getOrStartLive = async (session) => {
         }
     });
     transcriber.on('interim', ({ text }) => {
+        if (entry.utteranceStart === null) entry.utteranceStart = offsetFor(entry);
         broadcast(entry, { type: 'interim', text });
     });
     transcriber.on('status', (status) => {
@@ -216,6 +249,39 @@ const buildNotes = async (sessionId) => {
 
 const isLive = (sessionId) => live.has(sessionId);
 
+/** Attendees and current speaker read from the Meet page by the extension. */
+const updateMeetInfo = async (sessionId, { participants, speaker }) => {
+    const entry = live.get(sessionId);
+    if (!entry) return;
+    const before = entry.participants.size;
+
+    const name = cleanName(speaker);
+    if (name) {
+        const last = entry.speakerLog[entry.speakerLog.length - 1];
+        if (!last || last.name !== name) {
+            entry.speakerLog.push({ t: offsetFor(entry), name });
+            if (entry.speakerLog.length > MAX_SPEAKER_EVENTS) entry.speakerLog.shift();
+        }
+        if (entry.participants.size < MAX_NAMES) entry.participants.add(name);
+    }
+
+    // Keep everyone who was there at any point (people who left still attended)
+    if (Array.isArray(participants)) {
+        for (const p of participants.slice(0, MAX_NAMES)) {
+            const n = cleanName(p);
+            if (n && entry.participants.size < MAX_NAMES) entry.participants.add(n);
+        }
+    }
+    if (entry.participants.size !== before) {
+        const list = [...entry.participants].sort();
+        await prisma.meetingSession.update({
+            where: { id: sessionId },
+            data: { participants: JSON.stringify(list) }
+        });
+        broadcast(entry, { type: 'participants', participants: list });
+    }
+};
+
 /** Stop streaming to Gemini but keep the session open (extension went away). */
 const pauseLive = async (sessionId) => {
     const entry = await stopLive(sessionId);
@@ -231,5 +297,7 @@ module.exports = {
     finishSession,
     buildNotes,
     isLive,
-    pauseLive
+    pauseLive,
+    updateMeetInfo,
+    pickSpeaker
 };

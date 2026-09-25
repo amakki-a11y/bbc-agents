@@ -71,5 +71,7 @@ GEMINI_API_KEY=... node scripts/testMeetingAgentLive.js meeting.pcm
 - Only you can see your meetings. Screenshots are private and never served from the public `/uploads` folder.
 - If the internet drops, the extension reconnects and keeps the same meeting.
   If it's gone for more than 2 minutes, the server pauses listening until it comes back.
-- Speaker names aren't detected from the audio yet. Claude works out who
-  said what from context (for example "تمام يا سارة").
+- **Attendees** are read from the names on the Meet screen and shown on the meeting page.
+- **Who said what:** turn on Meet's captions (**CC** button). The agent reads only the
+  speaker's name from them (Gemini still writes the text) and labels each transcript line.
+  Without CC, Claude works out speakers from context (for example "تمام يا سارة").

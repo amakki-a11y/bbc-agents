@@ -4,7 +4,7 @@ import { http, API_BASE, getAuthToken } from '../api/http';
 import Dashboard from './Dashboard';
 import {
     Mic, ArrowLeft, CheckCircle2, ListChecks, Lightbulb, Monitor, FileText,
-    RefreshCw, Trash2, Square, Loader2, AlertTriangle, X, Undo2
+    RefreshCw, Trash2, Square, Loader2, AlertTriangle, X, Undo2, Users
 } from 'lucide-react';
 
 const STATUS = {
@@ -20,6 +20,14 @@ const formatOffset = (ms) => {
     const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
     const s = String(total % 60).padStart(2, '0');
     return h ? `${h}:${m}:${s}` : `${m}:${s}`;
+};
+
+const attendeeCount = (s) => {
+    try {
+        return JSON.parse(s.participants || '[]').length;
+    } catch {
+        return 0;
+    }
 };
 
 const splitSentences = (text = '') => text.split(/(?<=[.!?؟])\s+/).filter(Boolean);
@@ -204,6 +212,7 @@ const MeetingList = () => {
                                 {new Date(s.started_at).toLocaleString()}
                                 {s.ended_at && ` · ${formatDuration(s.started_at, s.ended_at)}`}
                                 {s._count?.actionItems ? ` · ${s._count.actionItems} action items` : ''}
+                                {attendeeCount(s) ? ` · ${attendeeCount(s)} attendees` : ''}
                             </div>
                             {s.summary_en && (
                                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -257,6 +266,9 @@ const MeetingDetail = ({ id }) => {
             if (msg.type === 'status') {
                 setLiveStatus(msg.status);
                 if (['processing', 'ready', 'failed'].includes(msg.status)) load();
+            }
+            if (msg.type === 'participants') {
+                setSession(prev => prev && ({ ...prev, participants: msg.participants }));
             }
             if (msg.type === 'segment') {
                 setInterim('');
@@ -359,6 +371,21 @@ const MeetingDetail = ({ id }) => {
                     )}
                 </div>
             </div>
+
+            {session.participants?.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    <Users size={16} color="var(--text-muted)" />
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginInlineEnd: 4 }}>
+                        {session.participants.length} attendee{session.participants.length === 1 ? '' : 's'}:
+                    </span>
+                    {session.participants.map(name => (
+                        <span key={name} dir="auto" style={{
+                            padding: '3px 10px', borderRadius: 14, fontSize: '0.8rem',
+                            background: 'var(--bg-tertiary)', color: 'var(--text-secondary)'
+                        }}>{name}</span>
+                    ))}
+                </div>
+            )}
 
             {message && (
                 <div style={{
