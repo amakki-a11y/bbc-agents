@@ -5,7 +5,7 @@ import {
     Search, UserPlus, Copy, ChevronDown,
     Folder, LayoutDashboard, Calendar, HelpCircle, TrendingUp, Bot,
     Users, Building2, Clock, GitBranch, Shield, LogOut, Settings, User, Inbox, Plus,
-    CalendarOff, Target, Sparkles, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog, Layers, Contact
+    CalendarOff, Target, Sparkles, Activity, PanelLeftClose, PanelLeft, Sun, Moon, FileText, Brain, UserCog, Layers, Contact, Mic
 } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
 import NotificationBell from '../components/NotificationBell';
@@ -453,6 +453,7 @@ const Dashboard = ({ children }) => {
                         {/* Tools Section */}
                         <div style={{ marginBottom: '1.5rem' }}>
                             <NavItem icon={Calendar} label="Calendar" href="/calendar" collapsed={sidebarCollapsed} />
+                            <NavItem icon={Mic} label="Meeting Notes" href="/meetings" collapsed={sidebarCollapsed} />
                             <NavItem icon={Bot} label="AI Assistant" href="/bot" collapsed={sidebarCollapsed} />
                             <NavItem icon={Brain} label="Agent Brain" href="/agent-brain" collapsed={sidebarCollapsed} />
                             <NavItem icon={Target} label="Goals" href="/goals" collapsed={sidebarCollapsed} />

@@ -1,0 +1,235 @@
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const prisma = require('../../lib/prisma');
+const { LiveTranscriber } = require('./geminiLive');
+const { generateMeetingNotes } = require('./notes');
+
+/**
+ * Keeps one live Gemini transcriber per recording meeting session and
+ * fans transcript updates out to every connected socket (extension, web page).
+ */
+
+// Dot-folder: express.static ignores dotfiles, so screenshots are only
+// reachable through the authenticated API, never through /uploads.
+const UPLOAD_BASE = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../../uploads');
+const SCREENSHOT_DIR = path.join(UPLOAD_BASE, '.meeting-agent');
+
+const MAX_SCREENSHOTS = 120;
+const MIN_SCREENSHOT_GAP_MS = 4000;
+const MAX_SCREENSHOT_BYTES = 1.5 * 1024 * 1024;
+
+const live = new Map(); // sessionId -> { transcriber, sockets, startedAt, screenshots, lastShotAt, status }
+
+const broadcast = (entry, message) => {
+    const data = JSON.stringify(message);
+    for (const ws of entry.sockets) {
+        if (ws.readyState === 1) ws.send(data);
+    }
+};
+
+const offsetFor = (entry) => Math.max(0, Date.now() - entry.startedAt);
+
+const getOrStartLive = async (session) => {
+    let entry = live.get(session.id);
+    if (entry) return entry;
+
+    const transcriber = new LiveTranscriber();
+    entry = {
+        transcriber,
+        sockets: new Set(),
+        startedAt: new Date(session.started_at).getTime(),
+        screenshots: await prisma.meetingTranscriptSegment.count({ where: { session_id: session.id, kind: 'screen' } }),
+        lastShotAt: 0,
+        status: 'connecting'
+    };
+    live.set(session.id, entry);
+
+    transcriber.on('segment', async ({ text, speaker, language }) => {
+        try {
+            const segment = await prisma.meetingTranscriptSegment.create({
+                data: {
+                    session_id: session.id,
+                    kind: 'speech',
+                    text,
+                    speaker,
+                    language,
+                    offset_ms: offsetFor(entry)
+                }
+            });
+            broadcast(entry, { type: 'segment', segment });
+        } catch (error) {
+            console.error('[MeetingAgent] failed to save segment:', error.message);
+        }
+    });
+    transcriber.on('interim', ({ text }) => {
+        broadcast(entry, { type: 'interim', text });
+    });
+    transcriber.on('status', (status) => {
+        entry.status = status;
+        broadcast(entry, { type: 'status', status });
+    });
+    transcriber.on('error', (error) => {
+        console.error(`[MeetingAgent] Gemini (${session.id}):`, error.message);
+        broadcast(entry, { type: 'warning', message: error.message });
+    });
+
+    try {
+        await transcriber.start();
+    } catch (error) {
+        live.delete(session.id);
+        throw error;
+    }
+    return entry;
+};
+
+const addSocket = (entry, ws) => {
+    entry.sockets.add(ws);
+    ws.send(JSON.stringify({ type: 'status', status: entry.status }));
+};
+
+const removeSocket = (sessionId, ws) => {
+    live.get(sessionId)?.sockets.delete(ws);
+};
+
+const pushAudio = (sessionId, pcm) => {
+    live.get(sessionId)?.transcriber.sendAudio(pcm);
+};
+
+const pushScreenshot = async (sessionId, jpeg) => {
+    const entry = live.get(sessionId);
+    if (!entry) return;
+    const now = Date.now();
+    if (entry.screenshots >= MAX_SCREENSHOTS) return;
+    if (now - entry.lastShotAt < MIN_SCREENSHOT_GAP_MS) return;
+    if (jpeg.length > MAX_SCREENSHOT_BYTES) return;
+    // JPEG files start with FF D8 FF
+    if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8 || jpeg[2] !== 0xff) return;
+
+    entry.lastShotAt = now;
+    entry.screenshots += 1;
+
+    const dir = path.join(SCREENSHOT_DIR, sessionId);
+    await fs.promises.mkdir(dir, { recursive: true });
+    const file = path.join(dir, `${crypto.randomBytes(12).toString('hex')}.jpg`);
+    await fs.promises.writeFile(file, jpeg);
+
+    const segment = await prisma.meetingTranscriptSegment.create({
+        data: {
+            session_id: sessionId,
+            kind: 'screen',
+            image_path: file,
+            offset_ms: offsetFor(entry)
+        }
+    });
+    broadcast(entry, { type: 'screenshot', segment: { id: segment.id, offset_ms: segment.offset_ms } });
+};
+
+const stopLive = async (sessionId) => {
+    const entry = live.get(sessionId);
+    if (!entry) return;
+    live.delete(sessionId);
+    await entry.transcriber.stop();
+    // Give the last transcript segment a moment to be written
+    await new Promise(r => setTimeout(r, 300));
+    return entry;
+};
+
+/**
+ * Stop recording and ask Claude for the notes. Runs in the background;
+ * status goes processing -> ready | failed.
+ */
+const finishSession = async (sessionId) => {
+    // Only the first stop request wins (extension and web page can both send one)
+    const { count } = await prisma.meetingSession.updateMany({
+        where: { id: sessionId, status: 'recording' },
+        data: { status: 'processing', ended_at: new Date(), error: null }
+    });
+    if (count === 0) return;
+
+    const entry = await stopLive(sessionId);
+    if (entry) broadcast(entry, { type: 'status', status: 'processing' });
+
+    try {
+        await buildNotes(sessionId);
+        if (entry) broadcast(entry, { type: 'status', status: 'ready' });
+    } catch (error) {
+        console.error(`[MeetingAgent] notes failed (${sessionId}):`, error.message);
+        await prisma.meetingSession.update({
+            where: { id: sessionId },
+            data: { status: 'failed', error: error.message }
+        });
+        if (entry) broadcast(entry, { type: 'status', status: 'failed', message: error.message });
+    }
+    if (entry) {
+        for (const ws of entry.sockets) ws.close(1000, 'meeting finished');
+    }
+};
+
+const buildNotes = async (sessionId) => {
+    const session = await prisma.meetingSession.findUnique({ where: { id: sessionId } });
+    const segments = await prisma.meetingTranscriptSegment.findMany({
+        where: { session_id: sessionId },
+        orderBy: { offset_ms: 'asc' }
+    });
+    const employees = await prisma.employee.findMany({
+        where: { status: { notIn: ['terminated', 'resigned'] } },
+        select: { id: true, name: true, email: true, jobTitle: true },
+        orderBy: { name: 'asc' }
+    });
+
+    const notes = await generateMeetingNotes({ session, segments, employees });
+    const employeeIds = new Set(employees.map(e => e.id));
+
+    await prisma.$transaction([
+        // Regenerating replaces drafts but keeps items that already became tasks
+        prisma.meetingActionItem.deleteMany({ where: { session_id: sessionId, status: 'draft' } }),
+        prisma.meetingActionItem.createMany({
+            data: notes.action_items.map(item => ({
+                session_id: sessionId,
+                title: item.title_en,
+                title_ar: item.title_ar,
+                description: item.description,
+                owner_name: item.owner_name,
+                assignee_employee_id: employeeIds.has(item.assignee_employee_id) ? item.assignee_employee_id : null,
+                due_date: item.due_date ? new Date(`${item.due_date}T12:00:00Z`) : null,
+                priority: item.priority
+            }))
+        }),
+        prisma.meetingSession.update({
+            where: { id: sessionId },
+            data: {
+                status: 'ready',
+                title: session.title === 'Untitled meeting' ? notes.title : session.title,
+                summary_en: notes.summary_en,
+                summary_ar: notes.summary_ar,
+                notes: JSON.stringify({
+                    key_points: notes.key_points,
+                    decisions: notes.decisions,
+                    screen_highlights: notes.screen_highlights
+                }),
+                error: null
+            }
+        })
+    ]);
+};
+
+const isLive = (sessionId) => live.has(sessionId);
+
+/** Stop streaming to Gemini but keep the session open (extension went away). */
+const pauseLive = async (sessionId) => {
+    const entry = await stopLive(sessionId);
+    if (entry) broadcast(entry, { type: 'status', status: 'waiting_for_extension' });
+};
+
+module.exports = {
+    getOrStartLive,
+    addSocket,
+    removeSocket,
+    pushAudio,
+    pushScreenshot,
+    finishSession,
+    buildNotes,
+    isLive,
+    pauseLive
+};

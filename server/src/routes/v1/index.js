@@ -31,6 +31,9 @@ const listTaskRoutes = require('../listTasks.routes');
 // CRM routes
 const clientsRoutes = require('../clients.routes');
 
+// Meeting agent routes
+const meetingAgentRoutes = require('../meetingAgent.routes');
+
 // Mount all routes under /api/v1
 router.use('/', dataRoutes);
 router.use('/tasks/details', detailedTaskRoutes);
@@ -60,5 +63,8 @@ router.use('/list-tasks', listTaskRoutes);
 
 // CRM routes
 router.use('/clients', clientsRoutes);
+
+// Meeting agent routes
+router.use('/meeting-agent', meetingAgentRoutes);
 
 module.exports = router;

@@ -20,6 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@google/genai": "^2.24.0",
     "@prisma/client": "^5.0.0",
     "bcrypt": "^5.1.0",
     "compression": "^1.8.1",
@@ -39,6 +40,7 @@
     "systeminformation": "^5.30.5",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
+    "ws": "^8.21.3",
     "xss-clean": "^0.1.4",
     "zod": "^4.3.5"
   },

@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --brand: #6366f1; --text: #0f172a; --muted: #64748b; --border: #e2e8f0; --bg: #fff; --soft: #f8fafc; --red: #dc2626; --green: #059669; }
+  @media (prefers-color-scheme: dark) {
+    :root { --text: #e2e8f0; --muted: #94a3b8; --border: #334155; --bg: #0f172a; --soft: #1e293b; }
+  }
+  * { box-sizing: border-box; }
+  body { width: 340px; margin: 0; padding: 14px; font: 13px/1.45 system-ui, sans-serif; color: var(--text); background: var(--bg); }
+  h1 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin: 8px 0 3px; }
+  input[type=text], input[type=email], input[type=password], input[type=url] {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--soft); color: var(--text); font: inherit;
+  }
+  button { width: 100%; margin-top: 10px; padding: 9px; border: 0; border-radius: 8px; font: 600 13px system-ui; cursor: pointer; color: #fff; background: var(--brand); }
+  button.stop { background: var(--red); }
+  button.link { background: transparent; color: var(--brand); padding: 4px; margin-top: 4px; font-weight: 500; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.live { background: var(--red); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .error { color: var(--red); font-size: 12px; margin-top: 8px; }
+  .transcript { margin-top: 10px; max-height: 210px; overflow-y: auto; background: var(--soft); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-size: 12px; }
+  .transcript p { margin: 0 0 6px; unicode-bidi: plaintext; text-align: start; }
+  .transcript .interim { color: var(--muted); font-style: italic; }
+  .hidden { display: none; }
+  .footer { display: flex; justify-content: space-between; margin-top: 10px; }
+  .footer button { width: auto; }
+</style>
+</head>
+<body>
+<h1>🎙️ BBC Meeting Agent</h1>
+
+<section id="login" class="hidden">
+  <label for="serverUrl">Server</label>
+  <input id="serverUrl" type="url" placeholder="https://back-end-production-bad8.up.railway.app">
+  <label for="email">Email</label>
+  <input id="email" type="email" autocomplete="username">
+  <label for="password">Password</label>
+  <input id="password" type="password" autocomplete="current-password">
+  <button id="loginBtn">Log in</button>
+</section>
+
+<section id="main" class="hidden">
+  <div id="idle">
+    <label for="title">Meeting title (optional)</label>
+    <input id="title" type="text" placeholder="e.g. Weekly sales sync">
+    <div class="row"><input id="includeMic" type="checkbox"><label for="includeMic" style="margin:0">Include my microphone</label></div>
+    <button id="startBtn">Start listening</button>
+    <p id="notMeet" class="muted hidden">Open a Google Meet tab, then click Start.</p>
+  </div>
+
+  <div id="recording" class="hidden">
+    <div class="status"><span id="dot" class="dot"></span><span id="statusText">Starting…</span></div>
+    <div id="transcript" class="transcript"></div>
+    <button id="stopBtn" class="stop">Stop &amp; write notes</button>
+  </div>
+
+  <div id="done" class="hidden">
+    <p class="status">✅ Meeting finished</p>
+    <p class="muted">Claude is writing the notes in English and Arabic. They will be ready in about a minute.</p>
+    <button id="openNotesBtn">Open meeting notes</button>
+    <button id="newBtn" class="link">Start another meeting</button>
+  </div>
+
+  <p id="error" class="error hidden"></p>
+
+  <div class="footer">
+    <button id="micBtn" class="link">Allow microphone</button>
+    <button id="logoutBtn" class="link">Log out <span id="who"></span></button>
+  </div>
+</section>
+
+<script src="popup.js"></script>
+</body>
+</html>
