@@ -1,7 +1,7 @@
 // BBC Meeting Agent - background service worker.
 // Owns login + the meeting session; the offscreen document does the capture.
 
-const DEFAULT_SERVER = 'https://back-end-production-bad8.up.railway.app';
+const DEFAULT_SERVER = 'http://localhost:3000';
 
 const getSettings = async () => {
     const s = await chrome.storage.local.get(['serverUrl', 'accessToken', 'refreshToken', 'email', 'includeMic']);
@@ -46,11 +46,17 @@ const api = async (path, options = {}, retry = true) => {
 
 const login = async ({ serverUrl, email, password }) => {
     const url = (serverUrl || DEFAULT_SERVER).replace(/\/+$/, '');
-    const res = await fetch(`${url}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
+    let res;
+    try {
+        res = await fetch(`${url}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+            signal: AbortSignal.timeout(15000)
+        });
+    } catch (error) {
+        throw new Error(`Cannot reach ${url} (${error.message}). Is the server running?`);
+    }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || body.message || 'Login failed');
     await chrome.storage.local.set({

@@ -38,7 +38,7 @@
 
 <section id="login" class="hidden">
   <label for="serverUrl">Server</label>
-  <input id="serverUrl" type="url" placeholder="https://back-end-production-bad8.up.railway.app">
+  <input id="serverUrl" type="url" placeholder="http://localhost:3000">
   <label for="email">Email</label>
   <input id="email" type="email" autocomplete="username">
   <label for="password">Password</label>
@@ -68,13 +68,13 @@
     <button id="newBtn" class="link">Start another meeting</button>
   </div>
 
-  <p id="error" class="error hidden"></p>
-
   <div class="footer">
     <button id="micBtn" class="link">Allow microphone</button>
     <button id="logoutBtn" class="link">Log out <span id="who"></span></button>
   </div>
 </section>
+
+<p id="error" class="error hidden"></p>
 
 <script src="popup.js"></script>
 </body>

@@ -20,7 +20,7 @@ Google Meet tab ──audio + screenshots──► BBC server ──audio──�
 
 ## 1. Server setup
 
-Add these environment variables to the back-end (for example in Railway → Variables):
+Add these to `server/.env` on the machine that runs the server:
 
 | Variable | Needed | What it is |
 |---|---|---|
@@ -50,7 +50,7 @@ GEMINI_API_KEY=... node scripts/testMeetingAgentLive.js meeting.pcm
 3. Click **Load unpacked** and choose this `meeting-agent-extension` folder.
 4. Pin **BBC Meeting Agent** to the toolbar.
 5. Click the icon and log in with your BBC email and password.
-   Change **Server** only if you use a different back-end.
+   **Server** is `http://localhost:3000` when Chrome runs on the same machine as the server; otherwise use that machine's address.
 6. Click **Allow microphone** once. Meet doesn't play your own voice in the tab,
    so the agent needs your mic to hear you.
 

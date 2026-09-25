@@ -1,7 +1,6 @@
 // BBC Meeting Agent - popup UI
 
-const DEFAULT_SERVER = 'https://back-end-production-bad8.up.railway.app';
-const DEFAULT_APP = 'https://front-end-production-ad4c.up.railway.app';
+const DEFAULT_SERVER = 'http://localhost:3000';
 
 const $ = (id) => document.getElementById(id);
 const show = (id, visible) => $(id).classList.toggle('hidden', !visible);
@@ -18,7 +17,8 @@ const STATUS_TEXT = {
 
 const toBackground = (msg) => chrome.runtime.sendMessage({ target: 'background', ...msg });
 
-const appUrlFor = (serverUrl) => (/localhost|127\.0\.0\.1/.test(serverUrl || '') ? 'http://localhost:5173' : DEFAULT_APP);
+// Local test: the web app runs on Vite (5173); elsewhere it is served next to the API
+const appUrlFor = (serverUrl) => (/localhost|127\.0\.0\.1/.test(serverUrl || '') ? 'http://localhost:5173' : serverUrl);
 
 const showError = (message) => {
     $('error').textContent = message || '';
@@ -33,8 +33,9 @@ const render = async () => {
     show('login', !loggedIn);
     show('main', loggedIn);
     if (!loggedIn) {
-        $('serverUrl').value = settings.serverUrl || DEFAULT_SERVER;
-        $('email').value = settings.email || '';
+        // Fill the form once; never overwrite what the user typed
+        if (!$('serverUrl').value) $('serverUrl').value = settings.serverUrl || DEFAULT_SERVER;
+        if (!$('email').value) $('email').value = settings.email || '';
         return;
     }
 
@@ -62,7 +63,7 @@ const render = async () => {
         box.replaceChildren(...items);
         box.scrollTop = box.scrollHeight;
     }
-    showError(state.error);
+    if (state.error) showError(state.error);
 
     if (!state.recording && !finished) {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -73,17 +74,30 @@ const render = async () => {
 };
 
 $('loginBtn').addEventListener('click', async () => {
-    $('loginBtn').disabled = true;
+    const btn = $('loginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Logging in…';
     showError('');
-    const res = await toBackground({
-        type: 'login',
-        serverUrl: $('serverUrl').value.trim() || DEFAULT_SERVER,
-        email: $('email').value.trim(),
-        password: $('password').value
-    });
-    $('loginBtn').disabled = false;
-    $('password').value = '';
-    if (!res?.ok) showError(res?.error || 'Login failed');
+    const serverUrl = ($('serverUrl').value.trim() || DEFAULT_SERVER).replace(/\/+$/, '');
+    try {
+        // Servers other than localhost/Meet need the user's OK once (optional host permission)
+        if (!/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(serverUrl)) {
+            const granted = await chrome.permissions.request({ origins: [`${new URL(serverUrl).origin}/*`] });
+            if (!granted) throw new Error('Chrome did not allow the extension to reach this server.');
+        }
+        const res = await toBackground({
+            type: 'login',
+            serverUrl,
+            email: $('email').value.trim(),
+            password: $('password').value
+        });
+        if (!res?.ok) throw new Error(res?.error || 'Login failed');
+        $('password').value = '';
+    } catch (error) {
+        showError(error.message);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Log in';
     render();
 });
 
