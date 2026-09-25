@@ -52,6 +52,9 @@ const pickSpeaker = (log, start, end) => {
     return names.join(' / ');
 };
 
+// No real title yet: empty, the default, or just the Meet code (e.g. "fji-cjdg-yxh")
+const needsTitle = (title) => !title || title === 'Untitled meeting' || /^[a-z]{3,4}-[a-z]{4}-[a-z]{3,4}$/i.test(title.trim());
+
 const cleanName = (n) => (typeof n === 'string' ? n.replace(/\s+/g, ' ').trim().slice(0, 80) : '');
 
 const getOrStartLive = async (session) => {
@@ -233,7 +236,7 @@ const buildNotes = async (sessionId) => {
             where: { id: sessionId },
             data: {
                 status: 'ready',
-                title: session.title === 'Untitled meeting' ? notes.title : session.title,
+                title: needsTitle(session.title) ? notes.title : session.title,
                 summary_en: notes.summary_en,
                 summary_ar: notes.summary_ar,
                 notes: JSON.stringify({
@@ -299,5 +302,6 @@ module.exports = {
     isLive,
     pauseLive,
     updateMeetInfo,
-    pickSpeaker
+    pickSpeaker,
+    needsTitle
 };

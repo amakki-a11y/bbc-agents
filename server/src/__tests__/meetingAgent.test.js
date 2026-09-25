@@ -96,3 +96,12 @@ describe('Meeting agent - speaker from Meet captions', () => {
         expect(pickSpeaker([], 0, 10000)).toBeNull();
     });
 });
+
+describe('Meeting agent - meeting title', () => {
+    const { needsTitle } = require('../services/meetingAgent/sessionManager');
+    test('replaces default titles and bare Meet codes', () => {
+        expect(needsTitle('Untitled meeting')).toBe(true);
+        expect(needsTitle('fji-cjdg-yxh')).toBe(true);
+        expect(needsTitle('Weekly sales sync')).toBe(false);
+    });
+});
