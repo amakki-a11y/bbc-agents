@@ -105,3 +105,27 @@ describe('Meeting agent - meeting title', () => {
         expect(needsTitle('Weekly sales sync')).toBe(false);
     });
 });
+
+describe('Meeting agent - screenshots for Claude', () => {
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+    const { pickScreenshots } = require('../services/meetingAgent/notes');
+    const file = path.join(os.tmpdir(), 'meeting-agent-test.jpg');
+    beforeAll(() => fs.writeFileSync(file, 'x'));
+    afterAll(() => fs.unlinkSync(file));
+    const shots = (n, shared) => Array.from({ length: n }, (_, i) => ({
+        kind: 'screen', image_path: file, offset_ms: i * 1000, text: shared(i) ? 'presentation' : null
+    }));
+
+    test('mostly shared screens when someone presented, in time order', () => {
+        const picked = pickScreenshots(shots(40, i => i % 4 !== 0));
+        expect(picked).toHaveLength(20);
+        expect(picked.filter(s => s.text === 'presentation')).toHaveLength(17);
+        expect(picked.map(s => s.offset_ms)).toEqual([...picked.map(s => s.offset_ms)].sort((a, b) => a - b));
+    });
+
+    test('all meeting views when nobody shared', () => {
+        expect(pickScreenshots(shots(10, () => false))).toHaveLength(10);
+    });
+});

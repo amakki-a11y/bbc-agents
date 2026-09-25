@@ -516,7 +516,9 @@ const MeetingDetail = ({ id }) => {
                             {screens.map(s => (
                                 <div key={s.id}>
                                     <Screenshot sessionId={id} segmentId={s.id} />
-                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: 4 }}>{formatOffset(s.offset_ms)}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: 4 }}>
+                                        {formatOffset(s.offset_ms)}{s.text === 'presentation' ? ' · Shared screen' : ''}
+                                    </div>
                                 </div>
                             ))}
                         </div>

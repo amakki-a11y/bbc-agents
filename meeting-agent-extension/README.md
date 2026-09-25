@@ -14,7 +14,7 @@ Google Meet tab ──audio + screenshots──► BBC server ──audio──�
 ```
 
 - **Hear:** Gemini Live (`gemini-3.5-transcribe-live`) turns speech into text live, including mixed Arabic and English.
-- **See:** Every few seconds the extension checks the Meet screen, and sends a screenshot when a new slide or document appears.
+- **See:** Every few seconds the extension checks the Meet screen, and sends a screenshot when a new slide or document appears. While someone **shares their screen**, it checks every 2 seconds and saves only the shared screen, cropped at full sharpness, so Claude can read the text.
 - **Think:** When the meeting ends, Claude reads the transcript and screenshots, then writes a summary, decisions, key points and action items in both languages.
 - **Act:** On the **Meeting Notes** page you check each action item, then click **Create tasks**.
 

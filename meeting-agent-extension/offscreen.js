@@ -4,7 +4,15 @@
 
 const FRAME_AUDIO = 1;
 const FRAME_SCREEN = 2;
+const FRAME_PRESENTATION = 3;         // cropped to the shared screen
 const SCREENSHOT_EVERY_MS = 5000;
+const PRESENTATION_EVERY_MS = 2000;
+// Shared screens: compare at 160x90 and count pixels that really changed, so a new
+// slide with only new text still counts (average difference is too blunt for text)
+const PRESENTATION_GRID = [160, 90];
+const PRESENTATION_PIXEL_DELTA = 40;       // a pixel "changed" if it moved this much (0-255)
+const PRESENTATION_CHANGED_SHARE = 0.004;  // 0.4 % of pixels (a mouse cursor is less)
+const MAX_PRESENTATION_WIDTH = 1920;
 const SCREEN_CHANGE_THRESHOLD = 12; // average pixel difference (0-255) that counts as "new slide"
 const MAX_SCREENSHOT_WIDTH = 1280;
 
@@ -15,6 +23,7 @@ let micStream = null;
 let ws = null;
 let shotTimer = null;
 let lastThumb = null;
+let presentation = null; // shared-screen area reported by meet-content.js (null = nobody sharing)
 let config = null;
 let stopping = false;
 let reconnectDelay = 1000;
@@ -95,6 +104,8 @@ const startAudio = async () => {
 };
 
 // Grab the Meet picture every few seconds; send it only when it changed
+// Grab the Meet picture and send it when it changed. While someone shares their
+// screen: check more often and send only the shared screen, cropped, so its text is readable.
 const startScreenshots = async () => {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -103,30 +114,64 @@ const startScreenshots = async () => {
     await video.play();
 
     const tctx = thumb.getContext('2d', { willReadFrequently: true });
+    const grid = document.createElement('canvas');
+    [grid.width, grid.height] = PRESENTATION_GRID;
+    const gctx = grid.getContext('2d', { willReadFrequently: true });
+    let lastCheck = 0;
+    let wasPresenting = false;
+
     shotTimer = setInterval(() => {
         if (!video.videoWidth) return;
+        const pres = presentation;
+        const now = Date.now();
+        if (now - lastCheck < (pres ? PRESENTATION_EVERY_MS : SCREENSHOT_EVERY_MS)) return;
+        lastCheck = now;
+        if (!!pres !== wasPresenting) {
+            wasPresenting = !!pres;
+            lastThumb = null; // sharing started/stopped: always take a fresh picture
+        }
 
-        tctx.drawImage(video, 0, 0, thumb.width, thumb.height);
-        const pixels = tctx.getImageData(0, 0, thumb.width, thumb.height).data;
-        const gray = new Uint8Array(thumb.width * thumb.height);
+        // Area of the captured frame to use (tab frame pixels, not CSS pixels)
+        let sx = 0, sy = 0, sw = video.videoWidth, sh = video.videoHeight;
+        if (pres) {
+            const kx = video.videoWidth / pres.viewWidth;
+            const ky = video.videoHeight / pres.viewHeight;
+            sx = Math.round(pres.x * kx);
+            sy = Math.round(pres.y * ky);
+            sw = Math.min(video.videoWidth - sx, Math.round(pres.width * kx));
+            sh = Math.min(video.videoHeight - sy, Math.round(pres.height * ky));
+            if (sw < 50 || sh < 50) return;
+        }
+
+        const [cv, cx] = pres ? [grid, gctx] : [thumb, tctx];
+        cx.drawImage(video, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+        const pixels = cx.getImageData(0, 0, cv.width, cv.height).data;
+        const gray = new Uint8Array(cv.width * cv.height);
         for (let i = 0; i < gray.length; i++) {
             gray[i] = (pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2]) / 3;
         }
-        if (lastThumb) {
-            let diff = 0;
-            for (let i = 0; i < gray.length; i++) diff += Math.abs(gray[i] - lastThumb[i]);
-            if (diff / gray.length < SCREEN_CHANGE_THRESHOLD) return;
+        if (lastThumb && lastThumb.length === gray.length) {
+            if (pres) {
+                let changed = 0;
+                for (let i = 0; i < gray.length; i++) if (Math.abs(gray[i] - lastThumb[i]) > PRESENTATION_PIXEL_DELTA) changed++;
+                if (changed / gray.length < PRESENTATION_CHANGED_SHARE) return;
+            } else {
+                let diff = 0;
+                for (let i = 0; i < gray.length; i++) diff += Math.abs(gray[i] - lastThumb[i]);
+                if (diff / gray.length < SCREEN_CHANGE_THRESHOLD) return;
+            }
         }
         lastThumb = gray;
 
-        const scale = Math.min(1, MAX_SCREENSHOT_WIDTH / video.videoWidth);
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const maxWidth = pres ? MAX_PRESENTATION_WIDTH : MAX_SCREENSHOT_WIDTH;
+        const scale = Math.min(1, maxWidth / sw);
+        canvas.width = Math.round(sw * scale);
+        canvas.height = Math.round(sh * scale);
+        canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
         canvas.toBlob(async (blob) => {
-            if (blob) send(FRAME_SCREEN, await blob.arrayBuffer());
-        }, 'image/jpeg', 0.7);
-    }, SCREENSHOT_EVERY_MS);
+            if (blob) send(pres ? FRAME_PRESENTATION : FRAME_SCREEN, await blob.arrayBuffer());
+        }, 'image/jpeg', pres ? 0.85 : 0.7);
+    }, 500);
 };
 
 const start = async (msg) => {
@@ -160,6 +205,7 @@ const start = async (msg) => {
 const cleanup = () => {
     clearInterval(shotTimer);
     shotTimer = null;
+    presentation = null;
     [tabStream, micStream].forEach(s => s?.getTracks().forEach(t => t.stop()));
     tabStream = micStream = null;
     ctx?.close();
@@ -180,9 +226,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.target !== 'offscreen') return;
     if (msg.type === 'start') start(msg);
     else if (msg.type === 'stop') stop();
-    else if (msg.type === 'meet-info' && ws?.readyState === WebSocket.OPEN) {
+    else if (msg.type === 'meet-info') {
+        if ('presentation' in msg) presentation = msg.presentation;
         // Attendees / current speaker read from the Meet page
-        ws.send(JSON.stringify({ type: 'meet-info', participants: msg.participants, speaker: msg.speaker }));
+        if ((msg.participants || msg.speaker) && ws?.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'meet-info', participants: msg.participants, speaker: msg.speaker }));
+        }
     }
     sendResponse({ ok: true });
 });

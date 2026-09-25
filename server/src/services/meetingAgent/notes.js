@@ -9,7 +9,8 @@ const Anthropic = require('@anthropic-ai/sdk');
  */
 
 const DEFAULT_MODEL = 'claude-opus-5';
-const MAX_SCREENSHOTS = 12;
+const MAX_SCREENSHOTS = 20;
+const MAX_OTHER_WHEN_SHARING = 3;
 const MAX_EMPLOYEES = 300;
 
 let client = null;
@@ -87,7 +88,7 @@ Action items are concrete follow-ups someone agreed to or was asked to do. Skip 
 
 Speaker names in the transcript and the attendee list come from Google Meet. A line without a name means the speaker is unknown; a line like "A / B" means both spoke in it. Use these names to decide who owns each action item and to match employees.
 
-Screenshots show what was on screen during the meeting. Use them to understand the discussion and list the important visible content under screen_highlights.`;
+Screenshots show what was on screen during the meeting. "Shared screen" pictures are cropped to what a participant presented (slides, documents, apps): read them carefully, they often hold the numbers, names and decisions being discussed. Use them to understand the discussion and list the important visible content under screen_highlights.`;
 
 const attendeesOf = (session) => {
     try {
@@ -111,12 +112,23 @@ const buildTranscript = (segments) => segments
     .map(s => `[${formatOffset(s.offset_ms)}] ${s.speaker ? `${s.speaker}: ` : ''}${s.text}`)
     .join('\n');
 
-// Evenly pick up to MAX_SCREENSHOTS screenshots across the meeting
+// Evenly spread `n` items from a list (keeps first and last moments)
+const spread = (list, n) => {
+    if (list.length <= n) return list;
+    if (n <= 1) return list.slice(0, n);
+    const step = (list.length - 1) / (n - 1);
+    return Array.from({ length: n }, (_, i) => list[Math.round(i * step)]);
+};
+
+// Up to MAX_SCREENSHOTS pictures, mostly shared screens (cropped, readable) when
+// someone presented, plus a few full views of the meeting for context.
 const pickScreenshots = (segments) => {
     const shots = segments.filter(s => s.kind === 'screen' && s.image_path && fs.existsSync(s.image_path));
-    if (shots.length <= MAX_SCREENSHOTS) return shots;
-    const step = shots.length / MAX_SCREENSHOTS;
-    return Array.from({ length: MAX_SCREENSHOTS }, (_, i) => shots[Math.floor(i * step)]);
+    const shared = shots.filter(s => s.text === 'presentation');
+    const other = shots.filter(s => s.text !== 'presentation');
+    const otherCount = shared.length ? Math.min(other.length, MAX_OTHER_WHEN_SHARING) : MAX_SCREENSHOTS;
+    return [...spread(shared, MAX_SCREENSHOTS - Math.min(otherCount, other.length)), ...spread(other, otherCount)]
+        .sort((a, b) => a.offset_ms - b.offset_ms);
 };
 
 /**
@@ -133,7 +145,8 @@ const generateMeetingNotes = async ({ session, segments, employees }) => {
 
     const content = [];
     for (const shot of pickScreenshots(segments)) {
-        content.push({ type: 'text', text: `Screenshot at [${formatOffset(shot.offset_ms)}]:` });
+        const label = shot.text === 'presentation' ? 'Shared screen' : 'Meeting view';
+        content.push({ type: 'text', text: `${label} at [${formatOffset(shot.offset_ms)}]:` });
         content.push({
             type: 'image',
             source: {
@@ -200,4 +213,4 @@ const generateMeetingNotes = async ({ session, segments, employees }) => {
     return JSON.parse(text);
 };
 
-module.exports = { generateMeetingNotes, NOTES_SCHEMA, buildTranscript, formatOffset };
+module.exports = { generateMeetingNotes, NOTES_SCHEMA, buildTranscript, formatOffset, pickScreenshots };

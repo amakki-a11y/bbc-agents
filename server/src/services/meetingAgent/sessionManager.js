@@ -15,9 +15,10 @@ const { generateMeetingNotes } = require('./notes');
 const UPLOAD_BASE = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../../uploads');
 const SCREENSHOT_DIR = path.join(UPLOAD_BASE, '.meeting-agent');
 
-const MAX_SCREENSHOTS = 120;
+const MAX_SCREENSHOTS = 300;
 const MIN_SCREENSHOT_GAP_MS = 4000;
-const MAX_SCREENSHOT_BYTES = 1.5 * 1024 * 1024;
+const MIN_PRESENTATION_GAP_MS = 1500;   // shared screens change often (slides, scrolling)
+const MAX_SCREENSHOT_BYTES = 1.9 * 1024 * 1024;
 
 const live = new Map(); // sessionId -> { transcriber, sockets, startedAt, screenshots, lastShotAt, status }
 
@@ -132,12 +133,12 @@ const pushAudio = (sessionId, pcm) => {
     live.get(sessionId)?.transcriber.sendAudio(pcm);
 };
 
-const pushScreenshot = async (sessionId, jpeg) => {
+const pushScreenshot = async (sessionId, jpeg, { presentation = false } = {}) => {
     const entry = live.get(sessionId);
     if (!entry) return;
     const now = Date.now();
     if (entry.screenshots >= MAX_SCREENSHOTS) return;
-    if (now - entry.lastShotAt < MIN_SCREENSHOT_GAP_MS) return;
+    if (now - entry.lastShotAt < (presentation ? MIN_PRESENTATION_GAP_MS : MIN_SCREENSHOT_GAP_MS)) return;
     if (jpeg.length > MAX_SCREENSHOT_BYTES) return;
     // JPEG files start with FF D8 FF
     if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8 || jpeg[2] !== 0xff) return;
@@ -154,11 +155,12 @@ const pushScreenshot = async (sessionId, jpeg) => {
         data: {
             session_id: sessionId,
             kind: 'screen',
+            text: presentation ? 'presentation' : null,   // marks a cropped shared screen
             image_path: file,
             offset_ms: offsetFor(entry)
         }
     });
-    broadcast(entry, { type: 'screenshot', segment: { id: segment.id, offset_ms: segment.offset_ms } });
+    broadcast(entry, { type: 'screenshot', segment: { id: segment.id, offset_ms: segment.offset_ms, text: segment.text } });
 };
 
 const stopLive = async (sessionId) => {

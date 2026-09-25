@@ -11,6 +11,7 @@ const manager = require('../services/meetingAgent/sessionManager');
  * capture (Chrome extension) sends binary frames:
  *   0x01 + PCM16 mono 16 kHz audio
  *   0x02 + JPEG screenshot
+ *   0x03 + JPEG of a shared screen (cropped)
  * and JSON text frames: { "type": "stop" }
  *
  * The server sends JSON: status | segment | screenshot | warning | error
@@ -19,6 +20,7 @@ const manager = require('../services/meetingAgent/sessionManager');
 const PATH = '/ws/meeting-agent';
 const FRAME_AUDIO = 0x01;
 const FRAME_SCREEN = 0x02;
+const FRAME_PRESENTATION = 0x03; // screenshot cropped to a shared screen
 const IDLE_STOP_MS = 2 * 60 * 1000; // pause Gemini if the extension is gone this long
 const MAX_FRAME_BYTES = 2 * 1024 * 1024;
 
@@ -60,6 +62,7 @@ const handleConnection = async (ws, req) => {
                 const body = data.subarray(1);
                 if (kind === FRAME_AUDIO) manager.pushAudio(sessionId, body);
                 else if (kind === FRAME_SCREEN) await manager.pushScreenshot(sessionId, body);
+                else if (kind === FRAME_PRESENTATION) await manager.pushScreenshot(sessionId, body, { presentation: true });
                 return;
             }
             const msg = JSON.parse(data.toString());
